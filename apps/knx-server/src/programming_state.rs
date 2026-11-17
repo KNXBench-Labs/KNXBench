@@ -360,19 +360,20 @@ fn after_download(
                                 WrittenParameters {
                                     values,
                                     scoped_values,
-                                    object_flags: knx_productdb::image::resolve_effective_object_flags(
-                                    conn,
-                                    &written.program_id,
-                                    &written.values,
-                                    &written.flag_overrides,
-                                )
-                                .ok()
-                                .map(|flags| {
-                                    flags
-                                        .into_iter()
-                                        .map(|(number, flags)| (number, flags.into()))
-                                        .collect()
-                                }),
+                                    object_flags:
+                                        knx_productdb::image::resolve_effective_object_flags(
+                                            conn,
+                                            &written.program_id,
+                                            &written.values,
+                                            &written.flag_overrides,
+                                        )
+                                        .ok()
+                                        .map(|flags| {
+                                            flags
+                                                .into_iter()
+                                                .map(|(number, flags)| (number, flags.into()))
+                                                .collect()
+                                        }),
                                     at,
                                 }
                             });

@@ -163,10 +163,7 @@ pub fn resolve_mi_authority(
                 Some(k) => MiAuthority::Found(k.to_string()),
                 None => MiAuthority::Ambiguous {
                     source_ets_id: many[0].source.ets_id.clone(),
-                    instance_ets_ids: many
-                        .iter()
-                        .map(|m| m.instance_ets_id.clone())
-                        .collect(),
+                    instance_ets_ids: many.iter().map(|m| m.instance_ets_id.clone()).collect(),
                 },
             }
         }

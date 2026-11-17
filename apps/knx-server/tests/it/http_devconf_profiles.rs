@@ -58,7 +58,12 @@ fn base64url(bytes: &[u8]) -> String {
     out
 }
 
-async fn fixture() -> (tempfile::TempDir, Arc<knx_server::AppState>, axum::Router, u32) {
+async fn fixture() -> (
+    tempfile::TempDir,
+    Arc<knx_server::AppState>,
+    axum::Router,
+    u32,
+) {
     let xml = r#"<KNX xmlns="http://knx.org/xml/project/23"><Project Id="P-0001"><Installations><Installation InstallationId="0"><Topology><UnassignedDevices><DeviceInstance Id="P-0001-0_DI-1" Name="Synthetic"/></UnassignedDevices></Topology></Installation></Installations></Project></KNX>"#;
     let info = r#"<KNX xmlns="http://knx.org/xml/project/23"><Project Id="P-0001"><ProjectInformation Name="Synthetic devconf"/></Project></KNX>"#;
     let dir = tempfile::tempdir().unwrap();
@@ -123,7 +128,13 @@ async fn profiles_read_preview_apply_refuse_unconfirmed_and_cancel_is_one_undo_s
     let (_dir, state, app, device) = fixture().await;
     let before = state.project.lock().unwrap().clone();
 
-    let (status, view) = request(&app, "GET", "/api/project/device-config-profiles", Value::Null).await;
+    let (status, view) = request(
+        &app,
+        "GET",
+        "/api/project/device-config-profiles",
+        Value::Null,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK, "read route: {view}");
     assert_eq!(view["profiles"], json!([]));
 
@@ -150,7 +161,11 @@ async fn profiles_read_preview_apply_refuse_unconfirmed_and_cancel_is_one_undo_s
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
     assert_eq!(body["kind"], "devconfConfirmationRequired");
-    assert_eq!(*state.project.lock().unwrap(), before, "refusal must not mutate");
+    assert_eq!(
+        *state.project.lock().unwrap(),
+        before,
+        "refusal must not mutate"
+    );
 
     // Wrong token is a conflict.
     let (status, _) = request(
@@ -175,7 +190,10 @@ async fn profiles_read_preview_apply_refuse_unconfirmed_and_cancel_is_one_undo_s
     {
         let project = state.project.lock().unwrap();
         let project = project.as_ref().unwrap();
-        let stored = project.devices.config_profile(knx_core::DeviceId(device)).unwrap();
+        let stored = project
+            .devices
+            .config_profile(knx_core::DeviceId(device))
+            .unwrap();
         assert_eq!(stored.module_id(), "example.demo-panel");
         assert_eq!(stored.document(), b"{\"nodes\": []}".to_vec());
     }
@@ -189,14 +207,30 @@ async fn profiles_read_preview_apply_refuse_unconfirmed_and_cancel_is_one_undo_s
         let mut stack = state.command_stack.lock().unwrap();
         stack.undo(project).unwrap();
     }
-    assert_eq!(*state.project.lock().unwrap(), before, "undo restores exactly");
+    assert_eq!(
+        *state.project.lock().unwrap(),
+        before,
+        "undo restores exactly"
+    );
 
     // A stale preview (wrong snapshot revision) conflicts.
-    let (status, view2) = request(&app, "GET", "/api/project/device-config-profiles", Value::Null).await;
+    let (status, view2) = request(
+        &app,
+        "GET",
+        "/api/project/device-config-profiles",
+        Value::Null,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let mut stale = preview_payload(&view2, set_action(device, "{\"nodes\": []}"));
     stale["snapshotRevision"] = json!(u64::MAX);
-    let (status, body) = request(&app, "POST", "/api/project/device-config-profiles/preview", stale).await;
+    let (status, body) = request(
+        &app,
+        "POST",
+        "/api/project/device-config-profiles/preview",
+        stale,
+    )
+    .await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
 
     // Preview then cancel leaves the project untouched and clears the token.
@@ -224,7 +258,11 @@ async fn profiles_read_preview_apply_refuse_unconfirmed_and_cancel_is_one_undo_s
         json!({"token":token2,"confirmed":true}),
     )
     .await;
-    assert_eq!(status, StatusCode::CONFLICT, "cancelled token must not apply");
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "cancelled token must not apply"
+    );
     assert_eq!(*state.project.lock().unwrap(), before);
 
     // Unknown device is refused by preview with a structured error.
@@ -242,7 +280,13 @@ async fn profiles_read_preview_apply_refuse_unconfirmed_and_cancel_is_one_undo_s
 #[tokio::test]
 async fn remove_action_requires_an_existing_profile_and_applies_as_one_undo_step() {
     let (_dir, state, app, device) = fixture().await;
-    let (status, view) = request(&app, "GET", "/api/project/device-config-profiles", Value::Null).await;
+    let (status, view) = request(
+        &app,
+        "GET",
+        "/api/project/device-config-profiles",
+        Value::Null,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
 
     // Remove with nothing stored is refused.
@@ -265,12 +309,24 @@ async fn remove_action_requires_an_existing_profile_and_applies_as_one_undo_step
     .await;
     assert_eq!(status, StatusCode::OK, "{plan}");
     let token = plan["token"].as_str().unwrap().to_string();
-    let (status, _) = request(&app, "POST", "/api/project/device-config-profiles/apply", json!({"token":token,"confirmed":true})).await;
+    let (status, _) = request(
+        &app,
+        "POST",
+        "/api/project/device-config-profiles/apply",
+        json!({"token":token,"confirmed":true}),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let with_profile = state.project.lock().unwrap().clone();
 
     // Read shows the stored profile.
-    let (status, view2) = request(&app, "GET", "/api/project/device-config-profiles", Value::Null).await;
+    let (status, view2) = request(
+        &app,
+        "GET",
+        "/api/project/device-config-profiles",
+        Value::Null,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(view2["profiles"].as_array().unwrap().len(), 1);
     assert_eq!(view2["profiles"][0]["moduleId"], "example.demo-panel");
@@ -286,7 +342,13 @@ async fn remove_action_requires_an_existing_profile_and_applies_as_one_undo_step
     assert_eq!(status, StatusCode::OK, "{plan}");
     assert_eq!(plan["noOp"], false);
     let token = plan["token"].as_str().unwrap().to_string();
-    let (status, applied) = request(&app, "POST", "/api/project/device-config-profiles/apply", json!({"token":token,"confirmed":true})).await;
+    let (status, applied) = request(
+        &app,
+        "POST",
+        "/api/project/device-config-profiles/apply",
+        json!({"token":token,"confirmed":true}),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK, "{applied}");
     assert_eq!(applied["changed"], true);
     assert!(state

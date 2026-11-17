@@ -77,9 +77,9 @@ fn project_with_device() -> Project {
         com_objects: vec![],
         binary_data: vec![],
     });
-    project
-        .ids
-        .raise_to(&knx_core::IdAllocators::from_counts(2, 2, 2, 1, 1, 1, 1, 1, 1));
+    project.ids.raise_to(&knx_core::IdAllocators::from_counts(
+        2, 2, 2, 1, 1, 1, 1, 1, 1,
+    ));
     project
 }
 
@@ -171,7 +171,9 @@ fn set_replace_and_remove_are_undoable() {
     stack
         .do_command(
             &mut project,
-            Command::RemoveDeviceConfigProfile { device: DeviceId(1) },
+            Command::RemoveDeviceConfigProfile {
+                device: DeviceId(1),
+            },
         )
         .unwrap();
     assert!(project.devices.config_profile(DeviceId(1)).is_none());
@@ -213,17 +215,17 @@ fn invalid_commands_are_refused_without_touching_the_project() {
         document: vec![],
     };
     assert!(matches!(
-        Command::SetDeviceConfigProfile {
-            profile: invalid
-        }
-        .apply(&mut project),
+        Command::SetDeviceConfigProfile { profile: invalid }.apply(&mut project),
         Err(CommandError::InvalidConfigProfile(_))
     ));
     assert_eq!(project, before);
 
     // Removing a profile that does not exist.
     assert_eq!(
-        Command::RemoveDeviceConfigProfile { device: DeviceId(1) }.apply(&mut project),
+        Command::RemoveDeviceConfigProfile {
+            device: DeviceId(1)
+        }
+        .apply(&mut project),
         Err(CommandError::ConfigProfileNotFound(DeviceId(1)))
     );
     assert_eq!(project, before);
@@ -314,18 +316,24 @@ fn duplicate_stored_profile_refuses_load() {
     let sha = "a".repeat(64);
     conn.execute(row, rusqlite::params![sha]).unwrap();
     conn.execute(row, rusqlite::params![sha]).unwrap_err(); // PK already refuses the second
-    // Bypass the PK to reach the load-side duplicate guard: a second device
-    // row is impossible (device_id is PK), so the guard is exercised by
-    // loading a store whose table was corrupted to hold two rows for one
-    // device via a non-PK schema. Simpler: drop and recreate without the PK.
+                                                            // Bypass the PK to reach the load-side duplicate guard: a second device
+                                                            // row is impossible (device_id is PK), so the guard is exercised by
+                                                            // loading a store whose table was corrupted to hold two rows for one
+                                                            // device via a non-PK schema. Simpler: drop and recreate without the PK.
     conn.execute_batch(
         "CREATE TABLE dup_profiles (device_id INTEGER, module_id TEXT NOT NULL, module_version TEXT NOT NULL, module_sha256 TEXT NOT NULL, document BLOB NOT NULL) STRICT;",
     )
     .unwrap();
-    conn.execute("INSERT INTO dup_profiles SELECT * FROM device_config_profile", [])
-        .unwrap();
-    conn.execute("INSERT INTO dup_profiles SELECT * FROM device_config_profile", [])
-        .unwrap();
+    conn.execute(
+        "INSERT INTO dup_profiles SELECT * FROM device_config_profile",
+        [],
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO dup_profiles SELECT * FROM device_config_profile",
+        [],
+    )
+    .unwrap();
     conn.execute_batch("DROP TABLE device_config_profile; ALTER TABLE dup_profiles RENAME TO device_config_profile;")
         .unwrap();
     let err = knx_store::load_project(&conn).unwrap_err();
@@ -340,18 +348,14 @@ fn stored_profile_for_missing_device_refuses_load() {
     let conn = knx_store::open_and_migrate_in_memory().unwrap();
     let project = project_with_device();
     knx_store::save_project(&conn, &project).unwrap();
-    conn.execute_batch("PRAGMA foreign_keys = OFF;")
-        .unwrap();
+    conn.execute_batch("PRAGMA foreign_keys = OFF;").unwrap();
     conn.execute(
         "INSERT INTO device_config_profile (device_id, module_id, module_version, module_sha256, document) VALUES (99, 'm', '1.0.0', ?1, x'7B226E6F64657322A16E6F646573223A205B5D7D')",
         rusqlite::params!["a".repeat(64)],
     )
     .unwrap();
     let err = knx_store::load_project(&conn).unwrap_err();
-    assert!(
-        err.to_string().contains("does not exist"),
-        "{err}"
-    );
+    assert!(err.to_string().contains("does not exist"), "{err}");
 }
 
 #[test]
@@ -373,7 +377,10 @@ fn a_profile_keeps_its_snapshot_identity_and_a_profileless_image_keeps_the_older
     knx_store::save_project(&conn, &project).unwrap();
     let with_profile = NativeSnapshot::read(&conn).unwrap();
     let hash_with = with_profile.semantic_hash().unwrap();
-    assert_ne!(hash_with, hash_without, "a profile changes the semantic identity");
+    assert_ne!(
+        hash_with, hash_without,
+        "a profile changes the semantic identity"
+    );
 
     // An older-shape image (profile table dropped) still decodes with the
     // profile-less identity, exactly like the other additive overlays.
@@ -385,6 +392,7 @@ fn a_profile_keeps_its_snapshot_identity_and_a_profileless_image_keeps_the_older
         )
         .unwrap();
     let bytes = conn2.serialize(rusqlite::MAIN_DB).unwrap().to_vec();
-    let decoded = NativeSnapshot::decode(&bytes, &knx_store::project_history::image_hash(&bytes)).unwrap();
+    let decoded =
+        NativeSnapshot::decode(&bytes, &knx_store::project_history::image_hash(&bytes)).unwrap();
     assert_eq!(decoded.semantic_hash().unwrap(), hash_without);
 }

@@ -722,8 +722,11 @@ mod tests {
         m.instance_ets_id = "MD-2_M-1_MI-2".into();
         b.devices.insert_module_instance(m);
         // Re-point the com object at the re-numbered instance id.
-        let com_id = b.devices.get(a.devices.module_instances().next().unwrap().device)
-            .unwrap().com_objects[0];
+        let com_id = b
+            .devices
+            .get(a.devices.module_instances().next().unwrap().device)
+            .unwrap()
+            .com_objects[0];
         let com = b.devices.com_object(com_id).unwrap().clone();
         let mut com = com;
         com.source.ets_id = "MD-2_M-1_MI-2_O-2-0_R-1".into();

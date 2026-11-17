@@ -5,6 +5,7 @@ use std::fmt;
 pub mod activity_history;
 pub mod building;
 pub mod command_sync;
+mod devconf_profile;
 pub mod devices;
 mod functions;
 pub mod group;
@@ -13,7 +14,6 @@ pub mod manifest;
 pub mod manufacturer_files;
 pub mod migration;
 pub mod module_instance;
-mod devconf_profile;
 mod notes;
 pub mod opaque;
 pub mod parameter;
@@ -141,7 +141,10 @@ impl fmt::Display for StoreError {
                 write!(f, "native project note integrity refused: {reason}")
             }
             StoreError::ProfileIntegrity(reason) => {
-                write!(f, "native device configuration profile integrity refused: {reason}")
+                write!(
+                    f,
+                    "native device configuration profile integrity refused: {reason}"
+                )
             }
             StoreError::UnknownBuildingPartType(kind) => write!(
                 f,

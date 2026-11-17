@@ -175,7 +175,9 @@ pub struct ImageRequest {
     /// The device's individual address, for the address table.
     pub individual_address: IndividualAddress,
     /// Chosen parameter values by `ParameterRef` id. Everything absent
-    /// takes its product default.
+    /// takes its product default. Keys may be module-qualified
+    /// (`…_M-<m>_MI-<k>_<local-ref>`); they are decomposed on the write side
+    /// and consumed per instantiation (ADR-0177).
     pub values: BTreeMap<String, String>,
     /// The group address links.
     pub links: Vec<Link>,
@@ -721,7 +723,7 @@ fn build_image_selected(
     let mut written: BTreeMap<String, (String, Encoded)> = BTreeMap::new();
     // Every field written so far, with its segment and `ParameterRef`, so
     // that an overlap can name both parties.
-    let mut fields: Vec<(&str, ParameterField, &str)> = Vec::new();
+    let mut fields: Vec<(String, ParameterField, &str)> = Vec::new();
     let mut parameters = BTreeMap::new();
     let mut texts = BTreeMap::new();
     let mut parameter_fields = Vec::new();
@@ -733,9 +735,9 @@ fn build_image_selected(
     let refs = activation
         .parameter_refs
         .iter()
-        .map(|active| active.ref_id.as_str());
-    let assigned_refs = assigned.iter().map(|(target, _)| target.as_str());
-    for parameter_ref in refs.chain(assigned_refs) {
+        .map(|active| (active.scope.as_ref(), active.ref_id.as_str()));
+    let assigned_refs = assigned.iter().map(|(target, _)| (None, target.as_str()));
+    for (scope, parameter_ref) in refs.chain(assigned_refs) {
         let parameter = types.parameter_of(parameter_ref)?;
         let Some(placement) = code.parameters.get(parameter) else {
             continue; // Lives nowhere in memory.
@@ -745,6 +747,13 @@ fn build_image_selected(
             .find(|(target, _)| target == parameter_ref)
             .map(|(_, value)| value.as_str());
         let raw = assigned_value
+            .or_else(|| {
+                scope.and_then(|s| {
+                    s.module_id
+                        .as_deref()
+                        .and_then(|_| values.get(Some(s), parameter_ref))
+                })
+            })
             .or_else(|| values.get_unscoped(parameter_ref))
             .ok_or_else(|| ImageError::Value {
                 parameter_ref: parameter_ref.to_string(),
@@ -797,7 +806,40 @@ fn build_image_selected(
                 ),
             });
         }
-        let (segment_id, field) = field_of(parameter, placement, types.size(parameter_ref)?)?;
+        let (segment_id_owned, field) = match placement {
+            ParameterPlacement::ModuleMemory {
+                base_offset_arg, ..
+            } => {
+                // The instantiation's bound argument gives the base; without
+                // it the module-local relative offset is meaningless and
+                // refused by name (ADR-0177), never guessed.
+                let scope = scope.ok_or_else(|| ImageError::Unsupported {
+                    what: format!(
+                        "{parameter}: a module Memory (BaseOffset) outside any module scope"
+                    ),
+                })?;
+                let raw =
+                    scope
+                        .argument(base_offset_arg)
+                        .ok_or_else(|| ImageError::Unsupported {
+                            what: format!(
+                            "{parameter}: BaseOffset argument {base_offset_arg:?} of {:?} unbound",
+                            scope.module_id
+                        ),
+                        })?;
+                let base_value: u64 = raw.parse().map_err(|_| ImageError::Unsupported {
+                    what: format!(
+                        "{parameter}: BaseOffset argument {base_offset_arg:?} is not numeric ({raw:?})"
+                    ),
+                })?;
+                module_field_of(parameter, placement, base_value, types.size(parameter_ref)?)?
+            }
+            _ => {
+                let (segment, field) = field_of(parameter, placement, types.size(parameter_ref)?)?;
+                (segment.to_string(), field)
+            }
+        };
+        let segment_id: &str = segment_id_owned.as_str();
         if let Some(defaults) = &defaults {
             if experimental.is_none() {
                 let raw_default = defaults.get_unscoped(parameter_ref).ok_or_else(|| {
@@ -867,8 +909,8 @@ fn build_image_selected(
             Encoded::Number(_) | Encoded::Float { .. } => image.write(field, ordered),
             Encoded::Text { octets, .. } => image.write_octets(field, octets),
         }
-        .map_err(|error| overlap_or(error, parameter_ref, segment_id, &fields))?;
-        fields.push((segment_id, field, parameter_ref));
+        .map_err(|error| overlap_or(error, parameter_ref, segment_id_owned.as_str(), &fields))?;
+        fields.push((segment_id.to_string(), field, parameter_ref));
         let facts = types.get(parameter_ref)?;
         parameter_fields.push(ParameterAttribution {
             reference: parameter_ref.to_string(),
@@ -1302,14 +1344,19 @@ fn activate_values(
     if !undecided.is_empty() {
         return Err(ImageError::Evaluation(undecided));
     }
+    // Module-scoped ComObjectRefs stay refused by name: the group-object
+    // table arithmetic (`BaseNumber` argument + local `Number`) is counted
+    // in the WP-07 witness but not simulator-verified, so no object number
+    // is written for a module instance in this build. Module-scoped
+    // *parameters* are admitted below by `build_image_selected`, which
+    // resolves each instantiation's `BaseOffset` argument.
     if let Some(active) = activation
-        .parameter_refs
+        .com_object_refs
         .iter()
-        .chain(&activation.com_object_refs)
         .find(|active| active.scope.is_some())
     {
         return Err(ImageError::Unsupported {
-            what: format!("{}: a module instance", active.ref_id),
+            what: format!("{}: a module instance object", active.ref_id),
         });
     }
     Ok((values, activation))
@@ -1394,7 +1441,7 @@ fn overlap_or(
     error: ParameterImageError,
     parameter_ref: &str,
     segment: &str,
-    fields: &[(&str, ParameterField, &str)],
+    fields: &[(String, ParameterField, &str)],
 ) -> ImageError {
     let ParameterImageError::Overlap { field, earlier } = error else {
         return ImageError::Parameter {
@@ -1502,8 +1549,58 @@ pub(crate) fn field_of<'a>(
         }
         // A property is not a segment: [`property::property_images`] places it.
         ParameterPlacement::Property(_) => Err(unwritable_placement(parameter, "Property")),
+        // Resolved per instantiation by the caller (`module_field_of`),
+        // never at the module-local relative offset.
+        ParameterPlacement::ModuleMemory { .. } => Err(unwritable_placement(
+            parameter,
+            "module Memory (BaseOffset) without a bound argument",
+        )),
         ParameterPlacement::Unmodelled { name, .. } => Err(unwritable_placement(parameter, name)),
     }
+}
+
+/// The field a module-local parameter's placement names once the
+/// instantiation's `base_offset_arg` argument is bound: the argument's
+/// numeric value plus the relative `@Offset`, in the same segment.
+/// Refused by name when the value does not fit a 32-bit offset or the
+/// sum overflows — never guessed (ADR-0177).
+pub(crate) fn module_field_of(
+    parameter: &str,
+    placement: &ParameterPlacement,
+    base_value: u64,
+    size_in_bit: u32,
+) -> Result<(String, ParameterField), ImageError> {
+    let ParameterPlacement::ModuleMemory {
+        code_segment,
+        offset,
+        bit_offset,
+        ..
+    } = placement
+    else {
+        return Err(ImageError::Unsupported {
+            what: format!("{parameter}: not a module Memory placement"),
+        });
+    };
+    let Some(base) = u32::try_from(base_value).ok() else {
+        return Err(ImageError::Unsupported {
+            what: format!(
+                "{parameter}: BaseOffset argument value {base_value} exceeds 32-bit offset"
+            ),
+        });
+    };
+    let offset = base
+        .checked_add(*offset)
+        .ok_or_else(|| ImageError::Unsupported {
+            what: format!("{parameter}: BaseOffset + Offset exceeds 32-bit source placement"),
+        })?;
+    Ok((
+        code_segment.clone(),
+        ParameterField {
+            offset,
+            bit_offset: *bit_offset,
+            size_in_bit,
+        },
+    ))
 }
 
 /// `(segment, first octet, end)` of the group object table, from its

@@ -19,6 +19,7 @@ fn baseline() -> ParameterBaseline {
         object_flags: None,
         program_id: "M-0001_A-0001-01-0000".into(),
         values: [("M-0001_A-0001-01-0000_P-1_R-1".to_string(), "7".to_string())].into(),
+        scoped_values: Default::default(),
         at: chrono::DateTime::UNIX_EPOCH,
     }
 }

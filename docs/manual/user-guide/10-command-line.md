@@ -472,7 +472,7 @@ A mismatch exits with `1`, so this works as an integrity check in a scheduled jo
 
 None of the `knx bus` commands writes anything into a device. Writing to a device is
 reserved for the `knx device` commands below, each with its own confirmation:
-`knx device download` writes a project device's configuration (verified on four device
+`knx device download` writes a project device's configuration (verified on five device
 programs so far), and address programming is currently refused before any connection. See the
 boundary section in [Bus monitor and KNXnet/IP](07-bus-and-interfaces.md) for the full
 statement and the guard rails behind it.
@@ -837,7 +837,7 @@ If you can, report what you saw: it settles the question for that program.
 
 #### Helping to verify a device
 
-Only one application program is *verified* so far; everything else is *untested*,
+Five application programs are *verified* so far; everything else is *untested*,
 which only means nobody has told us it works. If you download a device anyway, you can
 change that for everyone who has the same device:
 

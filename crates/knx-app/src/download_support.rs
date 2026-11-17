@@ -726,7 +726,7 @@ mod tests {
         assert_eq!(button.scopes, ["complete"], "{button:?}");
         assert_eq!(button.date, "2026-10-09");
         assert!(button.reference.starts_with("docs/"), "{button:?}");
-        assert_eq!(shipped.len(), 4, "{shipped:?}");
+        assert_eq!(shipped.len(), 5, "{shipped:?}");
     }
 
     #[test]
@@ -744,6 +744,82 @@ mod tests {
         );
         assert_eq!(hager.date, "2026-11-12");
         assert!(hager.reference.starts_with("docs/evidence/"), "{hager:?}");
+    }
+
+    #[test]
+    fn the_shipped_evidence_names_the_stcc510s_four_scopes() {
+        let shipped = shipped_evidence().expect("the shipped file parses");
+        let program = "M-0009_A-207C-10-0210";
+        let detector = shipped
+            .get(program)
+            .expect("the tester detector is verified");
+        assert_eq!(
+            detector.scopes,
+            [
+                "complete",
+                "partial-parameters",
+                "partial-group-addresses",
+                "partial-both",
+            ]
+        );
+        assert_eq!(detector.date, "2026-11-16");
+        assert!(detector
+            .reference
+            .starts_with("docs/evidence/tester-report-hager-stcc510s-2026-11-16.json"));
+        let record: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../docs/evidence/tester-report-hager-stcc510s-2026-11-16.json"
+        ))
+        .expect("the evidence record parses");
+        assert_eq!(record["program"]["id"], program);
+        assert_eq!(
+            record["program"]["sourceSha256"],
+            "b3b6a92483b7d7679b57769e1f7d8b0c4b0ec24436f24c1749562699b24f44a2"
+        );
+        let reports = record["reports"].as_array().expect("four reports");
+        assert_eq!(reports.len(), detector.scopes.len());
+        for (report, (scope, steps, octets)) in reports.iter().zip([
+            ("complete", 25, 1084),
+            ("partial-parameters", 11, 64),
+            ("partial-group-addresses", 21, 1020),
+            ("partial-both", 24, 1084),
+        ]) {
+            assert_eq!(report["scope"], scope);
+            assert_eq!(report["plan"]["steps"], steps);
+            assert_eq!(report["plan"]["dataOctets"], octets);
+            assert_eq!(report["outcome"]["completed"], true);
+            assert_eq!(report["outcome"]["written"], "yes");
+            assert_eq!(report["outcome"]["restart"], "unconfirmed");
+            assert_eq!(
+                report["postDownloadCheck"]["planLoadVerdict"],
+                "matchesPlan"
+            );
+            assert_eq!(report["testerAnswer"]["deviceWorksAsConfigured"], true);
+        }
+        let plan = plan();
+        for partial in [
+            None,
+            Some(PartialDownloadParts {
+                parameters: true,
+                group_addresses: false,
+            }),
+            Some(PartialDownloadParts {
+                parameters: false,
+                group_addresses: true,
+            }),
+            Some(PartialDownloadParts {
+                parameters: true,
+                group_addresses: true,
+            }),
+        ] {
+            assert_eq!(
+                scoped_level(program, partial, &plan, &[], &shipped).code(),
+                "verified"
+            );
+            assert_eq!(
+                scoped_level("M-0009_A-207C-11-0210", partial, &plan, &[], &shipped).code(),
+                "untested"
+            );
+        }
     }
 
     #[test]

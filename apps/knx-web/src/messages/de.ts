@@ -688,6 +688,7 @@ export const messages: Record<MessageKey, string> = {
   "gaWorkspace.newInRange.cancel": "Abbrechen",
   "gaWorkspace.newInRange.create": "Anlegen",
   "gaWorkspace.all": "Alle Bereiche",
+  "gaWorkspace.sendValue": "Wert senden… (Busmonitor)",
   "gaWorkspace.level": "Bereichsebene {level}",
   "gaWorkspace.problems": "{count} Darstellungsbefunde — Daten erhalten",
   "gaWorkspace.scopeUnavailable": "Der Bereich ist nicht verfügbar oder mehrdeutig; alle erhaltenen Zeilen werden angezeigt.",

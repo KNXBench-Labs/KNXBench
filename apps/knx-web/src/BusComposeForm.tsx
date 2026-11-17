@@ -12,14 +12,18 @@
 //! when the parent hands it a new row to prefill from) and does not need
 //! to know anything about sessions, polling or filters to do its job.
 
-import { useState } from "react";
+import { useEffect, useId, useMemo, useState, type KeyboardEvent } from "react";
 import * as api from "./api";
 import { gatewayRefusalMessage } from "./gatewayRefusal";
 import type { BusWriteResponse, DptInputFormat } from "./api";
+import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import { useTranslate } from "./i18n";
 import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
 import { useUiLanguage } from "./uiLanguage";
 import { DPT_OPTIONS, dptDisplay, retainedDptOptions } from "./dptLabels";
+import { dptText } from "./groupAddressView";
+import { filterPickerAddresses, PICKER_WINDOW } from "./groupAddressPicker";
+import { useActiveOptionScroll } from "./useActiveOptionScroll";
 
 /// What the parent (`BusMonitorPanel.tsx`) knows about this destination's
 /// DPT resolution *at the moment it was prefilled* — mirrors
@@ -85,6 +89,10 @@ interface BusComposeFormProps {
   contextStale: boolean;
   /** Unknown/legacy comparison is not permission to use an unverified DPT. */
   contextUnverified?: boolean;
+  /// The project's group addresses (issue #51): the destination becomes a
+  /// searchable combobox over them, keeping free-text entry for addresses
+  /// outside the project. Empty/absent keeps the plain input.
+  groupAddresses?: GroupAddressNode[];
 }
 
 // Task 5 review round 2: `SESSION_CLOSED_MESSAGE`/`NO_DPT_RESOLVED_MESSAGE`/
@@ -102,6 +110,7 @@ export default function BusComposeForm({
   sessionClosed,
   contextStale,
   contextUnverified: contextUnverifiedProp = false,
+  groupAddresses,
 }: BusComposeFormProps) {
   const t = useTranslate();
   const passiveSerial = session.kind === "serial" && session.mode === "passive";
@@ -131,6 +140,55 @@ export default function BusComposeForm({
     // asking the server, so this falls back to `"unknown"` rather than
     // keeping a stale answer for a different address.
     setResolution({ kind: "unknown" });
+  }
+
+  // Issue #51: the destination becomes a searchable combobox over the
+  // project's group addresses. Picking an entry is a plain destination edit
+  // (same invalidation as typing) and additionally adopts the project's own
+  // DPTs for that address when they are a single unambiguous type — the same
+  // rule the server applies on an "unknown" resolution.
+  const pickerListId = useId();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerHighlight, setPickerHighlight] = useState(0);
+  const pickerAddresses = useMemo(
+    () => (groupAddresses ?? []).filter(ga => ga.address.trim() !== ""),
+    [groupAddresses],
+  );
+  const pickerMatches = useMemo(
+    () => filterPickerAddresses(pickerAddresses, destination, formatGa, language),
+    [pickerAddresses, destination, formatGa, language],
+  );
+  const pickerShown = pickerMatches.slice(0, PICKER_WINDOW);
+  const pickerActive = pickerOpen && pickerShown.length > 0 ? Math.min(pickerHighlight, pickerShown.length - 1) : -1;
+  const pickerActiveRef = useActiveOptionScroll(pickerActive, pickerShown, pickerOpen);
+  const pickerOptionId = (index: number) => `${pickerListId}-option-${index}`;
+  // A fresh prefill (remount via `key`) starts with the list closed; typing
+  // or focusing opens it as a search.
+  useEffect(() => { setPickerOpen(false); setPickerHighlight(0); }, [initialDestination]);
+
+  function chooseAddress(ga: GroupAddressNode) {
+    setDestination(formatGa(ga.address));
+    setResolution(
+      ga.dpts.length === 1 ? { kind: "single", dpt: ga.dpts[0] } : { kind: "unknown" },
+    );
+    setPickerOpen(false);
+    setPickerHighlight(0);
+  }
+
+  function onDestinationKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!pickerOpen) { setPickerOpen(true); return; }
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      setPickerHighlight(current =>
+        Math.max(0, Math.min(pickerShown.length - 1, Math.min(current, pickerShown.length - 1) + step)));
+    } else if (event.key === "Enter") {
+      if (!pickerOpen || pickerActive < 0) return;
+      event.preventDefault();
+      chooseAddress(pickerShown[pickerActive]);
+    } else if (event.key === "Escape" && pickerOpen) {
+      event.preventDefault(); event.stopPropagation(); setPickerOpen(false);
+    } else if (event.key === "Tab") setPickerOpen(false);
   }
 
   async function send() {
@@ -262,15 +320,51 @@ export default function BusComposeForm({
       <div className="bus-compose-fields">
         <label>
           {t("busCompose.destinationLabel")}
-          <input
-            type="text"
-            className="bus-compose-destination ga-address"
-            value={destination}
-            placeholder={formatGa("1/1/1")}
-            onChange={(e) => onDestinationChange(e.target.value)}
-            disabled={passiveSerial || sessionClosed || contextStale || contextUnverified}
-            aria-describedby={disabledReason}
-          />
+          <span className="ga-picker bus-compose-destination-picker">
+            <input
+              type="text"
+              className="bus-compose-destination ga-address"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-haspopup="listbox"
+              aria-expanded={pickerOpen}
+              aria-controls={pickerListId}
+              aria-activedescendant={pickerActive >= 0 ? pickerOptionId(pickerActive) : undefined}
+              autoComplete="off"
+              spellCheck={false}
+              value={destination}
+              placeholder={formatGa("1/1/1")}
+              onChange={(e) => { onDestinationChange(e.target.value); setPickerOpen(true); setPickerHighlight(0); }}
+              onFocus={() => setPickerOpen(true)}
+              onBlur={() => setPickerOpen(false)}
+              onKeyDown={onDestinationKeyDown}
+              disabled={passiveSerial || sessionClosed || contextStale || contextUnverified}
+              aria-describedby={disabledReason}
+            />
+            <ul className="ga-picker-list" id={pickerListId} role="listbox"
+              aria-label={t("busCompose.destinationLabel")} hidden={!pickerOpen}>
+              {pickerOpen && pickerShown.map((ga, index) => (
+                <li key={ga.id} id={pickerOptionId(index)}
+                  ref={index === pickerActive ? pickerActiveRef : undefined}
+                  role="option" aria-selected={index === pickerActive}
+                  className={index === pickerActive ? "ga-picker-option selected" : "ga-picker-option"}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => chooseAddress(ga)}>
+                  <span className="ga-address">{formatGa(ga.address)}</span>
+                  <span className="ga-picker-name">{ga.name}</span>
+                  <small className="ga-picker-dpt">{dptText(t, ga, language)}</small>
+                </li>
+              ))}
+            </ul>
+            {pickerOpen && pickerMatches.length === 0 && (
+              <p className="ga-picker-empty" role="status">{t("gaPicker.noMatches")}</p>
+            )}
+            {pickerOpen && pickerMatches.length > pickerShown.length && (
+              <p className="ga-picker-window" role="status">
+                {t("gaPicker.window", { shown: pickerShown.length, total: pickerMatches.length })}
+              </p>
+            )}
+          </span>
         </label>
         <label className="bus-compose-dpt-field">
           {t("busCompose.dptLabel")}

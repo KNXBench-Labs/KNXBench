@@ -83,6 +83,13 @@
 .catalog-table tr.search-result.selected { box-shadow: inset 3px 0 0 var(--knx-accent); }
 .catalog-table tr.search-result.disabled { cursor: not-allowed; }
 
+/* The chooser sits above the scroller; the ResizableTable owns its own reset button. */
+.catalog-table-block { min-width: 0; }
+.catalog-table-toolbar { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+.catalog-table .resizable-table { display: contents; }
+.catalog-table-scroll .resizable-table-scroll { border: 0; border-radius: 0; max-height: none; }
+.catalog-table-scroll .table-column-reset { display: none; }
+
 /* Announces the keyboard-highlighted row to assistive technology without showing it. */
 .catalog-highlight-status {
   position: absolute;

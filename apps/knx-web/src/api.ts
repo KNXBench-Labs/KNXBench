@@ -782,6 +782,12 @@ export interface CatalogItemDetails {
   applicationName: string | null;
   applicationVersion: string | null;
   catalogSectionId: string | null;
+  /** Section display name; absent on servers older than this field. */
+  catalogSectionName?: string | null;
+  /** Declared mask version (e.g. `MV-0701`); absent on older servers. */
+  maskVersion?: string | null;
+  /** Comma-separated medium types (e.g. `TP1`); absent on older servers. */
+  mediumTypes?: string | null;
   sourceNames: string[];
 }
 

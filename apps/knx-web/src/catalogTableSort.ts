@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { CatalogItem } from "./api";
 
-export type CatalogSortColumn = "product" | "manufacturer" | "number" | "application";
+export type CatalogSortColumn = "product" | "manufacturer" | "number" | "application" | "section" | "mask" | "medium";
 export interface CatalogSort { column: CatalogSortColumn; descending: boolean }
 
 export const DEFAULT_CATALOG_SORT: CatalogSort = { column: "product", descending: false };
@@ -26,6 +26,12 @@ export const applicationLabel = (item: CatalogItem): string => {
   const name = displayText(item.details?.applicationName);
   return name ? [name, displayText(item.details?.applicationVersion)].filter(Boolean).join(" ") : "";
 };
+/** The catalogue section the item sits in, when the server reported one. */
+export const sectionLabel = (item: CatalogItem): string => displayText(item.details?.catalogSectionName) || displayText(item.details?.catalogSectionId);
+/** The declared mask version, e.g. `0701h`; `""` when the linked program has none. */
+export const maskLabel = (item: CatalogItem): string => displayText(item.details?.maskVersion);
+/** The comma-separated medium types of the linked hardware2program, e.g. `TP1`; `""` when none. */
+export const mediumLabel = (item: CatalogItem): string => displayText(item.details?.mediumTypes);
 
 /** The text a row orders by for one column; an empty first part means absent. */
 function sortParts(item: CatalogItem, column: CatalogSortColumn, manufacturerNames: ReadonlyMap<string, string>): string[] {
@@ -34,6 +40,9 @@ function sortParts(item: CatalogItem, column: CatalogSortColumn, manufacturerNam
     case "manufacturer": return [manufacturerLabel(item, manufacturerNames)];
     case "number": return [orderNumberLabel(item)];
     case "application": return [displayText(item.details?.applicationName), displayText(item.details?.applicationVersion)];
+    case "section": return [sectionLabel(item)];
+    case "mask": return [maskLabel(item)];
+    case "medium": return [mediumLabel(item)];
   }
 }
 

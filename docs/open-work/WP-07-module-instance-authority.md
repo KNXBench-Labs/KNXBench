@@ -4,6 +4,8 @@
 
 **Evidence route:** clean-room observation is admitted by the owner (8 November 2026; [OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)). The full independently counted mapping witness is not yet accepted. The bounded source-only classification below does not supply missing/duplicate/nested/repeated authority or public ETS-observation provenance.
 
+**Mapping witness (17 November 2026):** the admitted mapping contract is now backed by a real, independently counted witness over eight ETS exports of one fictional project plus two modular corpus projects (42 + 32 + 75 module instances; 292 counted argument values, all matching `Start + Allocates·(k−1)`; RepeatIndex positions counted 149/149): [witness](../research/2026-11-17-wp07-module-mapping-witness.md). Acceptance of that witness, and with it the unblocking of the first deliverable, remains with the owner; the download-image arithmetic and bus behavior stay out of scope.
+
 ## Task
 
 Establish `ModuleDef`/`ModuleInstance`, repeat and number-offset identity

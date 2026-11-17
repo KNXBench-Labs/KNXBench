@@ -342,6 +342,25 @@ limits](2026-11-14-wp07-unresolved-module-owner.md) preserve the initial RED,
 corrected M3 discrimination and historical broader-suite deviation. No source-ID
 row or count changes; KL-68/PDB-01 boundaries and module write stops remain.
 
+## WP-07 mapping witness counted (17 November 2026)
+
+The admitted module-mapping contract now has a real, independently counted
+witness on the owner-admitted clean-room route (8 November 2026): eight ETS
+exports of one fictional modular project plus the two modular corpus demo
+projects — 42 + 32 + 75 module instances, 292 counted numeric argument values
+all matching `Allocator/@Start + Argument/@Allocates·(k−1)`, RepeatIndex
+positions counted 149/149, and 23 697/23 697 corpus-wide `BaseOffset`/
+`BaseNumber` argument references resolving. The application-program XML is
+byte-identical across all eight exports and its `ModuleDefs` section is
+byte-identical to the signed manufacturer package. The KNX specification
+corpus (179 volumes) contains no definition of these names, so the contract
+rests on observed ETS exports, not on the specification. Details and limits —
+download-image arithmetic and bus behavior out of scope — are in the
+[witness](../research/2026-11-17-wp07-module-mapping-witness.md). Owner
+acceptance of the witness — and with it the unblocking of WP-07's first
+deliverable and the WP-37 module-scoped-parameters dependency — is still
+pending; the package status stays evidence-gated until then.
+
 ## Reconciliation record (AR14D D2, 2026-10-04)
 
 The ledger was built from the routing table in `alpha-release-goal.md` §7–§8

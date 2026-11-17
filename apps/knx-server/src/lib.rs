@@ -127,6 +127,7 @@ mod function_routes;
 mod one_shot_activity;
 pub mod operation_recordings;
 mod programming_state;
+mod programming_reconcile;
 pub use programming_state::address_programming_settler;
 mod historical_import_log;
 #[cfg(test)]
@@ -256,6 +257,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(note_routes::router(state.clone()))
         .merge(function_routes::router())
         .merge(programming_state::router())
+        .merge(programming_reconcile::reconcile_router())
         .merge(parameter_editor_routes::router())
         .merge(catalogue_update_routes::router())
         .merge(catalogue_jobs.with_state(()))

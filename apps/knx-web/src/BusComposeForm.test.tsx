@@ -56,6 +56,7 @@ async function renderForm(
   contextStale = false,
   passiveSerial = false,
   actionSession: GroupActionSession = {kind:"ip",identity:{sessionId:1,serverIncarnation:"compose-test"}},
+  groupAddresses?: import("./bindings/GroupAddressNode").GroupAddressNode[],
 ) {
   host = document.createElement("div");
   document.body.appendChild(host);
@@ -69,6 +70,7 @@ async function renderForm(
         projectOpen={projectOpen}
         sessionClosed={sessionClosed}
         contextStale={contextStale}
+        groupAddresses={groupAddresses}
       />,
     );
   });
@@ -482,4 +484,69 @@ it("shows no TCP delivery note for a UDP send, which keeps the unbound route",as
     expect(apiMock.writeBusValue).toHaveBeenCalledTimes(1);expect(apiMock.writeBoundBusValue).not.toHaveBeenCalled();
     expect(host!.textContent).not.toContain("TCP");
   }finally{await act(async()=>root.unmount());}
+});
+
+describe("issue #51 destination combobox", () => {
+  const addresses = [
+    { id: 1, name: "Living room light", address: "1/1/1", range: null, dpts: ["DPST-1-1"], links: [] },
+    { id: 2, name: "Kitchen shutter", address: "2/3/4", range: null, dpts: [], links: [] },
+  ] as unknown as import("./bindings/GroupAddressNode").GroupAddressNode[];
+
+  it("keeps free-text entry for addresses outside the project and sends them unchanged", async () => {
+    const root = await renderForm("", { kind: "unknown" }, true, false, false, false, undefined, addresses);
+    try {
+      const input = host!.querySelector<HTMLInputElement>(".bus-compose-destination")!;
+      expect(input.getAttribute("role")).toBe("combobox");
+      await act(async () => {
+        setInputValue(".bus-compose-destination", "9/9/9");
+        setInputValue(".bus-compose-value", "on");
+      });
+      // Typing a non-project address opens the list with no matches but
+      // never blocks the free-text value.
+      await act(async () => input.focus());
+      expect(host!.querySelector(".ga-picker-empty")).not.toBeNull();
+      await clickSend();
+      expect(apiMock.writeBusValue).toHaveBeenCalledWith("9/9/9", null, "on", null);
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("searches by address and by name, and choosing an entry adopts its single DPT", async () => {
+    const root = await renderForm("", { kind: "unknown" }, true, false, false, false, undefined, addresses);
+    try {
+      const input = host!.querySelector<HTMLInputElement>(".bus-compose-destination")!;
+      await act(async () => { input.focus(); setInputValue(".bus-compose-destination", "kitchen"); });
+      const options = [...host!.querySelectorAll<HTMLElement>(".ga-picker-option")];
+      expect(options.map(o => o.textContent)).toHaveLength(1);
+      expect(options[0].textContent).toContain("2/3/4");
+      await act(async () => options[0].click());
+      expect(input.value).toBe("2/3/4");
+      // No DPT on that address: stays "unknown", the server resolves.
+      await act(async () => setInputValue(".bus-compose-value", "on"));
+      await clickSend();
+      expect(apiMock.writeBusValue).toHaveBeenCalledWith("2/3/4", null, "on", null);
+
+      // Choosing the typed address adopts its DPT.
+      await act(async () => { setInputValue(".bus-compose-destination", "1/1/1"); });
+      const opts = [...host!.querySelectorAll<HTMLElement>(".ga-picker-option")];
+      await act(async () => opts[0].click());
+      await act(async () => setInputValue(".bus-compose-value", "off"));
+      await clickSend();
+      expect(apiMock.writeBusValue).toHaveBeenLastCalledWith("1/1/1", "DPST-1-1", "off", null);
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("opens the list on focus and navigates it with the keyboard without sending", async () => {
+    const root = await renderForm("", { kind: "unknown" }, true, false, false, false, undefined, addresses);
+    try {
+      const input = host!.querySelector<HTMLInputElement>(".bus-compose-destination")!;
+      await act(async () => input.focus());
+      expect(host!.querySelector(".ga-picker-list")!.getAttribute("hidden")).toBeNull();
+      await act(async () => input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })));
+      await act(async () => input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+      // With an empty query the list is in project order; ArrowDown moves to
+      // the second entry and Enter chooses it.
+      expect(input.value).toBe("2/3/4");
+      expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+    } finally { await act(async () => root.unmount()); }
+  });
 });

@@ -5121,7 +5121,10 @@ describe("App — unapplied installation-instructions draft", () => {
       await act(async () => findButton("Open project…").click());
       await expandExplorer();
       await act(async () => treeLabel("Device D").click());
-      await act(async () => findButton(enMessages["deviceInstructions.tab"]).click());
+      await act(async () => {
+        const tabs = [...host!.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+        tabs.find((b) => b.textContent === enMessages["deviceInstructions.tab"])!.click();
+      });
       const field = host!.querySelector<HTMLTextAreaElement>(".device-instructions textarea")!;
       expect(field.value).toBe("Hint");
       await act(async () => {

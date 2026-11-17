@@ -99,6 +99,7 @@ mod service_control_routes;
 mod source_import_report_routes;
 pub use domain::*;
 
+mod devconf_routes;
 mod errors;
 mod flow;
 mod fs_routes;
@@ -126,8 +127,8 @@ pub use catalogue_jobs::{
 mod function_routes;
 mod one_shot_activity;
 pub mod operation_recordings;
-mod programming_state;
 mod programming_reconcile;
+mod programming_state;
 pub use programming_state::address_programming_settler;
 mod historical_import_log;
 #[cfg(test)]
@@ -255,6 +256,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
         .merge(instruction_routes::router(state.clone()))
         .merge(name_recipe_routes::router(state.clone()))
         .merge(note_routes::router(state.clone()))
+        .merge(devconf_routes::router(state.clone()))
         .merge(function_routes::router())
         .merge(programming_state::router())
         .merge(programming_reconcile::reconcile_router())

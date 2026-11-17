@@ -22,8 +22,14 @@ fn module_qualified_keys_decompose_into_module_ref_pairs() {
     assert_eq!(
         scoped,
         BTreeMap::from([
-            (("P-1_M-2_MI-3".to_string(), "R-7".to_string()), "on".to_string()),
-            (("P-1_M-2_MI-4".to_string(), "R-7".to_string()), "off".to_string()),
+            (
+                ("P-1_M-2_MI-3".to_string(), "R-7".to_string()),
+                "on".to_string()
+            ),
+            (
+                ("P-1_M-2_MI-4".to_string(), "R-7".to_string()),
+                "off".to_string()
+            ),
         ])
     );
 }
@@ -47,4 +53,3 @@ fn malformed_or_plain_keys_are_skipped_never_guessed() {
     ]));
     assert!(scoped.is_empty());
 }
-

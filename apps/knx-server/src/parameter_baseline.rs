@@ -7,7 +7,9 @@
 //! which values changed, and says when it cannot.
 
 use chrono::SecondsFormat;
-use knx_core::commissioning::parameter_baseline::{differences, scoped_differences, ParameterBaseline};
+use knx_core::commissioning::parameter_baseline::{
+    differences, scoped_differences, ParameterBaseline,
+};
 use knx_core::{DeviceId, Project};
 use serde::Serialize;
 
@@ -144,8 +146,7 @@ fn compare(
         .collect();
     match knx_productdb::dynamic::resolve_unscoped_values(conn, &program, &unscoped_chosen) {
         Ok(current) => {
-            let current_scoped =
-                knx_productdb::dynamic::resolve_scoped_values(chosen);
+            let current_scoped = knx_productdb::dynamic::resolve_scoped_values(chosen);
             LastDownloadDto {
                 state: LastDownloadState::Usable,
                 at: Some(baseline.at.to_rfc3339_opts(SecondsFormat::Millis, true)),

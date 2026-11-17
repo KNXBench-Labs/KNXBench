@@ -342,7 +342,7 @@ fn saved_instance_priority_snapshot_hash_unknown_shape_and_future_schema_refuse(
     let snapshot = seed(SavedInstancePriority::default());
     let conn = knx_store::open_and_migrate_in_memory().unwrap();
     knx_store::save_project(&conn, &snapshot.project).unwrap();
-    conn.execute_batch("DROP TABLE device_parameter_baseline_scoped_value; DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority; PRAGMA user_version=16;")
+    conn.execute_batch("DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; DROP TABLE group_address_description; DROP TABLE com_object_priority_edit; DROP TABLE com_object_saved_priority; DROP TABLE device_config_profile; DROP TABLE device_parameter_baseline_scoped_value; PRAGMA user_version = 16;")
         .unwrap();
     let original = conn.serialize(rusqlite::MAIN_DB).unwrap().to_vec();
     assert!(NativeSnapshot::decode(&original, &history::image_hash(&original)).is_ok());
@@ -350,7 +350,7 @@ fn saved_instance_priority_snapshot_hash_unknown_shape_and_future_schema_refuse(
     for ddl in [
         "CREATE TABLE unexpected (id INTEGER) STRICT;",
         "ALTER TABLE com_object_instance ADD COLUMN unexpected TEXT;",
-        "PRAGMA user_version=18;",
+        "PRAGMA user_version = 18;",
     ] {
         let mut bad = rusqlite::Connection::open_in_memory().unwrap();
         bad.deserialize_read_exact(

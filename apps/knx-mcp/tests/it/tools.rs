@@ -815,7 +815,7 @@ fn an_older_project_file_is_served_and_never_upgraded() {
          DROP TABLE project_history_state;
          DROP TABLE project_history_stack;
          DROP TABLE project_history_version;
-         DROP TABLE project_history_context;
+         DROP TABLE project_history_context; DROP TABLE device_config_profile; DROP TABLE device_parameter_baseline_scoped_value;
          ALTER TABLE line DROP COLUMN model_position;
          ALTER TABLE group_address DROP COLUMN dpt_state;
              ALTER TABLE group_address DROP COLUMN dpt_value;

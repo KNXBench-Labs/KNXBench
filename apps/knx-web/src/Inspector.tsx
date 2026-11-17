@@ -12,6 +12,7 @@ import { emitAchievementEvent } from "./achievementEvents";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import ComObjectTable from "./ComObjectTable";
+import DeviceConfigPanel from "./DeviceConfigPanel";
 import { useComMutation } from "./ComMutationBoundary";
 import { useUiLanguage } from "./uiLanguage";
 import { DPT_OPTIONS, dptDisplay, dptEntry, retainedDptOptions } from "./dptLabels";
@@ -1057,11 +1058,12 @@ export function DeviceWorkspace(props: {
   const tabLabels: Record<DeviceTab, string> = {
     objects: t("inspector.communicationObjects"), parameters: t("workbench.parameters"), identity: t("deviceIdentity.tab"),
     diagnostics: t("parameters.diagnosticsTab"), restricted: t("parameters.restrictedTab"), instructions: t("deviceInstructions.tab"),
+    config: t("deviceConfig.tab"),
   };
   const tabs = DEVICE_TABS.map((name) => tabLabels[name]);
   // The instructions editor reads on mount, so it mounts on the tab's first
   // visit and then stays (hidden) so its draft survives other tabs.
-  const instructionsTab = tabs.length - 1;
+  const instructionsTab = tabs.length - 2; // the configuration module tab is last
   const [instructionsOpened, setInstructionsOpened] = useState(false);
   useEffect(() => { if (tab === instructionsTab) setInstructionsOpened(true); }, [tab, instructionsTab]);
   // Issue #40: the tree's pending flags, shown where the user edits; a reloaded
@@ -1141,6 +1143,9 @@ export function DeviceWorkspace(props: {
     <div role="tabpanel" id={`device-panel-${detail.id}-${instructionsTab}`} aria-labelledby={`device-tab-${detail.id}-${instructionsTab}`} hidden={tab !== instructionsTab} tabIndex={0}>
       {(instructionsOpened || tab === instructionsTab) && <DeviceInstructionsPanel deviceId={detail.id} tree={tree}
         onApplied={onApplied} onDirtyChange={props.onInstructionDraftChange} />}
+    </div>
+    <div role="tabpanel" id={`device-panel-${detail.id}-config`} aria-labelledby={`device-tab-${detail.id}-${tabs.length - 1}`} hidden={tab !== tabs.length - 1} tabIndex={0}>
+      {tab === tabs.length - 1 && <DeviceConfigPanel deviceId={detail.id} tree={tree} onApplied={onApplied} />}
     </div>
   </section>;
 }

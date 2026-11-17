@@ -186,8 +186,7 @@ fn a_native19_file_migrates_additively_and_every_baseline_starts_unknown() {
     {
         let conn = Connection::open(&path).unwrap();
         conn.execute_batch(
-            "DROP TABLE device_parameter_baseline_scoped_value; DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline;
-             PRAGMA user_version = 19;",
+            "DROP TABLE device_config_profile; DROP TABLE device_parameter_baseline_scoped_value; DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; PRAGMA user_version = 19;",
         )
         .unwrap();
     }
@@ -207,6 +206,7 @@ fn a_native19_file_migrates_additively_and_every_baseline_starts_unknown() {
     assert_eq!(std::fs::read(&path).unwrap(), bytes, "read-only open wrote");
 
     let conn = knx_store::open_existing_and_migrate(&path).unwrap();
+    assert_eq!(user_version(&conn), knx_store::CURRENT_SCHEMA_VERSION);
     assert_eq!(user_version(&conn), 22);
     assert_eq!(knx_store::CURRENT_SCHEMA_VERSION, 22);
     for table in [
@@ -244,13 +244,13 @@ fn a_baseline_only_write_brings_a_native19_file_to_the_current_schema_first() {
     {
         let conn = Connection::open(&path).unwrap();
         conn.execute_batch(
-            "DROP TABLE device_parameter_baseline_scoped_value; DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline;
-             PRAGMA user_version = 19;",
+            "DROP TABLE device_config_profile; DROP TABLE device_parameter_baseline_scoped_value; DROP TABLE device_object_flags_baseline; DROP TABLE device_link_baseline_link; DROP TABLE device_link_baseline; DROP TABLE device_parameter_baseline_value; DROP TABLE device_parameter_baseline; PRAGMA user_version = 19;",
         )
         .unwrap();
     }
     let conn = history::open_editor_store(&path, false).unwrap();
     history::write_parameter_baselines(&conn, &[record(1, 2)]).unwrap();
+    assert_eq!(user_version(&conn), knx_store::CURRENT_SCHEMA_VERSION);
     assert_eq!(user_version(&conn), 22);
     drop(conn);
     assert_eq!(stored(&path).get(DeviceId(1)), Some(&baseline(2)));
@@ -273,9 +273,10 @@ fn a_future_native_store_is_refused_like_every_schema_step() {
             matches!(
                 refused,
                 Err(knx_store::MigrationError::FutureSchemaVersion {
-                    found: 23,
-                    supported: 22
-                })
+                    found: f,
+                    supported: s,
+                }) if f == knx_store::CURRENT_SCHEMA_VERSION + 1
+                    && s == knx_store::CURRENT_SCHEMA_VERSION
             ),
             "{refused:?}"
         );
@@ -713,6 +714,7 @@ fn a_version_stored_by_an_older_schema_restores_and_leaves_the_baselines_alone()
     let path = dir.path().join("predecessor.knxdb");
     std::fs::copy(source, &path).unwrap();
     let conn = knx_store::open_existing_and_migrate(&path).unwrap();
+    assert_eq!(user_version(&conn), knx_store::CURRENT_SCHEMA_VERSION);
     assert_eq!(user_version(&conn), 22);
     history::write_parameter_baselines(&conn, &[record(1, 2)]).unwrap();
     let editor = history::load_editor(&conn).unwrap().unwrap();

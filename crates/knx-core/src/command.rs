@@ -434,6 +434,7 @@ pub enum Command {
     /// topology position so undo restores byte-for-byte ordering.
     RestoreDevice {
         device: DeviceInstance,
+        config_profile: Option<crate::devconf::DeviceConfigProfile>,
         com_objects: Vec<ComObjectInstance>,
         program_defaults: Vec<(ComObjectInstanceId, ProgramDefaults)>,
         installation: InstallationId,
@@ -634,6 +635,18 @@ pub enum Command {
         id: crate::ProjectNoteId,
         position: usize,
     },
+    /// Stores or replaces one device's configuration profile (ADR-0175
+    /// decision 5). The profile is validated before it is applied; an
+    /// existing profile for the device is replaced, and its previous value
+    /// is carried by the inverse so undo restores it exactly.
+    SetDeviceConfigProfile {
+        profile: crate::devconf::DeviceConfigProfile,
+    },
+    /// Removes one device's configuration profile. The inverse restores the
+    /// exact removed profile.
+    RemoveDeviceConfigProfile {
+        device: DeviceId,
+    },
     /// ADR-0124. `function.id` and every member id are pre-allocated by the
     /// caller (`IdAllocators::next_function_id`/`next_function_member_id`).
     /// The Function is appended; its details and members pass edit
@@ -701,6 +714,10 @@ pub enum CommandError {
     NotesOrphaned(Vec<crate::note::OrphanedNote>),
     NoteNotFound(crate::ProjectNoteId),
     NotePosition(usize),
+    /// The command names a profile that fails project-side validation.
+    InvalidConfigProfile(crate::devconf::ProfileError),
+    /// No configuration profile is stored for this device.
+    ConfigProfileNotFound(DeviceId),
     DeviceNotFound(DeviceId),
     /// Coupler evidence names a different product than the device now has.
     CouplerEvidenceMismatch {
@@ -908,6 +925,10 @@ impl fmt::Display for CommandError {
             CommandError::Validation(e) => write!(f, "{e}"),
             CommandError::InvalidName(e) => write!(f, "{e}"),
             CommandError::InvalidNote(e) => write!(f, "note refused: {e}"),
+            CommandError::InvalidConfigProfile(e) => write!(f, "configuration profile refused: {e}"),
+            CommandError::ConfigProfileNotFound(device) => {
+                write!(f, "device {device} holds no configuration profile")
+            }
             CommandError::NotesOrphaned(notes) => {
                 let count = notes.len();
                 let noun = if count == 1 {
@@ -2180,6 +2201,39 @@ impl Command {
             Command::MoveFunction { id, location } => {
                 function_commands::relocate(project, *id, *location)
             }
+            Command::SetDeviceConfigProfile { profile } => {
+                if project.devices.get(profile.device).is_none() {
+                    return Err(CommandError::DeviceNotFound(profile.device));
+                }
+                if let Err(e) = crate::devconf::DeviceConfigProfile::new(
+                    profile.device,
+                    &profile.module_id,
+                    &profile.module_version,
+                    &profile.module_sha256,
+                    profile.document.clone(),
+                ) {
+                    return Err(CommandError::InvalidConfigProfile(e));
+                }
+                let previous = project.devices.config_profile(profile.device).cloned();
+                project.devices.set_config_profile(profile.clone());
+                Ok(match previous {
+                    Some(previous) => Command::SetDeviceConfigProfile { profile: previous },
+                    None => Command::RemoveDeviceConfigProfile {
+                        device: profile.device,
+                    },
+                })
+            }
+            Command::RemoveDeviceConfigProfile { device } => {
+                let device = *device;
+                if project.devices.get(device).is_none() {
+                    return Err(CommandError::DeviceNotFound(device));
+                }
+                let previous = project
+                    .devices
+                    .remove_config_profile(device)
+                    .ok_or(CommandError::ConfigProfileNotFound(device))?;
+                Ok(Command::SetDeviceConfigProfile { profile: previous })
+            }
             Command::SetDeviceProgramming { device, change } => {
                 programming_commands::set(project, *device, *change)
             }
@@ -3036,6 +3090,7 @@ impl Command {
                 device,
                 com_objects,
                 program_defaults,
+                config_profile,
                 installation,
                 line,
                 position,
@@ -3047,6 +3102,7 @@ impl Command {
                 let line = *line;
                 let position = *position;
                 let device_id = device.id;
+                let config_profile = config_profile.clone();
                 let installation = project
                     .installations
                     .iter_mut()
@@ -3075,6 +3131,9 @@ impl Command {
                 }
                 for (com_id, defaults) in program_defaults {
                     project.devices.set_program_defaults(com_id, defaults);
+                }
+                if let Some(profile) = config_profile {
+                    project.devices.set_config_profile(profile);
                 }
                 project.devices.insert(device);
                 target.insert(position, device_id);
@@ -3126,6 +3185,7 @@ impl Command {
                 let installation = &mut project.installations[installation_index];
                 let installation_id = installation.id;
                 let (line, position) = remove_device_from_topology(installation, id)?;
+                let config_profile = project.devices.remove_config_profile(id);
                 let device = project.devices.remove(id).unwrap();
                 // `remove_com_object` also drops the com object's
                 // `program_defaults` entry (ADR-0027), so the inverse has to
@@ -3149,6 +3209,7 @@ impl Command {
                     device,
                     com_objects,
                     program_defaults,
+                    config_profile,
                     installation: installation_id,
                     line,
                     position,

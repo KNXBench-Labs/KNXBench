@@ -5,6 +5,7 @@ use std::fmt;
 pub mod activity_history;
 pub mod building;
 pub mod command_sync;
+mod devconf_profile;
 pub mod devices;
 mod functions;
 pub mod group;
@@ -59,6 +60,9 @@ pub enum StoreError {
     Sqlite(rusqlite::Error),
     /// Native note content, target, ordering or allocator metadata is invalid.
     NoteIntegrity(String),
+    /// Native device configuration profile content or references are invalid
+    /// (ADR-0175 decision 5).
+    ProfileIntegrity(String),
     /// Native Function content, references, ordering or allocators are
     /// invalid (ADR-0124).
     FunctionIntegrity(String),
@@ -135,6 +139,12 @@ impl fmt::Display for StoreError {
             }
             StoreError::NoteIntegrity(reason) => {
                 write!(f, "native project note integrity refused: {reason}")
+            }
+            StoreError::ProfileIntegrity(reason) => {
+                write!(
+                    f,
+                    "native device configuration profile integrity refused: {reason}"
+                )
             }
             StoreError::UnknownBuildingPartType(kind) => write!(
                 f,

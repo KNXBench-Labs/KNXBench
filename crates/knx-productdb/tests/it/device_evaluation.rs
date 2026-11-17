@@ -3,10 +3,10 @@
 //! `device_evaluation` (ADR-0090) and the `ValueStatus` classification the
 //! adapter reports as visibility.
 
+use knx_core::{DeviceId, ModuleInstance, ModuleInstanceId, SourceRef};
 use knx_productdb::device_evaluation::{
     evaluate_device, resolve_mi_authority, EvaluationFinding, MiAuthority, ValueStatus,
 };
-use knx_core::{DeviceId, ModuleInstance, ModuleInstanceId, SourceRef};
 use rusqlite::Connection;
 
 /// `P-1` (Mode, Restriction 0/1) shows `P-2` when 1 and `P-3` when 0. One

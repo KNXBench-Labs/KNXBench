@@ -97,6 +97,10 @@ pub(super) fn candidates(cmd: &Command, project: &Project, out: &mut BTreeSet<De
         | Command::RemoveProjectNote { .. }
         | Command::ReplaceProjectNote { .. }
         | Command::MoveProjectNote { .. }
+        // A device configuration profile is device-local data, not bus
+        // programming content.
+        | Command::SetDeviceConfigProfile { .. }
+        | Command::RemoveDeviceConfigProfile { .. }
         | Command::CreateFunction { .. }
         | Command::DeleteFunction { .. }
         | Command::RestoreFunction { .. }

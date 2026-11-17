@@ -708,6 +708,7 @@ export const messages = {
   "gaWorkspace.newInRange.cancel": "Cancel",
   "gaWorkspace.newInRange.create": "Create",
   "gaWorkspace.all": "All ranges",
+  "gaWorkspace.sendValue": "Send value… (bus monitor)",
   "gaWorkspace.level": "Range level {level}",
   "gaWorkspace.problems": "{count} presentation findings — data retained",
   "gaWorkspace.scopeUnavailable": "The range scope is unavailable or ambiguous; all retained rows are shown.",

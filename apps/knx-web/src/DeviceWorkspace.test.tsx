@@ -120,7 +120,7 @@ async function render(product: DeviceProductNode, selectProductTab = true, comOb
 it("keeps communication editing and parameters reachable in the central device tabs", async () => {
   const { host, tabs, cleanup } = await render(NO_REFERENCE, false);
   expect(host.textContent).toContain("Example");
-  expect(tabs.map((b) => b.textContent)).toEqual(["Communication objects", "Parameters", "Product data", "Diagnostics", "Manufacturer fields", "Installation instructions"]);
+  expect(tabs.map((b) => b.textContent)).toEqual(["Communication objects", "Parameters", "Product data", "Diagnostics", "Manufacturer fields", "Installation instructions", "Configuration"]);
   await act(async () => tabs[1].click());
   expect(tabs[1].getAttribute("aria-selected")).toBe("true");
   expect(api.deviceParameters).toHaveBeenCalled();
@@ -166,8 +166,8 @@ it("separates grouped diagnostics and restricted fields without refetching on ta
   expect([...visible().querySelectorAll<HTMLInputElement>("input")].every((input) => input.disabled)).toBe(true);
   expect(api.deviceParameters).toHaveBeenCalledTimes(1);
   expect(api.setParameterValue).not.toHaveBeenCalled();
-  await act(async () => tabs[5].click());
-  await act(async () => tabs[5].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+  await act(async () => tabs[6].click());
+  await act(async () => tabs[6].dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
   expect(tabs[0].getAttribute("aria-selected")).toBe("true");
   await cleanup();
 });
@@ -432,9 +432,9 @@ it("moves both ways with the arrow keys and reaches the last tab with End", asyn
   await press(2, "ArrowLeft"); expect(selected()).toBe(1);
   await press(1, "ArrowLeft"); expect(selected()).toBe(0);
   // Wrapping and End include both inspection tabs and the instructions tab.
-  await press(0, "ArrowLeft"); expect(selected()).toBe(5);
-  await press(5, "ArrowRight"); expect(selected()).toBe(0);
-  await press(0, "End"); expect(selected()).toBe(5);
+  await press(0, "ArrowLeft"); expect(selected()).toBe(6);
+  await press(6, "ArrowRight"); expect(selected()).toBe(0);
+  await press(0, "End"); expect(selected()).toBe(6);
   await press(2, "Home"); expect(selected()).toBe(0);
   await cleanup();
 });
@@ -443,7 +443,7 @@ it("puts the product identity in its own tab panel, alongside the other two", as
   const { host, tabs, cleanup } = await render({ product_ref: "M-00FA_H-EX42-1_P-1", program_ref: "M-00FA_H-EX42-1_HP-1", catalog: catalog(), resolution: "Resolved" }, false);
   const identity = host.querySelector<HTMLElement>(".device-identity")!;
   const panels = [...host.querySelectorAll<HTMLElement>('[role="tabpanel"]')];
-  expect(panels).toHaveLength(6);
+  expect(panels).toHaveLength(7);
   expect(panels[2].contains(identity)).toBe(true);
   expect(panels[2].hidden).toBe(true);
   expect(tabs[2].getAttribute("aria-controls")).toBe(panels[2].id);
@@ -596,12 +596,12 @@ it("gives every tab panel its own tab stop, so a panel with nothing focusable st
   // this component.
   const { host, tabs, cleanup } = await render(NO_REFERENCE);
   const panels = [...host.querySelectorAll<HTMLElement>('[role="tabpanel"]')];
-  expect(panels.map((p) => p.tabIndex)).toEqual([0, 0, 0, 0, 0, 0]);
+  expect(panels.map((p) => p.tabIndex)).toEqual([0, 0, 0, 0, 0, 0, 0]);
   expect(panels[2].querySelectorAll('a[href], button, input, select, textarea, summary, [tabindex]')).toHaveLength(0);
   panels[2].focus();
   expect(document.activeElement).toBe(panels[2]);
   // The tablist itself still has exactly one stop, the selected tab.
-  expect(tabs.map((b) => b.tabIndex)).toEqual([-1, -1, 0, -1, -1, -1]);
+  expect(tabs.map((b) => b.tabIndex)).toEqual([-1, -1, 0, -1, -1, -1, -1]);
   await cleanup();
 });
 
@@ -747,11 +747,11 @@ it("summarises the pending parts under the heading in display order, and marks t
   expect(view.note(tabs[0])).toBe("Not programmed yet: Group addresses");
   expect(view.note(tabs[1])).toBe("Not programmed yet: Parameters");
   expect(tabs[0].title).toBe("Not programmed yet: Group addresses");
-  expect(tabs.slice(2).map(view.note)).toEqual([null, null, null, null]);
-  expect(tabs.map((tab) => tab.querySelector(".device-pending-dot") !== null)).toEqual([true, true, false, false, false, false]);
+  expect(tabs.slice(2).map(view.note)).toEqual([null, null, null, null, null]);
+  expect(tabs.map((tab) => tab.querySelector(".device-pending-dot") !== null)).toEqual([true, true, false, false, false, false, false]);
   // The tab's name (its visible content) is unchanged; the marker is a description.
   expect(tabs.map((tab) => [...tab.childNodes].filter((node) => !(node instanceof HTMLElement && node.hidden)).map((node) => node.textContent).join("")))
-    .toEqual(["Communication objects", "Parameters", "Product data", "Diagnostics", "Manufacturer fields", "Installation instructions"]);
+    .toEqual(["Communication objects", "Parameters", "Product data", "Diagnostics", "Manufacturer fields", "Installation instructions", "Configuration"]);
   expect(tabs[1].querySelector(".device-pending-dot")?.getAttribute("aria-hidden")).toBe("true");
   await view.cleanup();
 });
@@ -775,7 +775,7 @@ it("shows no pending line or tab marker when nothing is pending or the state is 
     const view = await renderPending(pendingTree(state));
     expect(view.summary()).toBeNull();
     expect(view.host.querySelector(".device-pending-dot")).toBeNull();
-    expect(view.tabs().map(view.note)).toEqual([null, null, null, null, null, null]);
+    expect(view.tabs().map(view.note)).toEqual([null, null, null, null, null, null, null]);
     expect(view.tabs().every((tab) => !tab.hasAttribute("title"))).toBe(true);
     await view.cleanup();
   }

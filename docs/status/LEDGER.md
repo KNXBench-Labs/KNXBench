@@ -369,6 +369,21 @@ WP-37's module-scoped-parameters item can now build on it. Not claimed:
 download-image arithmetic on the wire, bus behavior, device readback, and any
 bus/device write, release or deployment authority.
 
+## WP-07 authority wired into all consumers (17 November 2026)
+
+ADR-0177's single reader `knx_core::ModuleInstance::instance_counter()` is
+now used by evaluation (`resolve_mi_authority` + Pass-B), parameter writes
+(the scoped-owner check) and object reconciliation (`owning_instance`),
+plus identity-keyed module comparison (`<ets_id>#k=<n>`). When several
+instances share the `RefId`, the program-side `Module/@Id`'s own `MI-<k>`
+tail picks exactly that instance; missing/malformed/unmatched counters keep
+the refuse/undetermined semantics. Branch `work/wp07-evidence-witness-20261117`,
+pushed as `32c4b00d1`. Tests: knx-core 824, knx-productdb 941 lib + 1094 it,
+knx-server 1076 lib + 950 it, knx-etsproj 78, knx-diff 57+17, knx-app
+comparison 9/9; layering/headers/anchors/ledger/local-info all pass. Not
+claimed: download-image arithmetic on the wire, bus behavior, device
+readback, bus/device writes, release or deployment authority.
+
 ## Reconciliation record (AR14D D2, 2026-10-04)
 
 The ledger was built from the routing table in `alpha-release-goal.md` §7–§8

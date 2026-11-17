@@ -25,7 +25,6 @@ ring.workspace = true
 flate2.workspace = true
 knx-app.workspace = true
 knx-core.workspace = true
-knx-devconf.workspace = true
 knx-csv.workspace = true
 knx-diff.workspace = true
 knx-etsproj.workspace = true

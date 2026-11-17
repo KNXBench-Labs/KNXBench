@@ -184,7 +184,7 @@ mod tests {
 
     fn project_with_device(device: u32) -> knx_core::Project {
         use knx_core::{
-            Area, AreaId, CommissioningState, CompletionStatus, Installation, InstallationId, Line,
+            Area, AreaId, CompletionStatus, Installation, InstallationId, Line,
             LineId, SourceRef, Topology,
         };
         let mut project = knx_core::Project::new(knx_core::Language("en".into()));

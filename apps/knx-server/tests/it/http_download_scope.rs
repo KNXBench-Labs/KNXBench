@@ -357,6 +357,37 @@ async fn nothing_pending_builds_no_plan_and_drops_the_shown_one() {
 }
 
 #[tokio::test]
+async fn a_nothing_pending_answer_is_followed_by_the_explicit_complete_plan() {
+    let dir = tempfile::tempdir().unwrap();
+    // Fully programmed (0b11111): the `changes` request has nothing to write
+    // and is refused; the same state's explicit complete request still plans.
+    // #52 acceptance chain: the offer is an answer, not a dead end.
+    let state = server(dir.path(), 0b11111);
+    let (status, body) = post(&state, "/api/device-download/plan", changes()).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert_eq!(body["kind"], "downloadNothingPending", "{body}");
+    assert!(body.get("planId").is_none(), "{body}");
+    assert!(state.device_download_plan.lock().unwrap().is_none());
+    let (status, body) = post(
+        &state,
+        "/api/device-download/plan",
+        json!({ "address": TARGET }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["partial"], false, "{body}");
+    assert_eq!(body["scope"], "complete", "{body}");
+    assert_eq!(body["scopeFromChanges"], false, "{body}");
+    assert!(!body.get("planId").unwrap().is_null(), "{body}");
+    // The usual safety acknowledgement stays on the complete plan.
+    assert_eq!(
+        body["confirmationPhrase"],
+        format!("I confirm download to {TARGET}"),
+        "{body}"
+    );
+}
+
+#[tokio::test]
 async fn changes_and_an_explicit_partial_together_are_refused() {
     let dir = tempfile::tempdir().unwrap();
     let state = server(dir.path(), 0);

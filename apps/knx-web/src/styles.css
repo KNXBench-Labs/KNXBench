@@ -4138,6 +4138,12 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .bus-compose-sent { color: var(--knx-success-color); font-family: var(--knx-font-mono); }
 .bus-compose-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
 .bus-compose-fields label { display: flex; flex-direction: column; gap: 5px; }
+/* Issue #51: the destination combobox wraps input + dropdown in a span so the
+   listbox can overlay the fields below instead of stretching the flex row. */
+.bus-compose-destination-picker { display: grid; gap: 4px; position: relative; min-width: 14rem; }
+.bus-compose-destination-picker > input { width: 100%; box-sizing: border-box; }
+.bus-compose-destination-picker .ga-picker-list { position: absolute; z-index: 5; left: 0; right: 0; top: 100%; }
+.ga-send-action { margin: 12px 0 0; }
 .bus-compose-input-format { min-width: 210px; }
 .bus-compose-fields .bus-compose-dpt-field { width: min(30rem, 100%); min-width: 0; }
 .bus-compose-dpt { width: 100%; min-width: 0; }

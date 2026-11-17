@@ -331,7 +331,7 @@ async fn literal_axis_http_empty_missing_and_translated_placeholder_have_distinc
 }
 
 #[tokio::test]
-async fn literal_axis_http_text_reference_keeps_its_own_source_caption() {
+async fn literal_axis_http_text_reference_resolves_the_parameter_not_the_source_caption() {
     let source = axis_source().replace(
         "Text=\"Upper bank\"",
         "Text=\"Upper bank\" TextParameterRefId=\"R-T\"",
@@ -343,14 +343,21 @@ async fn literal_axis_http_text_reference_keeps_its_own_source_caption() {
         Some("de-DE"),
     )
     .await;
+    // ADR-0177: a declared `TextParameterRefId` replaces the caption with the
+    // parameter's value; the translation and literal source text are not shown.
     assert_eq!(
         dto["sections"][0]["groupLayouts"][0]["rows"][0]["text"],
-        "Upper bank"
+        "Ref default"
     );
     assert_eq!(
         dto["sections"][0]["groupLayouts"][0]["rows"][0]["textParameterRefId"],
         "R-T"
     );
+    assert_eq!(
+        dto["sections"][0]["groupLayouts"][0]["rows"][0]["textFill"]["source"],
+        json!("ProductDefault")
+    );
+    // Axes without the reference keep their translated captions.
     assert_eq!(
         dto["sections"][0]["groupLayouts"][0]["columns"][0]["text"],
         "Auswahl"

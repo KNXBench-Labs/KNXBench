@@ -107,6 +107,9 @@ pub struct GridAxisCaptions {
 }
 
 /// Select each source-bound program axis's own `Text`, never `Value` or another owner.
+/// ADR-0177: an axis declaring `TextParameterRefId` is not translated — its
+/// caption resolves from the referenced parameter — so the candidate set is
+/// limited to axes without a reference.
 /// Seek distinct language keys through the existing (scope, scope_id, language,
 /// ref_id, attribute_name) index, charging each key before retaining it. Each
 /// candidate-axis probe and selected payload read is an exact primary-key lookup;
@@ -124,6 +127,15 @@ pub fn parameter_grid_axis_captions(
     let (Some(language), Some(axes)) = (language, layout.literal_grid_axes(program)) else {
         return Ok(result);
     };
+    // ADR-0177: only axes without a declared `TextParameterRefId` are
+    // translation candidates; a referenced axis's caption resolves from the
+    // parameter instead.
+    let axes: Vec<&String> = layout
+        .program_grids()
+        .flat_map(|grid| grid.rows.iter().chain(grid.columns.iter()))
+        .filter(|axis| axis.text_parameter_ref_id.is_none() && axes.contains(&axis.id))
+        .map(|axis| &axis.id)
+        .collect();
     if axes.is_empty() {
         return Ok(result);
     }
@@ -161,13 +173,13 @@ pub fn parameter_grid_axis_captions(
         // normalized-table growth cannot turn key enumeration into unbounded work.
         let candidate = budget.copy_text(candidate)?;
         if super::best_matching_language(language, &[candidate.as_str()]).is_some() {
-            for id in axes {
+            for id in &axes {
                 let mut rows = candidate_axis.query(rusqlite::params![program, candidate, id])?;
                 if rows.next()?.is_some() {
                     budget.admit_copy(id)?;
                     budget.admit_copy(&candidate)?;
                     languages
-                        .entry(id.clone())
+                        .entry((*id).clone())
                         .or_default()
                         .push(candidate.clone());
                 }

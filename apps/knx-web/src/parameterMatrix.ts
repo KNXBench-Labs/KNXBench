@@ -119,9 +119,9 @@ export function planParameterMatrix(layout: ParameterGroupLayout,
     templateColumns: [...(rowHeaderTrack ? [ROW_HEADER] : []),
       ...layout.columns.map(column => `minmax(${MIN_COLUMN}, ${weight(column.width)}fr)`)].join(" "),
     columnHeaders: layout.columns.flatMap((column, index) => captioned(column.text)
-      ? [{ key: `column:${column.id}`, text: column.text!, area: area(1, firstColumn + index) }] : []),
+      ? [{ key: `column:${column.id}`, text: column.text!, ...(column.textFill ? { textFill: column.textFill } : {}), area: area(1, firstColumn + index) }] : []),
     rowHeaders: layout.rows.flatMap((row, index) => captioned(row.text)
-      ? [{ key: `row:${row.id}`, text: row.text!, area: area(starts[index], 1, depth[index]) }] : []),
+      ? [{ key: `row:${row.id}`, text: row.text!, ...(row.textFill ? { textFill: row.textFill } : {}), area: area(starts[index], 1, depth[index]) }] : []),
     labels, fields, unplaced, unplacedHeading,
   };
 }

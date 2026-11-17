@@ -332,12 +332,18 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                         Some(Role::Rows(_) | Role::Columns(_))
                     )
                     && !path.contains(&"Repeat")
-                    && attr.evidence_value("TextParameterRefId").is_none()
-                    && attr.evidence_value("Text").is_some_and(literal_caption)
+                    // ADR-0177: an axis declaring `TextParameterRefId` is a
+                    // parameter-driven caption candidate too, not only a
+                    // translation candidate; the attribute whitelist below
+                    // admits the reference, so the axis identity stays bound.
+                    && attr.evidence_value("Text").is_none_or(literal_caption)
                     && attr.names().all(|name| {
                         name == "xmlns"
                             || name.starts_with("xmlns:")
-                            || matches!(name, "Id" | "Text" | "Width" | "CollapseIfEmpty")
+                            || matches!(
+                                name,
+                                "Id" | "Text" | "TextParameterRefId" | "Width" | "CollapseIfEmpty"
+                            )
                     })
                 {
                     if let Some(id) = attr.evidence_value("Id") {

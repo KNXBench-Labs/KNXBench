@@ -896,7 +896,7 @@ mod tests {
                 },
             ),
         ]);
-        let activation = evaluate(&trees, &ValueMap::default());
+        let _activation = evaluate(&trees, &ValueMap::default());
         let nodes = run(&trees, &keys, &instances, &HashMap::new(), &[1, 2]);
         // Both expansions' `Module/@Id`s end with the same RefId
         // ("A_MD-1_M-1_MI-1" / "A_MD-1_M-1_MI-2" both end with "_MD-1_M-1"),

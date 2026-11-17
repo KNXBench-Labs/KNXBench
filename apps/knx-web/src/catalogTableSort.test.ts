@@ -83,6 +83,17 @@ describe("sortCatalogItems", () => {
     expect(rows[0].name).toBe("  Beta ");
   });
 
+  it("sorts section, mask and medium with absent values last in both directions", () => {
+    const detail = (over: Record<string, unknown>) => ({ applicationProgramId: "A", applicationName: null,
+      applicationVersion: null, catalogSectionId: null, sourceNames: [], ...over });
+    const rows = [make("none"), make("sec", { details: detail({ catalogSectionName: "Actuators" }) }),
+      make("mask", { details: detail({ maskVersion: "MV-0701" }) }), make("med", { details: detail({ mediumTypes: "TP1" }) })];
+    // Only "section" has a value on "sec"; the other rows are empty for that column and tie on the id.
+    expect(ids(sortCatalogItems(rows, { column: "section", descending: false }, "en", none))).toEqual(["sec", "mask", "med", "none"]);
+    expect(ids(sortCatalogItems(rows, { column: "mask", descending: true }, "en", none))).toEqual(["mask", "med", "none", "sec"]);
+    expect(ids(sortCatalogItems(rows, { column: "medium", descending: false }, "en", none))).toEqual(["med", "mask", "none", "sec"]);
+  });
+
   it("never mutates or reuses its input", () => {
     const rows = Object.freeze([make("b", { name: "B" }), make("a", { name: "A" })]);
     const out = sortCatalogItems(rows, { column: "product", descending: false }, "en", none);

@@ -356,10 +356,18 @@ byte-identical to the signed manufacturer package. The KNX specification
 corpus (179 volumes) contains no definition of these names, so the contract
 rests on observed ETS exports, not on the specification. Details and limits —
 download-image arithmetic and bus behavior out of scope — are in the
-[witness](../research/2026-11-17-wp07-module-mapping-witness.md). Owner
-acceptance of the witness — and with it the unblocking of WP-07's first
-deliverable and the WP-37 module-scoped-parameters dependency — is still
-pending; the package status stays evidence-gated until then.
+[witness](../research/2026-11-17-wp07-module-mapping-witness.md).
+
+## WP-07 unblocked by owner decision (17 November 2026)
+
+The owner accepted the counted witness above as the evidence for WP-07's first
+deliverable and lifted the "Blocked: evidence" gate
+([OWN-01](../open-work/OWN-01-owner-decisions.md#decision-recorded--17-november-2026)).
+WP-07 is open implementation work again: next step is reuse of the accepted
+mapping authority in evaluation, parameter writes and object reconciliation;
+WP-37's module-scoped-parameters item can now build on it. Not claimed:
+download-image arithmetic on the wire, bus behavior, device readback, and any
+bus/device write, release or deployment authority.
 
 ## Reconciliation record (AR14D D2, 2026-10-04)
 

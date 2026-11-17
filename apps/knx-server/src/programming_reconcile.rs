@@ -22,9 +22,14 @@ use crate::{AppState, SharedState};
 /// One field of the accepted report, bounds-checked like the receipt parser.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct ReportProgram {
+// Fields are parsed for diagnostics, not read by reconciliation.
+#[allow(dead_code)]
+pub(crate) struct ReportProgram {
     id: String,
     source_sha256: Option<String>,
+    // Retained although unread today: the report format forwards these and
+    // the reconciliation log prints the raw report; dropping them would
+    // silently discard diagnostic data (never silently discard information).
     #[serde(default)]
     application_version: Option<String>,
     #[serde(default)]
@@ -35,7 +40,7 @@ struct ReportProgram {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct ReportPlan {
+pub(crate) struct ReportPlan {
     steps: usize,
     data_octets: usize,
     group_links: usize,
@@ -49,7 +54,7 @@ struct ReportOutcome {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct Report {
+pub(crate) struct Report {
     kind: String,
     format: u32,
     scope: String,

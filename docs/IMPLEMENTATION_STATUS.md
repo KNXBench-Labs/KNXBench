@@ -42,7 +42,12 @@ then every rule, with JSON-pointer locations) and produces exports with length
 and CRC-16/CCITT-FALSE; `knx devconf check|validate|export` exposes it on the
 CLI with atomic output files. KNXBench contains no device-specific code; tests
 use a fictional demo module with hand-computed export bytes. No project storage,
-server route, web editor, device download or bus access yet (WP-42.2/42.3).
+server route, web editor, device download or bus access yet at that point;
+WP-42.2 (storage: schema 22 `device_config_profile`, duplicate/missing-device
+load guards, snapshot identity) and WP-42.3 (server routes with
+preview/apply/cancel and confirmation, web `DeviceConfigPanel` as a seventh
+device tab) landed on 17 November 2026. Device download and bus access remain
+open (WP-43).
 
 <a id="first-class-settings-navigation-14-november-2026-main-only-after-alpha-21"></a>
 

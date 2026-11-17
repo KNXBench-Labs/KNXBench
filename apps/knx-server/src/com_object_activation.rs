@@ -160,9 +160,16 @@ fn decide<'a>(
         // object, so neither `Active` nor `Inactive` is known (WP07).
         ObjectScope::UnresolvedModule => (ComObjectActivation::Undetermined, None),
         ObjectScope::Module(own) => {
-            if instances_sharing_ref(device_instances, own) > 1 {
-                return (ComObjectActivation::Undetermined, None);
-            }
+            // ADR-0177: repeated instances are told apart by their `MI-`
+            // counter, not refused as a group. The object is Active when a
+            // scoped hit's `Module/@Id` carries this instance's own counter;
+            // a hit whose counter matches a *different* instance of the same
+            // `RefId` does not activate this object, and a hit with no
+            // well-formed counter at all stays undetermined.
+            let own_counter = match own.instance_counter() {
+                Some(k) => k,
+                None => return (ComObjectActivation::Undetermined, None),
+            };
             let mut orphaned = false;
             for hit in same_ref.filter(|r| r.scope.is_some()) {
                 match owning_instance(hit, device_instances) {
@@ -182,33 +189,48 @@ fn decide<'a>(
     }
 }
 
-/// How many of the device's `ModuleInstance`s share `own`'s `RefId`.
-fn instances_sharing_ref(
-    device_instances: &[knx_core::ModuleInstance],
-    own: &knx_core::ModuleInstance,
-) -> usize {
-    device_instances
-        .iter()
-        .filter(|m| m.source.ets_id == own.source.ets_id)
-        .count()
-}
-
 /// The one device `ModuleInstance` a scoped activation belongs to, by the
-/// innermost scope's `Module/@Id` (D39: it ends with `_<RefId>`). `None`
-/// when zero or several instances match. The resolved owner must also carry
-/// a well-formed instance counter (ADR-0177): a malformed `MI-` suffix has
-/// no authority to give, so it resolves to `None` here as well.
+/// innermost scope's `Module/@Id` (D39: the `RefId` occurs in it as an id
+/// component; the accepted WP-07 mapping appends `_M-<m>_MI-<k>` after it).
+/// When several instances share that `RefId`, ADR-0177 breaks the tie with
+/// the `MI-` counter the `Module/@Id` itself carries; a `Module/@Id` without
+/// a well-formed counter, zero matches or a counter no imported instance
+/// carries all resolve to `None` — never guessed.
 fn owning_instance<'a>(
     hit: &ActiveRef,
     device_instances: &'a [knx_core::ModuleInstance],
 ) -> Option<&'a knx_core::ModuleInstance> {
     let module_id = hit.scope.as_ref()?.module_id.as_deref()?;
+    // D39: the `Module/@Id` ends with the instance `RefId` — but the
+    // accepted WP-07 mapping (ADR-0177) appends "_M-<m>_MI-<k>" after it in
+    // real exports, so the RefId is a *substring* of the id, not its suffix.
+    // Match on the RefId occurring as an id component and read the counter
+    // from the id's own "_MI-" tail.
     let mut matches = device_instances
         .iter()
-        .filter(|m| module_id.ends_with(&format!("_{}", m.source.ets_id)));
+        .filter(|m| module_id.contains(&format!("_{}", m.source.ets_id)));
     let first = matches.next()?;
-    let unique = matches.next().is_none();
-    (unique && first.instance_counter().is_some()).then_some(first)
+    if matches.next().is_some() {
+        // Repeated instances: the Module/@Id's own MI- digits decide.
+        let id_counter = mi_counter_of(module_id)?;
+        return device_instances
+            .iter()
+            .find(|m| {
+                module_id.contains(&format!("_{}", m.source.ets_id))
+                    && m.instance_counter() == Some(id_counter)
+            });
+    }
+    first.instance_counter().is_some().then_some(first)
+}
+
+/// The `MI-<k>` digits a program-side `Module/@Id` carries, when well-formed.
+fn mi_counter_of(module_id: &str) -> Option<u32> {
+    let marker = module_id.rfind("_MI-")?;
+    let digits = &module_id[marker + 4..];
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    digits.parse().ok()
 }
 
 /// Channel nodes built so far, so every object of one channel shares one
@@ -793,25 +815,107 @@ mod tests {
         assert_eq!(activation, activation_before);
     }
 
+    /// ADR-0177: two instances sharing one `RefId` are told apart by their
+    /// `MI-` counters. The fixture's single expansion spells
+    /// `Module/@Id` "A_MD-1_M-1" — no `MI-` component — while both imported
+    /// instances share `RefId` "MD-1_M-1", so the tie-break has no counter
+    /// to read: the object stays `Undetermined`, never guessed. (The
+    /// counter-bearing case is covered by
+    /// `a_second_expansion_with_a_different_counter_activates_its_own_instance`.)
     #[test]
-    fn two_instances_sharing_one_ref_id_are_undetermined() {
+    fn two_instances_sharing_one_ref_id_without_a_module_id_counter_stay_undetermined() {
         let instances = vec![instance(10, "MD-1_M-1"), instance(11, "MD-1_M-1")];
-        let keys = HashMap::from([(
-            1,
-            ComObjectKey {
-                lookup_id: "A_MD-1_O-1".to_string(),
-                scope: ObjectScope::Module(&instances[0]),
-            },
-        )]);
-        let nodes = run(&module_program(), &keys, &instances, &HashMap::new(), &[1]);
+        let keys = HashMap::from([
+            (
+                1,
+                ComObjectKey {
+                    lookup_id: "A_MD-1_O-1".to_string(),
+                    scope: ObjectScope::Module(&instances[0]),
+                },
+            ),
+            (
+                2,
+                ComObjectKey {
+                    lookup_id: "A_MD-1_O-1".to_string(),
+                    scope: ObjectScope::Module(&instances[1]),
+                },
+            ),
+        ]);
+        let nodes = run(&module_program(), &keys, &instances, &HashMap::new(), &[1, 2]);
         assert_eq!(nodes[0].activation, ComObjectActivation::Undetermined);
-        assert!(nodes[0].channel.is_none());
+        assert_eq!(nodes[1].activation, ComObjectActivation::Undetermined);
     }
 
-    /// D40: two instances with one `RefId` cannot be fed their own values,
-    /// so even a ref no expansion activates is not known to be inactive.
+    /// ADR-0177: a second expansion of the same `RefId` carrying a different
+    /// `MI-` counter activates the instance with that counter, not the other.
     #[test]
-    fn an_unactivated_ref_of_a_repeated_instance_is_undetermined() {
+    fn a_second_expansion_with_a_different_counter_activates_its_own_instance() {
+        let mut m2 = nd(5, Some(4), "Module");
+        m2.element_id = Some("A_MD-1_M-1_MI-2".to_string());
+        m2.ref_id = Some("A_MD-1".to_string());
+        let program = DynamicTree::from_nodes(vec![
+            nd(1, None, "Dynamic"),
+            nd(2, Some(1), "ChannelIndependentBlock"),
+            {
+                let mut m1 = nd(3, Some(2), "Module");
+                m1.element_id = Some("A_MD-1_M-1_MI-1".to_string());
+                m1.ref_id = Some("A_MD-1".to_string());
+                m1
+            },
+            nd(4, Some(1), "ChannelIndependentBlock"),
+            m2,
+        ]);
+        let module = DynamicTree::from_nodes(vec![
+            nd(1, None, "Dynamic"),
+            channel(2, 1, "A_MD-1_CH-1", "Kanal"),
+            com_ref(3, 2, "A_MD-1_O-1"),
+        ]);
+        let trees = ProgramTrees::from_parts(
+            program,
+            HashMap::from([("A_MD-1".to_string(), module)]),
+        );
+        // Both expansions spell `Module/@Id` "A_MD-1_M-1", but the two
+        // imported instances carry different counters; the fixture helper
+        // always spells `_MI-1`, so give the second one `_MI-2`.
+        let mut second = instance(11, "MD-1_M-1");
+        second.instance_ets_id = "MD-1_M-1_MI-2".into();
+        let instances = vec![instance(10, "MD-1_M-1"), second];
+        let keys = HashMap::from([
+            (
+                1,
+                ComObjectKey {
+                    lookup_id: "A_MD-1_O-1".to_string(),
+                    scope: ObjectScope::Module(&instances[0]),
+                },
+            ),
+            (
+                2,
+                ComObjectKey {
+                    lookup_id: "A_MD-1_O-1".to_string(),
+                    scope: ObjectScope::Module(&instances[1]),
+                },
+            ),
+        ]);
+        let activation = evaluate(&trees, &ValueMap::default());
+        let nodes = run(&trees, &keys, &instances, &HashMap::new(), &[1, 2]);
+        // Both expansions' `Module/@Id`s end with the same RefId
+        // ("A_MD-1_M-1_MI-1" / "A_MD-1_M-1_MI-2" both end with "_MD-1_M-1"),
+        // so each matches both imported instances; the accepted mapping
+        // (ADR-0177) then breaks the tie with the `MI-` digits the
+        // `Module/@Id` itself carries — expansion 1 activates instance 10,
+        // expansion 2 activates instance 11, neither is left undetermined.
+        assert_eq!(nodes[0].activation, ComObjectActivation::Active);
+        assert!(nodes[0].channel.is_some());
+        assert_eq!(nodes[1].activation, ComObjectActivation::Active);
+        assert!(nodes[1].channel.is_some());
+    }
+
+    /// ADR-0177: with the accepted mapping, two instances sharing one
+    /// `RefId` are told apart by their `MI-` counters, so a ref no
+    /// expansion activates is known to be `Inactive` for the object's own
+    /// instance — the old D40 blanket `Undetermined` is lifted.
+    #[test]
+    fn an_unactivated_ref_of_a_repeated_instance_is_inactive() {
         let instances = vec![instance(10, "MD-1_M-1"), instance(11, "MD-1_M-1")];
         let keys = HashMap::from([(
             1,
@@ -821,7 +925,7 @@ mod tests {
             },
         )]);
         let nodes = run(&module_program(), &keys, &instances, &HashMap::new(), &[1]);
-        assert_eq!(nodes[0].activation, ComObjectActivation::Undetermined);
+        assert_eq!(nodes[0].activation, ComObjectActivation::Inactive);
     }
 
     #[test]

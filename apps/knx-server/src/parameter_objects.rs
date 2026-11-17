@@ -187,20 +187,33 @@ pub(crate) fn include_missing(
         // ADR-0177: the one resolved owner must also carry a well-formed
         // instance counter — a malformed `MI-` suffix is not an owner, so
         // the whole edit refuses here instead of guessing a number.
+        // ADR-0177: when several instances share the `RefId`, the
+        // `Module/@Id`'s own `MI-<k>` tail picks the owning instance.
         if let Some(scope) = &active.scope {
+            let module_id = scope.module_id.as_deref();
             let owners = modules
                 .iter()
                 .filter(|instance| {
-                    scope
-                        .module_id
-                        .as_ref()
-                        .is_some_and(|id| id.ends_with(&format!("_{}", instance.source.ets_id)))
+                    module_id.is_some_and(|id| {
+                        id.contains(&format!("_{}", instance.source.ets_id))
+                    })
                 })
                 .collect::<Vec<_>>();
-            let authoritative = owners.len() == 1 && owners[0].instance_counter().is_some();
+            let owner = match owners.as_slice() {
+                [] => None,
+                [one] if one.instance_counter().is_some() => Some(*one),
+                many => module_id
+                    .and_then(mi_counter_of)
+                    .and_then(|k| {
+                        many.iter()
+                            .find(|m| m.instance_counter() == Some(k))
+                            .copied()
+                    }),
+            };
+            let authoritative = owner.is_some();
             let present = authoritative
                 && represented.iter().any(|(instance, reference)| {
-                    *instance == Some(owners[0].id) && reference == &active.ref_id
+                    *instance == Some(owner.unwrap().id) && reference == &active.ref_id
                 });
             if !present {
                 return Err("The parameter would require new module communication objects whose instance/number mapping is not supported; nothing was changed.".into());
@@ -272,3 +285,16 @@ pub(crate) fn include_missing(
     };
     Ok((command, diagnostics))
 }
+
+/// The `MI-<k>` digits a program-side `Module/@Id` carries, when well-formed
+/// (ADR-0177): rightmost `_MI-` whose tail is all ASCII digits. This is the
+/// same counter definition as `knx_core::ModuleInstance::instance_counter`.
+fn mi_counter_of(module_id: &str) -> Option<u32> {
+    let marker = module_id.rfind("_MI-")?;
+    let digits = &module_id[marker + 4..];
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    digits.parse().ok()
+}
+

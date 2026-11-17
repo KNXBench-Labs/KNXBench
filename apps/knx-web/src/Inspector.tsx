@@ -1063,7 +1063,7 @@ export function DeviceWorkspace(props: {
   const tabs = DEVICE_TABS.map((name) => tabLabels[name]);
   // The instructions editor reads on mount, so it mounts on the tab's first
   // visit and then stays (hidden) so its draft survives other tabs.
-  const instructionsTab = tabs.length - 1;
+  const instructionsTab = tabs.length - 2; // the configuration module tab is last
   const [instructionsOpened, setInstructionsOpened] = useState(false);
   useEffect(() => { if (tab === instructionsTab) setInstructionsOpened(true); }, [tab, instructionsTab]);
   // Issue #40: the tree's pending flags, shown where the user edits; a reloaded

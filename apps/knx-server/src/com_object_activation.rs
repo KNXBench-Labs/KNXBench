@@ -161,15 +161,13 @@ fn decide<'a>(
         ObjectScope::UnresolvedModule => (ComObjectActivation::Undetermined, None),
         ObjectScope::Module(own) => {
             // ADR-0177: repeated instances are told apart by their `MI-`
-            // counter, not refused as a group. The object is Active when a
-            // scoped hit's `Module/@Id` carries this instance's own counter;
-            // a hit whose counter matches a *different* instance of the same
-            // `RefId` does not activate this object, and a hit with no
-            // well-formed counter at all stays undetermined.
-            let own_counter = match own.instance_counter() {
-                Some(k) => k,
-                None => return (ComObjectActivation::Undetermined, None),
-            };
+            // counter via owning_instance, which reads the counter from the
+            // `Module/@Id` itself when the `RefId` is shared; the object is
+            // Active when a scoped hit resolves to this instance. A hit
+            // with no well-formed counter stays undetermined.
+            if own.instance_counter().is_none() {
+                return (ComObjectActivation::Undetermined, None);
+            }
             let mut orphaned = false;
             for hit in same_ref.filter(|r| r.scope.is_some()) {
                 match owning_instance(hit, device_instances) {

@@ -312,7 +312,10 @@ description after the name.
 - Differences on object numbers without a selected project row are counted in
   the communication-object summary, not listed.
 - Module-scoped parameters (no baseline until module downloads exist); a write
-  of a module-scoped row never drops the unscoped ref's mark.
+  of a module-scoped row never drops the unscoped ref's mark. The
+  module-instance mapping authority they depend on now has a counted witness
+  ([WP-07 witness](../research/2026-11-17-wp07-module-mapping-witness.md)),
+  pending owner acceptance.
 - The caption beside an open checked editor is visible but not linked to the
   editor's controls as their description.
 - Devices imported, programmed by the System-2 path or marked by hand show only

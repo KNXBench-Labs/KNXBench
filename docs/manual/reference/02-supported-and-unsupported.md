@@ -125,7 +125,7 @@ workflow itself.
 | --- | --- | --- |
 | Reading, storing and displaying a device's parameters from its application program | ✅ Implemented | 1,390 parameter values from the reference project import correctly — [COMPATIBILITY.md §2](../../COMPATIBILITY.md#2-verified-today) |
 | Editing a parameter value in the open project, with validation and re-evaluation of the program's dynamic tree | ✅ Implemented | Described in [Devices and products](../user-guide/05-devices-and-products.md); the value is stored as an undo step and validated against the program's declared parameter chain |
-| Writing an edited parameter value to a real device | 🟡 Partial or experimental | As part of a device download, verified on four device programs so far — see *Commissioning* below and [Downloading to a device](../user-guide/07-bus-and-interfaces.md#downloading-to-a-device) |
+| Writing an edited parameter value to a real device | 🟡 Partial or experimental | As part of a device download, verified on five device programs so far — see *Commissioning* below and [Downloading to a device](../user-guide/07-bus-and-interfaces.md#downloading-to-a-device) |
 
 > **Note**
 >
@@ -147,13 +147,13 @@ secured installation cannot currently be fully represented or monitored by KNXBe
 
 | Item | Status | Evidence |
 | --- | --- | --- |
-| Downloading a device: application tables and parameters | 🟡 Partial or experimental | `knx device download` and the **Download to device** tab, plan first and confirmed per device; verified on four devices (two MDT push-button programs, an Eibmarkt presence detector and, from tester reports, a Hager push button, all mask `0701h`) with read-back, others unverified — [Downloading to a device](../user-guide/07-bus-and-interfaces.md#downloading-to-a-device), [KNOWN_LIMITATIONS.md §7](../../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked) |
+| Downloading a device: application tables and parameters | 🟡 Partial or experimental | `knx device download` and the **Download to device** tab, plan first and confirmed per device; verified on five devices (two MDT push-button programs, an Eibmarkt presence detector and, from tester reports, a Hager push button and STCC510S presence detector, all mask `0701h`) with read-back, others unverified — [Downloading to a device](../user-guide/07-bus-and-interfaces.md#downloading-to-a-device), [KNOWN_LIMITATIONS.md §7](../../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked) |
 | Programming an individual address | 🟡 Refused safety boundary | Confirmed starts fail before connection until device-specific durable recovery exists; not a working write or an active task — [ADR-0058](../../adr/0058-individual-address-reset-requires-durable-recovery.md) |
-| The generic load/unload/reset/memory-write commissioning procedures | 🟡 Bounded implementation | Four real memory-download devices (mask `0701h`); property procedures remain simulator-verified. No generic real-device coverage — [KNOWN_LIMITATIONS.md §7](../../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked), [§92](../../KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device) |
+| The generic load/unload/reset/memory-write commissioning procedures | 🟡 Bounded implementation | Five real memory-download devices (mask `0701h`); property procedures remain simulator-verified. No generic real-device coverage — [KNOWN_LIMITATIONS.md §7](../../KNOWN_LIMITATIONS.md#7-commissioning-and-device-download-are-required-but-blocked), [§92](../../KNOWN_LIMITATIONS.md#92-commissioning-phase-2-is-verified-against-a-simulator-this-project-wrote-and-has-never-addressed-a-device) |
 
 > **Warning**
 >
-> KNXBench has verified downloads for four device programs so far and cannot program individual
+> KNXBench has verified downloads for five device programs so far and cannot program individual
 > addresses at the moment. For any other device you still need a commissioning tool
 > that covers it.
 

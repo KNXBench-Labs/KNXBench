@@ -7,8 +7,6 @@
 //! incomplete clears nothing; the run is a bound, undoable, logged command
 //! exactly like a manual mark (ADR-0129/ADR-0173), never a blind "all done".
 
-use std::sync::Arc;
-
 use axum::extract::{Path, State};
 use axum::routing::post;
 use axum::{Json, Router};

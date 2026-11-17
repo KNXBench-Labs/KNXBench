@@ -194,21 +194,17 @@ pub(crate) fn include_missing(
             let owners = modules
                 .iter()
                 .filter(|instance| {
-                    module_id.is_some_and(|id| {
-                        id.contains(&format!("_{}", instance.source.ets_id))
-                    })
+                    module_id.is_some_and(|id| id.contains(&format!("_{}", instance.source.ets_id)))
                 })
                 .collect::<Vec<_>>();
             let owner = match owners.as_slice() {
                 [] => None,
                 [one] if one.instance_counter().is_some() => Some(*one),
-                many => module_id
-                    .and_then(mi_counter_of)
-                    .and_then(|k| {
-                        many.iter()
-                            .find(|m| m.instance_counter() == Some(k))
-                            .copied()
-                    }),
+                many => module_id.and_then(mi_counter_of).and_then(|k| {
+                    many.iter()
+                        .find(|m| m.instance_counter() == Some(k))
+                        .copied()
+                }),
             };
             let authoritative = owner.is_some();
             let present = authoritative
@@ -297,4 +293,3 @@ fn mi_counter_of(module_id: &str) -> Option<u32> {
     }
     digits.parse().ok()
 }
-

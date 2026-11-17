@@ -279,7 +279,10 @@ pub fn scoped_differences(
     keys.dedup();
     keys.into_iter()
         .filter_map(|(module_id, ref_id)| {
-            let (was, now) = (downloaded.get(&(module_id.clone(), ref_id.clone())), current.get(&(module_id.clone(), ref_id.clone())));
+            let (was, now) = (
+                downloaded.get(&(module_id.clone(), ref_id.clone())),
+                current.get(&(module_id.clone(), ref_id.clone())),
+            );
             (was != now).then(|| ScopedParameterDifference {
                 module_id: module_id.clone(),
                 ref_id: ref_id.clone(),

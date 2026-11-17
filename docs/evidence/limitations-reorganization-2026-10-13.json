@@ -1270,13 +1270,17 @@
       "heading": "## 68. Repeat activation stays unsupported; own instance values are readable",
       "source_lines": 55,
       "source_sha256": "ba3617bc06cddae12ebb39142c4aa8dddc54719a225fd79dd55354f9c33594e3",
-      "retained_sha256": "4cf95c6497f3ed066f9d32b3b103b853a2ca892eafb522507f54123e39faeaa4",
+      "retained_sha256": "25dc1281254af45c233ea5e7d5cd7c0e24d0703773400bd5d55a21b9a45876ca",
       "detail_file": "docs/limitations/KL-068-repeated-module-activation.md",
       "rewritten_link_targets": 2,
       "anchors": [
         "68-repeated-module-instantiation-is-refused-not-supported",
         "68-repeat-activation-stays-unsupported-own-instance-values-are-readable"
-      ]
+      ],
+      "redaction": {
+        "reason": "WP-37 update paragraph moved out of the pinned catalogue record into the dossier history above it; the pinned record itself is unchanged (ADR-0135 redaction procedure).",
+        "previous_retained_sha256": "a02ebb91d6e0334861dfb223439efeebdefa9c3051ec5dce6813cabb5a6a3501"
+      }
     },
     {
       "key": "KL-069",

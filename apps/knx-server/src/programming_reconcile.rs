@@ -22,9 +22,14 @@ use crate::{AppState, SharedState};
 /// One field of the accepted report, bounds-checked like the receipt parser.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct ReportProgram {
+// Fields are parsed for diagnostics, not read by reconciliation.
+#[allow(dead_code)]
+pub(crate) struct ReportProgram {
     id: String,
     source_sha256: Option<String>,
+    // Retained although unread today: the report format forwards these and
+    // the reconciliation log prints the raw report; dropping them would
+    // silently discard diagnostic data (never silently discard information).
     #[serde(default)]
     application_version: Option<String>,
     #[serde(default)]
@@ -35,7 +40,7 @@ struct ReportProgram {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct ReportPlan {
+pub(crate) struct ReportPlan {
     steps: usize,
     data_octets: usize,
     group_links: usize,
@@ -49,7 +54,7 @@ struct ReportOutcome {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct Report {
+pub(crate) struct Report {
     kind: String,
     format: u32,
     scope: String,
@@ -102,10 +107,7 @@ pub fn reconcile_router() -> Router<SharedState> {
 }
 
 /// The parts a scope's completed run proves, and the report's bounds.
-pub(crate) fn reconcile_parts(
-    scope: &str,
-    plan: &ReportPlan,
-) -> Result<ProgrammingParts, String> {
+pub(crate) fn reconcile_parts(scope: &str, plan: &ReportPlan) -> Result<ProgrammingParts, String> {
     if plan.steps == 0 || plan.steps > u32::MAX as usize || plan.data_octets > u32::MAX as usize {
         return Err("the report's plan size is out of range".into());
     }
@@ -190,8 +192,7 @@ pub(crate) fn reconcile_device(
             "the reported run did not complete; nothing was reconciled".into(),
         ));
     }
-    let parts = reconcile_parts(&report.scope, &report.plan)
-        .map_err(BoundCommandError::Refused)?;
+    let parts = reconcile_parts(&report.scope, &report.plan).map_err(BoundCommandError::Refused)?;
     let program_id = report.program.id.clone();
     let source_sha256 = report.program.source_sha256.clone();
 
@@ -206,8 +207,8 @@ pub(crate) fn reconcile_device(
         ) {
             return Err(BoundCommandError::Stale);
         }
-        let program_match = project_program(state, project, device)
-            .map_err(BoundCommandError::Refused)?;
+        let program_match =
+            project_program(state, project, device).map_err(BoundCommandError::Refused)?;
         let (expected_id, expected_hash, target) = program_match;
         if program_id != expected_id {
             return Err(BoundCommandError::Refused(format!(
@@ -224,7 +225,13 @@ pub(crate) fn reconcile_device(
         // the CLI's plan had when it ran.
         let expected = plan_shape(state, project, target, &report.scope)
             .map_err(BoundCommandError::Refused)?;
-        if expected != (report.plan.steps, report.plan.data_octets, report.plan.group_links) {
+        if expected
+            != (
+                report.plan.steps,
+                report.plan.data_octets,
+                report.plan.group_links,
+            )
+        {
             return Err(BoundCommandError::Refused(
                 "the report's plan does not match the current project state; the project changed since the run, nothing was reconciled".into(),
             ));
@@ -239,7 +246,13 @@ pub(crate) fn reconcile_device(
     // A reconcile is a claim KNXBench did not witness: like a manual mark it
     // forgets the parameter baseline, outside the undoable command (ADR-0173 §3).
     let forget = vec![knx_core::commissioning::parameter_baseline::BaselineEdit::remove(device)];
-    domain::apply_bound_prepared_with(state, binding, "ReconcileDeviceProgramming", command, forget)
+    domain::apply_bound_prepared_with(
+        state,
+        binding,
+        "ReconcileDeviceProgramming",
+        command,
+        forget,
+    )
 }
 
 /// `(steps, data_octets, group_links)` the current request would plan, in

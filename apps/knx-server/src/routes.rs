@@ -507,6 +507,9 @@ pub(crate) struct ParameterGridRowDto {
     pub(crate) id: String,
     pub(crate) text: Option<String>,
     pub(crate) text_parameter_ref_id: Option<String>,
+    /// ADR-0177: provenance of a parameter-driven caption fill, if any.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) text_fill: Option<knx_projection::TextFill>,
     /// Preserved, not applied by any client in this build.
     pub(crate) collapse_if_empty: Option<String>,
 }
@@ -518,6 +521,9 @@ pub(crate) struct ParameterGridColumnDto {
     pub(crate) id: String,
     pub(crate) text: Option<String>,
     pub(crate) text_parameter_ref_id: Option<String>,
+    /// ADR-0177: provenance of a parameter-driven caption fill, if any.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) text_fill: Option<knx_projection::TextFill>,
     pub(crate) width: Option<String>,
 }
 

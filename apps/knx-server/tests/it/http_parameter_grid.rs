@@ -28,8 +28,11 @@ fn program(dynamic: &str) -> String {
     let parameters: String = ids
         .iter()
         .map(|id| {
+            // ADR-0177: P-4 is the text parameter axis captions reference.
+            let kind = if *id == "P-4" { "PT-T" } else { "PT-1" };
+            let value = if *id == "P-4" { r#"Value="Fictional P-4""# } else { r#"Value="0""# };
             format!(
-                r#"<Parameter Id="{id}" Text="Fictional {id}" ParameterType="PT-1" Value="0"{}/>"#,
+                r#"<Parameter Id="{id}" Text="Fictional {id}" ParameterType="{kind}" {value}{}/>"#,
                 suffix(id)
             )
         })
@@ -47,7 +50,7 @@ fn program(dynamic: &str) -> String {
         .collect();
     format!(
         r#"<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-1"><ApplicationPrograms><ApplicationProgram Id="A-1" Name="Grid" ApplicationVersion="1" MaskVersion="MV-0701"><Static>
-<ParameterTypes><ParameterType Id="PT-1"><TypeRestriction SizeInBit="8" Base="Value"><Enumeration Id="E-0" Value="0" Text="Off"/><Enumeration Id="E-1" Value="1" Text="On"/></TypeRestriction></ParameterType></ParameterTypes>
+<ParameterTypes><ParameterType Id="PT-1"><TypeRestriction SizeInBit="8" Base="Value"><Enumeration Id="E-0" Value="0" Text="Off"/><Enumeration Id="E-1" Value="1" Text="On"/></TypeRestriction></ParameterType><ParameterType Id="PT-T"><TypeText SizeInBit="160"/></ParameterType></ParameterTypes>
 <Parameters>{parameters}</Parameters><ParameterRefs>{refs}</ParameterRefs></Static><Dynamic>{dynamic}</Dynamic>
 </ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#
     )
@@ -67,6 +70,14 @@ const GRID: &str = r#"<ParameterBlock Id="PB-G" Text="Fictional pairs" Layout="T
 
 #[allow(clippy::field_reassign_with_default)]
 async fn panel(dynamic: &str) -> Value {
+    panel_with_stored(dynamic, vec![]).await
+}
+
+#[allow(clippy::field_reassign_with_default)]
+async fn panel_with_stored(
+    dynamic: &str,
+    parameters: Vec<(&str, &str)>,
+) -> Value {
     let dir = tempfile::tempdir().unwrap();
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     knx_productdb::ingest_file(&products, "M-1/Hardware.xml", HARDWARE.as_bytes()).unwrap();
@@ -102,7 +113,19 @@ async fn panel(dynamic: &str) -> Value {
         buildings: vec![],
         group_ranges: vec![],
         group_addresses: vec![],
-        parameters: vec![],
+        parameters: parameters
+            .into_iter()
+            .enumerate()
+            .map(|(i, (ets_id, raw))| knx_core::ParameterInstance {
+                id: knx_core::ParameterInstanceId(i as u32 + 1),
+                device: DeviceId(1),
+                source: SourceRef {
+                    path: "device-1".into(),
+                    ets_id: ets_id.into(),
+                },
+                raw: raw.into(),
+            })
+            .collect(),
     });
     project.ids = knx_core::project::IdAllocators::from_counts(1, 0, 0, 0, 0, 0, 0, 0, 0);
     let mut state = knx_server::AppState::default();
@@ -152,7 +175,7 @@ async fn a_declared_grid_is_versioned_geometry_with_cells_and_active_captions() 
             ],
             "columns": [
                 { "id": "PB-G_C-1", "text": null, "textParameterRefId": null, "width": "30%" },
-                { "id": "PB-G_C-2", "text": "Left", "textParameterRefId": "P-4_R-1", "width": "70%" }
+                { "id": "PB-G_C-2", "text": "Fictional P-4", "textParameterRefId": "P-4_R-1", "width": "70%", "textFill": { "source": "ProductDefault", "template": "{{0}}" } }
             ],
             "labels": [{ "row": 1, "column": 1, "text": "Pair caption" }],
             "issues": [{ "kind": "missingCell", "element": "ParameterRefRef", "reference": "P-3_R-1", "cell": null }]
@@ -213,6 +236,52 @@ async fn a_declared_indent_level_reaches_the_field_and_an_undeclared_one_stays_n
     };
     assert_eq!(field("P-1_R-1")["indentLevel"], Value::Null);
     assert_eq!(field("P-2_R-1")["indentLevel"], json!(2));
+}
+
+/// ADR-0177: a column declaring `TextParameterRefId` shows the referenced text
+/// parameter's product default as its caption, with fill provenance; a row
+/// without the attribute keeps its own literal text and no fill.
+#[tokio::test]
+async fn an_axis_text_parameter_ref_resolves_to_the_parameter_value_with_provenance() {
+    let dto = panel(GRID).await;
+    let grid = &dto["sections"][0]["groupLayouts"][0];
+    let column = &grid["columns"][1];
+    assert_eq!(column["id"], "PB-G_C-2");
+    assert_eq!(column["text"], "Fictional P-4", "parameter-driven caption");
+    assert_eq!(column["textParameterRefId"], "P-4_R-1");
+    assert_eq!(
+        column["textFill"]["source"],
+        json!("ProductDefault"),
+        "no stored value: the product default fills"
+    );
+    let row = &grid["rows"][0];
+    assert_eq!(row["text"], "First pair", "literal axis text unchanged");
+    assert_eq!(row["textFill"], Value::Null, "no fill without TextParameterRefId");
+}
+
+/// ADR-0177: an axis reference naming no `ParameterRef` of the program keeps
+/// the axis's own text and reports the unresolved source, never a guess.
+#[tokio::test]
+async fn an_unknown_axis_text_parameter_ref_keeps_the_source_text_and_names_the_reason() {
+    let dynamic = GRID.replace(
+        r#"TextParameterRefId="P-4_R-1""#,
+        r#"TextParameterRefId="P-missing_R-1""#,
+    );
+    let dto = panel(&dynamic).await;
+    let column = &dto["sections"][0]["groupLayouts"][0]["columns"][1];
+    assert_eq!(column["text"], "Left", "axis's own literal text is kept");
+    assert_eq!(column["textParameterRefId"], "P-missing_R-1");
+    assert_eq!(column["textFill"]["source"], json!("UnknownParameter"));
+}
+
+/// ADR-0177: the device's stored value of the referenced text parameter wins
+/// over the product default, and the fill says so.
+#[tokio::test]
+async fn a_stored_axis_text_parameter_value_wins_over_the_product_default() {
+    let dto = panel_with_stored(GRID, vec![("P-4_R-1", "Kitchen")]).await;
+    let column = &dto["sections"][0]["groupLayouts"][0]["columns"][1];
+    assert_eq!(column["text"], "Kitchen", "stored value replaces the caption");
+    assert_eq!(column["textFill"]["source"], json!("StoredValue"));
 }
 
 /// WP-02: the resolved `SuffixText` reaches the field next to, never inside,

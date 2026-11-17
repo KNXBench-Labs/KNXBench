@@ -102,6 +102,14 @@ tokio = "1"
 rmcp = { version = "3.5.1", default-features = false, features = ["server", "macros", "transport-io", "elicitation"] }
 tower = "0.5"
 tower-http = "0.6"
+# Outbound HTTPS for the online product catalogue (ADR-0176): hyper's single-connection
+# HTTP/1.1 client over the workspace's rustls/ring stack, Mozilla's root set so trust does not
+# depend on the host's certificate store, and ring's AES-256-GCM for the credential file.
+hyper = { version = "1", default-features = false, features = ["client", "http1"] }
+hyper-util = { version = "0.1", default-features = false, features = ["tokio"] }
+http-body-util = "0.1"
+webpki-roots = "1"
+ring = "0.17"
 
 # Development and test builds (ADR-0144): line tables keep backtraces with file
 # and line while cutting link time and target size; third-party dependencies are

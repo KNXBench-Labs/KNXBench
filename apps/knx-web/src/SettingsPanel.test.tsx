@@ -159,7 +159,7 @@ describe("SettingsPanel", () => {
     const headings = Array.from(host!.querySelectorAll(".settings-section > h2")).map(
       (heading) => heading.textContent,
     );
-    expect(headings).toEqual(["Appearance", "Language & data", "Autosave", "Bus & diagnostics", "Updates", "Debug · device control"]);
+    expect(headings).toEqual(["Appearance", "Language & data", "Autosave", "Bus & diagnostics", "Catalogues", "Updates", "Debug · device control"]);
     expect(host!.querySelector(".settings-section-debug input[type='checkbox']")).not.toBeNull();
     const gateway = host!.querySelector<HTMLInputElement>(
       '.settings-section-bus input[placeholder="192.0.2.10:3671"]',
@@ -286,7 +286,7 @@ describe("SettingsPanel", () => {
     expect(heading).not.toBeNull();
     expect(document.activeElement).toBe(heading);
     const links = [...host!.querySelectorAll<HTMLAnchorElement>(".settings-jump-nav a")];
-    expect(links).toHaveLength(6);
+    expect(links).toHaveLength(7);
     for (const link of links) {
       const target = host!.querySelector<HTMLElement>(link.hash)!;
       expect(target.tagName).toBe("H2");

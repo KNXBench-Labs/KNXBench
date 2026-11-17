@@ -434,6 +434,7 @@ describe("one editing workspace", () => {
       "busMonitorCapture.ts",
       "busMonitorStatistics.ts",
       "canonicalJson.ts",
+      "comObjectView.ts", // Issue #51: pure group-address label/DPT helpers; no API.
       "deviceList.ts",
       "deviceSystem.ts",
       "diagnosticsWindow.ts",
@@ -461,6 +462,8 @@ describe("one editing workspace", () => {
       "gatewayPreference.ts",
       "gatewayRefusal.ts",
       "gifEncoder.ts",
+      "groupAddressPicker.ts", // Issue #51: pure address filter/window; no API.
+      "groupAddressView.ts", // Issue #51: pure DPT label; no API.
       "help.ts",
       "i18n.ts",
       "importEvidence.ts",
@@ -493,6 +496,7 @@ describe("one editing workspace", () => {
       "tableWordFloors.ts", // Computed-font DOM measurement only; checked for API/fetch above.
       "treeUtils.ts",
       "uiLanguage.ts",
+      "useActiveOptionScroll.ts", // Issue #51: pure scroll-into-view hook; no API.
       "useTableColumnWidths.ts", // Validated localStorage preferences, no project writes.
     ]);
 

@@ -9,7 +9,7 @@
 use chrono::{DateTime, Utc};
 use knx_core::commissioning::parameter_baseline::{
     BaselineChange, BaselineEdit, BaselineLink, LinkBaseline, LinkBaselineChange, ObjectFlagValues,
-    ParameterBaseline, ParameterValues,
+    ParameterBaseline, ParameterValues, ScopedParameterValues,
 };
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::commissioning::pending::{ProgrammingChange, ProgrammingParts};
@@ -65,6 +65,12 @@ pub struct Settlement {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WrittenParameters {
     pub values: ParameterValues,
+    /// Module-scoped values the written request carried, decomposed into
+    /// `(Module/@Id, ParameterRef id)` by the write side's
+    /// `instance_counter` authority (ADR-0177); empty when the run wrote
+    /// none (WP-37). Recorded verbatim in the baseline, never merged into
+    /// `values`.
+    pub scoped_values: ScopedParameterValues,
     /// Effective flags resolved in the same source-proving lease; None is unknown.
     pub object_flags: Option<ObjectFlagValues>,
     /// The settlement time the baseline records.
@@ -273,6 +279,7 @@ pub fn settle_download(
                         object_flags: resolved.object_flags,
                         program_id: written.program_id.clone(),
                         values: resolved.values,
+                        scoped_values: resolved.scoped_values,
                         at: resolved.at,
                     })
                 }

@@ -14,6 +14,12 @@ fragment aliases and update this index. Do not rewrite previous results.
 
 ## Alpha 22 pre-release (source cutoff 15 November 2026)
 
+**Pending branch, not a delivery:** the owner-authorized Reko online catalogue
+is WIP after this cutoff, with no accepted final review/package gate or
+publication at the 16 November documentation checkpoint. See
+[LS-02](open-work/LS-02-online-catalogue.md) for the decision, implementation
+scope and remaining acceptance; it is not included in the Alpha 22 result below.
+
 The [released scope](releases/alpha22.md) contains the bounded 14 November
 workspace, navigation, caption, focus and module-owner slices below, more
 WP-31 off-runtime waits and the explicit experimental TCP CLI/server/Web
@@ -542,6 +548,20 @@ the same bus operation. Following ETS usage it now says *programmieren* /
 its device-button meaning and *Download* stays for browser file downloads.
 Translation keys, placeholders and server confirmation phrases are unchanged.
 Rule: [GLOSSARY](GLOSSARY.md#german-terminology-for-device-writes).
+
+## Hager STCC510S four-scope tester evidence (16 November 2026; issue #53)
+
+Four report files add `M-0009_A-207C-10-0210` (STCC510S, application version
+16, mask `0701h`) as the fifth application with a verified complete download,
+with separate evidence for all three partial scopes. The application source
+hash matches; the production CLI built at the report-producing `f6ef90fb4`
+revision reproduces each scope's step and written-octet counts offline.
+All reports record matching post-download identity/load states and a running
+application; the tester confirms function. Restart remains unconfirmed.
+The later machine-compare differences are reporter observations with an
+unestablished cause, not a new byte tolerance or image rule. No new device
+operation was performed for this review.
+[Evidence and boundaries](evidence/tester-report-hager-stcc510s-2026-11-16.json).
 
 ## Hager 0701h parameters-only download verified from a tester report (11 November 2026; issue #38, WP-33)
 

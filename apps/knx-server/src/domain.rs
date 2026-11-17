@@ -264,6 +264,10 @@ pub struct AppState {
     /// [`Self::with_user_product_db`] sets it (`$XDG_CONFIG_HOME/knx/…`),
     /// so a test never reads or writes the developer's own.
     pub legacy_password: Option<knx_app::legacy::RememberedPassword>,
+    /// The online product catalogues (ADR-0176), or `None` when this server has no user
+    /// directories to keep an index, downloads and credentials in; only
+    /// [`Self::with_user_product_db`] sets it, so a test never reaches the developer's own.
+    pub online_catalogue: Option<std::sync::Arc<crate::online_catalogue::OnlineCatalogue>>,
     /// Closed by the first stop signal: from then on no route opens a new
     /// tunnel (Goal A3, KL-163). See `graceful_stop`.
     pub stop_admission: crate::StopAdmission,
@@ -289,6 +293,8 @@ impl AppState {
         let mut state = Self::with_product_db_at(data_dir, knx_productdb::default_path());
         state.legacy_password = knx_app::legacy::default_remembered_password_path()
             .map(knx_app::legacy::RememberedPassword::at);
+        state.online_catalogue =
+            crate::online_catalogue::OnlineCatalogue::from_environment().map(std::sync::Arc::new);
         // A user's server answers edits first and journals them after (ADR-0166).
         state.journal().run_in_background();
         state
@@ -477,6 +483,7 @@ impl AppState {
             achievements_lock: Mutex::new(()),
             catalog_requests: Mutex::new(Default::default()),
             legacy_password: None,
+            online_catalogue: None,
             stop_admission: Default::default(),
             catalogue_jobs: std::sync::Arc::new(crate::catalogue_jobs::CatalogueUpdateJobs::new(
                 crate::catalogue_jobs::Incarnation::mint(),

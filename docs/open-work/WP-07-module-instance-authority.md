@@ -1,8 +1,12 @@
 # WP-07 — Module-instance authority
 
-**Status:** Blocked: evidence. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** Unblocked by owner decision 17 November 2026 (evidence block lifted; [OWN-01](OWN-01-owner-decisions.md#decision-recorded--17-november-2026)). Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
-**Evidence route:** clean-room observation is admitted by the owner (8 November 2026; [OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)). The full independently counted mapping witness is not yet accepted. The bounded source-only classification below does not supply missing/duplicate/nested/repeated authority or public ETS-observation provenance.
+**Evidence route:** clean-room observation is admitted by the owner (8 November 2026; [OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)).
+
+**Implementation status (17 November 2026, ADR-0177):** the authority is wired into all four consumers. `knx_core::ModuleInstance::instance_counter()` is the single reader of the `_MI-<k>` suffix. Evaluation, parameter writes and object reconciliation (`resolve_mi_authority`, the scoped-owner check, `owning_instance`) read the counter from the program-side `Module/@Id` itself when several instances share the `RefId`, so a well-formed `MI-<k>` picks exactly that instance; a missing, malformed or unmatched counter keeps the refuse/undetermined semantics. Identity-keyed module comparison keys module-based objects on `<ets_id>#k=<n>`. Ambiguous mappings still refuse the whole edit without spending IDs or changing native history.
+
+**Mapping witness (17 November 2026, owner-accepted):** the admitted mapping contract is backed by a real, independently counted witness over eight ETS exports of one fictional project plus two modular corpus projects (42 + 32 + 75 module instances; 292 counted argument values, all matching `Start + Allocates·(k−1)`; RepeatIndex positions counted 149/149): [witness](../research/2026-11-17-wp07-module-mapping-witness.md). The first deliverable below is therefore met at the evidence level. The download-image arithmetic and bus behavior stay out of scope.
 
 ## Task
 

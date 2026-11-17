@@ -23,8 +23,9 @@ pub mod positional;
 // ingest and the migration backfill both already spell it out in full,
 // and re-exporting it too would just give the same function two names.
 pub use evaluate::{
-    evaluate, load_module_def_arguments, load_program_trees, load_tree, resolve_unscoped_values,
-    resolve_values, substitute_text, substitute_text_checked, Activation, ActiveAssign,
+    evaluate, load_module_def_arguments, load_program_trees, load_tree, resolve_scoped_values,
+    resolve_unscoped_values, resolve_values, substitute_text, substitute_text_checked, Activation,
+    ActiveAssign,
     ActiveButton, ActiveLabel, ActiveRef, ActiveRename, ActiveSeparator, ArgumentKind,
     AssignSource, Assignment, BoundArgument, ChannelOwner, ControlKind, Diagnostic, DynamicNode,
     DynamicTree, ModuleDefArgument, ModuleScope, Op, ProgramTrees, ScopedDiagnostic, Test,

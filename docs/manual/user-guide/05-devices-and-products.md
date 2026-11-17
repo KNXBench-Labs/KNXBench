@@ -732,6 +732,89 @@ bound to their catalogue ids, never to a row number. Search-arrow movement has
 a polite status announcement of the highlighted product and its current position.
 The native table scrolls locally on narrow screens; there is no column resizing.
 
+### Reko online catalogue (branch WIP)
+
+**Availability:** owner-authorized source candidate as of 16 November 2026,
+not software-accepted, published or included in Alpha 22. These instructions
+describe the branch controls, not a feature promised by the downloaded image.
+[Work and pending acceptance](../../open-work/LS-02-online-catalogue.md).
+
+**Goal:** find a product file in a local copy of the Reko index, acquire and
+verify that exact file, then explicitly import it. You need a build containing
+this candidate; an account on the provider website is needed for an uncached
+download. Local-file installation remains available if Reko is unavailable.
+
+1. Open **Product catalog**. At the install control choose **Reko** in
+   **Catalogue source**; **Local file** keeps the existing file picker.
+   Opening the view, dropdown or Settings does not contact Reko.
+2. If the index is missing, choose **Update index now**. This is an explicit
+   HTTPS request; there is no first-run fetch, timer or automatic refresh.
+   **Last successful check (including unchanged index)** records the most
+   recent successful check; **Index generated** is the provider's index date.
+   An unchanged response updates the check time, not the index's age. The backend
+   separately retains when it last fetched the body. A failed update keeps the
+   last good copy and does not advance successful timestamps. Invalid individual
+   entries are omitted with a displayed count.
+3. Enter manufacturer, product, order or application details, optionally choose
+   a **File type**, then **Search local index**. Search and page changes query
+   only KNXBench's local backend snapshot, not Reko. Select a result and check
+   its file name/type, application information, size and SHA-256. VD1/VD2 remain
+   visible as **Import not supported (VD1/VD2)**; visibility is not new import
+   support.
+4. Choose **Download selected file**. Without a usable saved account the
+   **Reko account** dialog asks for **Username and password** or a **Manually
+   supplied token**. **Save account** stores it encrypted on the server, not
+   in ordinary app settings or browser storage, and continues only the still
+   requested download. Saving is not itself a live login check. Register/manage
+   your account on the linked provider website; KNXBench does not register users.
+   Cancelling that dialog does not start a download.
+5. Wait for the verified result. **Stop download** requests cancellation; wait
+   for the backend's settled status rather than assuming the click stopped it.
+   **Downloaded and verified — not an import confirmation** means exactly that.
+   **Verify cached file** can reuse a valid local copy without consuming another
+   provider download. The acquisition cache is bounded and evicts old files;
+   it is not your product archive or a backup.
+6. For importable files choose **Prepare import…**. A `.knxprod` enters the
+   existing catalogue-job profile, admission, preview and confirmation workflow;
+   only its confirmed backup/apply can install. VD3–VD5 enter the separate legacy
+   importer and may ask for their own **file password**. That password is not
+   your Reko account password, and legacy does not gain the modern preview
+   guarantee. A download alone never installs products, changes projects or
+   sends anything to a KNX device.
+
+**Account and address.** Under **Settings → Catalogues → Reko account**, change
+or forget the shared account and configure the **HTTPS provider base address**.
+The default is `https://reko.x3muha.de`; **Restore default address** restores it.
+Changing address invalidates the old index/session and will not forward saved
+credentials to a different address. Save a new account explicitly, and manually
+update the index for the new source. Account/configuration changes may be refused
+while another catalogue operation runs. Status shows availability/username, never
+reads the stored password/token back.
+
+**Shared-server warning.** This is one account per catalogue and KNXBench
+installation. Everyone using that server shares the account and its daily
+allowance. It is not personal account isolation or KNXBench user management.
+Persist and back up the separate configuration key, including Docker `/config`,
+as described in [key persistence and recovery](11-web-and-docker.md#reko-configuration-and-key-persistence-branch-wip).
+A copy of encrypted data without its key is protected; a fully compromised
+host/process or a copy of both is not.
+
+**Refusals and retry.** If selection no longer matches the local index, run
+local search and select again; KNXBench does not silently substitute a different
+file or update remotely. Invalid size/hash refuses import. Password mode can
+perform at most one re-login and repeat after a provider `INVALID_TOKEN` download
+refusal; token-only mode asks for a replacement. 403 ends the action; 404 suggests
+a manual update, not an automatic one. A daily-limit/rate-limit message shows the
+provider wait/reset when available: wait, then retry manually. Nothing resumes
+when the wait expires. Network/503 failure keeps the last-good index; retry
+manually later. **Check local status** reads only KNXBench, not the provider.
+
+Online availability and a matching hash are not manufacturer authorization,
+licence clearance or device/application compatibility. The owner excluded a
+rights/provenance audit for this implementation package; that is not an assertion
+that rights were cleared or permission to release/deploy the candidate.
+[Technical contract and evidence boundary](../../contracts/reko-online-catalogue.md).
+
 ### Installing a product database
 
 The file picker at the top of the workspace takes a `.knxprod` file, the package format

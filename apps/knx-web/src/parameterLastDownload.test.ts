@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { LastDownload, ParameterField, ParameterSection } from "./api";
-import { differingByRef, differingElsewhere, withoutWrittenRefs } from "./parameterLastDownload";
+import { differingByRef, differingByScopedRef, differingElsewhere, withoutWrittenRefs } from "./parameterLastDownload";
 import { parseRules } from "./themeTokens";
 
 const field = (etsId: string, extra: Partial<ParameterField> = {}): ParameterField => ({
@@ -24,6 +24,39 @@ const sections: ParameterSection[] = [
   // Module rows never present an unscoped baseline ref.
   { scope: { moduleNode: 7, moduleId: null, moduleDefId: "MD-1" }, fields: [field("ModuleOnly")] },
 ];
+
+describe("differingByScopedRef", () => {
+  it("keys scoped differences by module id and ref id for a usable comparison", () => {
+    const last: LastDownload = {
+      state: "usable",
+      differing: [],
+      scopedDiffering: [
+        { moduleId: "A-1_M-1_MI-1", refId: "R-1", downloaded: "5", current: "9" },
+        { moduleId: "A-1_M-1_MI-2", refId: "R-1", downloaded: null, current: "x" },
+      ],
+    };
+    const map = differingByScopedRef(last);
+    expect(map.get("A-1_M-1_MI-1#R-1")).toEqual({ downloaded: "5" });
+    expect(map.get("A-1_M-1_MI-2#R-1")).toEqual({ downloaded: null });
+    expect(map.size).toBe(2);
+    expect(differingByScopedRef(undefined).size).toBe(0);
+    expect(differingByScopedRef({ state: "absent" }).size).toBe(0);
+  });
+
+  it("withoutWrittenRefs drops the pair a written module-qualified id decomposes to", () => {
+    const last: LastDownload = {
+      state: "usable",
+      differing: [{ refId: "P-1_R-1", downloaded: "1", current: "2" }],
+      scopedDiffering: [
+        { moduleId: "A-1_M-1_MI-1", refId: "R-1", downloaded: "5", current: "9" },
+        { moduleId: "A-1_M-1_MI-2", refId: "R-1", downloaded: "5", current: "9" },
+      ],
+    };
+    const kept = withoutWrittenRefs(last, ["A-1_M-1_MI-1_R-1"]);
+    expect(kept.differing?.length).toBe(1);
+    expect(kept.scopedDiffering?.map((entry) => entry.moduleId)).toEqual(["A-1_M-1_MI-2"]);
+  });
+});
 
 describe("differingElsewhere", () => {
   it("separates refs no field presents from refs only manufacturer fields present", () => {

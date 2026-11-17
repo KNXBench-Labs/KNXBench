@@ -84,15 +84,15 @@ describe("catalogue results table", () => {
       const table = host!.querySelector("table")!;
       expect(table, "a native table").not.toBeNull();
       expect(table.hasAttribute("role"), "no role override on the native table").toBe(false);
-      expect(Array.from(table.querySelectorAll("thead th")).map((th) => th.getAttribute("scope"))).toEqual(["col", "col", "col", "col"]);
+      expect(Array.from(table.querySelectorAll("thead th")).map((th) => th.getAttribute("scope"))).toEqual(["col", "col", "col", "col", "col", "col", "col"]);
       expect(Array.from(table.querySelectorAll("thead th")).map((th) => th.textContent!.replace(/[↑↓]/g, "").trim()))
-        .toEqual(["Product", "Manufacturer", "Order number", "Application"]);
+        .toEqual(["Product", "Manufacturer", "Order number", "Application", "Catalogue section", "Mask", "Medium"]);
       expect(header("Product").getAttribute("aria-sort")).toBe("ascending");
-      for (const other of ["Manufacturer", "Order number", "Application"]) {
+      for (const other of ["Manufacturer", "Order number", "Application", "Catalogue section", "Mask", "Medium"]) {
         expect(["none", null], other).toContain(header(other).getAttribute("aria-sort"));
       }
       expect(header("Product").textContent).toContain("↑");
-      expect(host!.querySelectorAll("th button")).toHaveLength(4);
+      expect(host!.querySelectorAll("th button")).toHaveLength(7);
       expect(rowIds(), "natural order: 2 before 10, case ignored").toEqual(["c-a", "c-2", "c-10"]);
       expect(host!.querySelector('[role="listbox"]'), "no listbox over a native table").toBeNull();
       expect(host!.querySelector('[role="option"]')).toBeNull();
@@ -366,7 +366,7 @@ describe("catalogue results table", () => {
     try {
       expect(host!.querySelectorAll("table tbody tr")).toHaveLength(0);
       expect(host!.querySelector(".search-empty")!.textContent).toBe("No matches.");
-      expect(host!.querySelectorAll("th button")).toHaveLength(4);
+      expect(host!.querySelectorAll("th button")).toHaveLength(7);
       expect(search().hasAttribute("aria-activedescendant")).toBe(false);
       expect(status().textContent).toBe("");
     } finally { await act(async () => root.unmount()); }
@@ -378,7 +378,7 @@ describe("catalogue results table", () => {
     const root = await render();
     try {
       expect(Array.from(host!.querySelectorAll("thead th")).map((th) => th.textContent!.replace(/[↑↓]/g, "").trim()))
-        .toEqual(["Produkt", "Hersteller", "Bestellnummer", "Anwendung"]);
+        .toEqual(["Produkt", "Hersteller", "Bestellnummer", "Anwendung", "Katalogbereich", "Maske", "Medium"]);
       expect(rowIds()).toEqual(["c-3", "c-2", "c-1"]);
       expect(header("Produkt").getAttribute("aria-sort")).toBe("ascending");
     } finally { await act(async () => root.unmount()); }
@@ -401,18 +401,20 @@ describe("catalogue table display text", () => {
     } finally { await act(async () => root.unmount()); }
   });
 
-  it("falls back to the id for an empty manufacturer name and dashes blank order number and application", async () => {
+  it("falls back to the id for an empty manufacturer name and dashes blank order number, application, section, mask and medium", async () => {
     apiMock.catalogManufacturers.mockResolvedValue([{ id: "M-1", name: "" }, { id: "M-2", name: "   " }]);
     apiMock.catalogItems.mockResolvedValue([
       make("b-1", { manufacturerId: "M-1", number: "   ", details: detail("  ", "2.0") }),
       make("b-2", { manufacturerId: "M-2", number: "", details: detail(null, "3") }),
-      make("b-3", { manufacturerId: "M-3", number: "ORD", details: detail(" Prog ", " 1 ") }),
+      make("b-3", { manufacturerId: "M-3", number: "ORD", details: { applicationProgramId: "A", applicationName: " Prog ",
+        applicationVersion: " 1 ", catalogSectionId: "SEC-3", catalogSectionName: "Actuators", maskVersion: "MV-0701",
+        mediumTypes: "TP1", sourceNames: [] } }),
     ]);
     const root = await render();
     try {
-      expect(cells("b-1").slice(1)).toEqual(["M-1", "—", "—"]);
-      expect(cells("b-2").slice(1)).toEqual(["M-2", "—", "—"]);
-      expect(cells("b-3").slice(1)).toEqual(["M-3", "ORD", "Prog 1"]);
+      expect(cells("b-1").slice(1)).toEqual(["M-1", "—", "—", "—", "—", "—"]);
+      expect(cells("b-2").slice(1)).toEqual(["M-2", "—", "—", "—", "—", "—"]);
+      expect(cells("b-3").slice(1)).toEqual(["M-3", "ORD", "Prog 1", "Actuators", "MV-0701", "TP1"]);
     } finally { await act(async () => root.unmount()); }
   });
 

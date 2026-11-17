@@ -12,6 +12,36 @@ updates supersede them; they are not new work assignments.
 
 ## 68. Repeat activation stays unsupported; own instance values are readable
 
+**Update 2026-11-17 — accepted mapping resolves repeated instances by their
+MI- counter (WP-07, ADR-0177).** With the owner-accepted witness
+([2026-11-17 witness](../research/2026-11-17-wp07-module-mapping-witness.md),
+149/149 `RepeatIndex` positions, 292/292 argument strides), the program-side
+`Module/@Id` carries the instance counter itself (`…_<RefId>_M-<m>_MI-<k>`).
+`resolve_mi_authority`, the parameter-write scoped-owner check and
+com-object activation now read that counter through
+`knx_core::ModuleInstance::instance_counter()`: a well-formed `MI-<k>`
+picks exactly the imported instance with counter k, so evaluation,
+parameter writes and object reconciliation attribute each expansion to its
+own instance instead of refusing the whole group. A missing, malformed or
+unmatched counter keeps the previous refuse/undetermined semantics —
+nothing is guessed. Identity-keyed module comparison keys on
+`<ets_id>#k=<n>`, so two instances of one `Module` never merge into one
+compared row.
+
+**Update 2026-11-17 (WP-37, first authority consumer) — module-scoped values
+now land in the download baseline.** A completed download's settlement records
+the module-scoped values its request carried as `scoped_values` keyed
+`(Module/@Id, ParameterRef id)` (native schema 22, pure addition
+`device_parameter_baseline_scoped_value`, migration v21→v22), decomposed once
+on the write side via `instance_counter()` (ADR-0177): a re-numbered instance
+is a different key, never a silent overwrite. The last-download comparison
+answers `scopedDiffering` beside `differing` and the parameter panel marks
+module-scoped rows by their section's `moduleId`. The image builder still
+refuses module instances (`ImageError::Unsupported "{ref}: a module
+instance"`), so module downloads — and with them module-scoped baseline
+content from a real device write — do not exist yet; repeat-driven activation
+stays unsupported exactly as above.
+
 **Update 2026-10-10 — read-only instance dimension delivered in code.**
 [ADR-0108](../adr/0108-read-only-module-instance-values.md) separates stored
 instance evidence from Dynamic evaluation. `ValueMap` now has a separate

@@ -10,12 +10,22 @@ export interface DownloadedValue {
 }
 
 /**
- * Differing refs by id, only for a usable comparison. Baselines are
- * unscoped, so only fields of the unscoped section may look a ref up.
+ * Differing refs by id, only for a usable comparison. The unscoped map only
+ * feeds fields of the unscoped section (ADR-0173).
  */
 export function differingByRef(lastDownload: LastDownload | undefined): ReadonlyMap<string, DownloadedValue> {
   if (lastDownload?.state !== "usable") return new Map();
   return new Map((lastDownload.differing ?? []).map((entry) => [entry.refId, { downloaded: entry.downloaded }]));
+}
+
+/**
+ * WP-37: differing module-scoped refs by `"<moduleId>#<refId>"`, only for a
+ * usable comparison. Feeds module-scoped sections, whose `scope.moduleId`
+ * is the `Module/@Id` the server's key carries (ADR-0177).
+ */
+export function differingByScopedRef(lastDownload: LastDownload | undefined): ReadonlyMap<string, DownloadedValue> {
+  if (lastDownload?.state !== "usable") return new Map();
+  return new Map((lastDownload.scopedDiffering ?? []).map((entry) => [`${entry.moduleId}#${entry.refId}`, { downloaded: entry.downloaded }]));
 }
 
 /** The downloaded value as the row would show it: an enum's label when declared, else raw. */
@@ -65,7 +75,14 @@ export function differingElsewhere(lastDownload: LastDownload, sections: readonl
  * read, so they are neither marked nor counted. Nothing is compared here.
  */
 export function withoutWrittenRefs(lastDownload: LastDownload, written: readonly string[]): LastDownload {
-  if (lastDownload.differing === undefined) return lastDownload;
+  if (lastDownload.differing === undefined && lastDownload.scopedDiffering === undefined) return lastDownload;
   const drop = new Set(written);
-  return { ...lastDownload, differing: lastDownload.differing.filter((entry) => !drop.has(entry.refId)) };
+  return {
+    ...lastDownload,
+    differing: lastDownload.differing?.filter((entry) => !drop.has(entry.refId)),
+    // A written module-qualified id (`<moduleId>_<suffix>`) drops its
+    // decomposed `(moduleId, refId)` pair from the scoped side.
+    scopedDiffering: lastDownload.scopedDiffering?.filter((entry) =>
+      !drop.has(`${entry.moduleId}_${entry.refId}`)),
+  };
 }

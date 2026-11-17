@@ -523,6 +523,7 @@ fn seed_baseline(state: &SharedState) {
                     object_flags: Some(Default::default()),
                     program_id: "M-0001_A-0001-01-0000".into(),
                     values: Default::default(),
+                    scoped_values: Default::default(),
                     at: chrono::DateTime::UNIX_EPOCH,
                 },
             ),

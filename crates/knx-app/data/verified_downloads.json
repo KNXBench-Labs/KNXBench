@@ -24,10 +24,17 @@
     },
     {
       "program_id": "M-0006_A-E052-12-3406",
-      "scopes": ["complete", "partial-parameters", "partial-both"],
+      "scopes": ["complete", "partial-parameters", "partial-group-addresses", "partial-both"],
       "device": "Hager push button (S8014xxx0, application version 18), mask 0701h, tester device",
-      "date": "2026-11-12",
-      "reference": "docs/evidence/tester-report-hager-0701-2026-11-12.json (tester reports, issue #38: complete and parameters plus group addresses, 2477 octets each, 2026-11-12) and docs/evidence/tester-report-hager-0701-2026-11-10.json (parameters only, 1457 octets, 2026-11-10); post-download identity and load states matched, device function confirmed"
+      "date": "2026-11-17",
+      "reference": "docs/evidence/tester-report-hager-0701-2026-11-12.json (tester reports, issue #38: complete and parameters plus group addresses, 2477 octets each, 2026-11-12), docs/evidence/tester-report-hager-0701-2026-11-10.json (parameters only, 1457 octets, 2026-11-10) and docs/evidence/tester-report-hager-0701-2026-11-17.json (group addresses only, issue #49: 24 steps, 1020 octets, 2026-11-17); post-download identity and load states matched, device function confirmed"
+    },
+    {
+      "program_id": "M-0009_A-207C-10-0210",
+      "scopes": ["complete", "partial-parameters", "partial-group-addresses", "partial-both"],
+      "device": "Hager STCC510S presence detector, application version 16, mask 0701h, tester device",
+      "date": "2026-11-16",
+      "reference": "docs/evidence/tester-report-hager-stcc510s-2026-11-16.json (four tester reports, issue #53: complete 1084 octets, parameters 64 octets, group addresses 1020 octets, both 1084 octets; source hash and offline plan shapes checked; device function confirmed; restart unconfirmed)"
     }
   ]
 }

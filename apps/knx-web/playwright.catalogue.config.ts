@@ -4,7 +4,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "catalogue-update.e2e.ts",
+  testMatch: ["catalogue-update.e2e.ts", "online-catalogue.e2e.ts"],
   outputDir: "../../target/playwright/catalogue-update",
   fullyParallel: false,
   workers: 1,

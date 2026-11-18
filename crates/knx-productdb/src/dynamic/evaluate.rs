@@ -1381,7 +1381,7 @@ impl ModuleScope {
     /// `ModuleDef`'s own argument (**[D]**, §1.1.3.9), the corpus has no
     /// nested `Module` at all to show otherwise (**[V]**), and inventing
     /// outer-scope inheritance would be inventing semantics.
-    fn argument(&self, name: &str) -> Option<&str> {
+    pub fn argument(&self, name: &str) -> Option<&str> {
         self.arguments
             .iter()
             .find(|a| a.name == name)

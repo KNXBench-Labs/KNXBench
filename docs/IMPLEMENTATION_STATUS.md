@@ -5232,6 +5232,15 @@ See [the editing contract](contracts/parameter-object-refresh.md).
 
 ## Recent deliveries
 
+- 2026-11-18 — WP-44 bus monitor polish on main `62ac2e6a7`: the telegram-details
+  pane stays visible while the table scrolls (sticky, own scroll; narrow-pane
+  fallback stacks it), the status bar counts the session's received (↓) and sent
+  (↑) telegrams live beside the connected state and resets on a new session, and
+  the connected indicator carries a gentle pulse that stays off under reduced
+  motion or the in-app motion level "off". Web UI only; change-scoped gate green on
+  the branch and on the main-first merge (inputsFrozen, 1471 browser tests).
+  Loopback/fixture evidence only; no bus or hardware verification claimed.
+
 - 2026-10-16 — Workbench configuration source delivery: independently foldable
   navigation, consolidated File groups, manufacturer-declared operating-mode
   dropdowns beside objects, parameter blocks, and atomic parameter-driven

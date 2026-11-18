@@ -669,7 +669,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
     const layout = await editor.evaluate(node => {
       const box = (selector: string) => node.querySelector(selector)!.getBoundingClientRect();
       const row = node.querySelector(".group-link-list .tree-new-row")!;
-      const parts = [row.querySelector(".ga-picker > input")!, row.querySelector(":scope > select")!, row.querySelector(":scope > button")!]
+      const parts = [row.querySelector(".ga-picker > input")!, row.querySelector(":scope > .select-compact > select, :scope > select")!, row.querySelector(":scope > button")!]
         .map(n => n.getBoundingClientRect());
       return { order: box(".group-link-list").bottom <= box("details.com-object-more").top + 1,
         oneLine: parts.every(r => Math.abs(r.top - parts[0].top) < 6), overflow: node.scrollWidth - node.clientWidth };

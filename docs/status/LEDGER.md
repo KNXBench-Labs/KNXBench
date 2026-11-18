@@ -414,6 +414,19 @@ keeps the original suffix. Package gate green on the main-first integration
 merge (receipt 1794975344416204325: rust-tests 6137 passed / 0 failed,
 corpus 97/97, all 14 stages exit=0).
 
+
+## WP-37 review follow-up: discriminating tests + scope-aware write dedup (18 November 2026)
+
+On `work/wp37-review-followup-20261118` (merged as PR !62, merge commit on main
+18 November 2026): the review of PR !60 asked for discriminating tests of the
+module-scoped admission path. New `crates/knx-productdb/tests/it/module_scoped_image.rs`
+(7 tests) pins per-instantiation BaseOffset resolution, every refusal branch
+(unbound / non-numeric / >32-bit / checked_add overflow) and the unchanged
+module-instance ComObjectRef refusal. The two-instantiation test exposed that
+the write-dedup keyed by Parameter id alone silently skipped every module
+instantiation after the first; the dedup is now scope-aware for scoped refs.
+Package gate green change-scoped vs origin/main (receipt 1794983520177388417,
+rust-tests 6144/0/24 binaries, corpus 97/97).
 ## Reconciliation record (AR14D D2, 2026-10-04)
 
 The ledger was built from the routing table in `alpha-release-goal.md` §7–§8

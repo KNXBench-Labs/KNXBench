@@ -37,9 +37,9 @@ the inspector. Requirements:
 
 | Package | Outcome | Status |
 | --- | --- | --- |
-| 45.1 | Shared bounded select component/CSS class: max-width ~20–25 ch, ellipsis, full value still reachable (title/aria + native dropdown) | Not started |
-| 45.2 | Hover marquee behaviour: soft-start left→right scroll, fade-in, 2 s pause, loop until hover ends; disabled under reduced motion | Not started |
-| 45.3 | Apply the shared class to the named offenders (DPT, linked group addresses, Herstellerfelder and other oversized selects) without breaking WP-41 slot policy | Not started |
+| 45.1 | Shared bounded select component/CSS class: max-width ~20–25 ch, ellipsis, full value still reachable (title/aria + native dropdown) | Delivered 18 Nov 2026 on work/wp45-compact-selects-20261118: `CompactSelect.tsx` + `.select-compact` CSS (10 rem scalar slot) |
+| 45.2 | Hover marquee behaviour: soft-start left→right scroll, fade-in, 2 s pause, loop until hover ends; disabled under reduced motion | Delivered 18 Nov 2026: `@keyframes knx-select-marquee` (ease-in-out, 40% of the cycle is the end pause at standard motion), scoped to `:hover`/`:focus-within` inside `@media (prefers-reduced-motion: no-preference)` + `:root:not([data-motion-level="off"])`, duration from `--knx-transition-duration` (motionGuard green) |
+| 45.3 | Apply the shared class to the named offenders (DPT, linked group addresses, Herstellerfelder and other oversized selects) without breaking WP-41 slot policy | Delivered 18 Nov 2026: DPT select (Inspector), link-direction select (verknüpfte Gruppenadressen row), Restriction select (Herstellerfelder, ParameterPanel); WP-41 slot CSS extended to `.select-compact` in styles.css and parameterWorkspace.css |
 
 ## Boundaries
 

@@ -288,6 +288,12 @@ or Table/Grid visual equivalence.
   `Cell` uses the existing 1-based `row,column` parser; out-of-range or
   malformed cells bind no cell. `Text`, when present, must be non-blank, not
   `#` and free of `{{`/`}}`; otherwise the cell binds with no caption.
+  **Deeper nesting (`nested-block-cell-deep-v2`, 18 November 2026):** a
+  `ParameterBlock` nested two or more levels deep is admitted the same way;
+  its `@Cell` is placed in the first enclosing ancestor block whose stored
+  grid can render it (nearest grid ancestor first, then outward), not
+  necessarily the direct parent. A block whose ancestors include no renderable
+  grid binds no cell.
 - **Activation.** The single existing walker records each reached nested
   `ParameterBlock` (`Activation.nested_blocks`, same shape as a reached
   `Button`) and continues into it: the nested block's own fields stay in the
@@ -296,9 +302,11 @@ or Table/Grid visual equivalence.
 - **Source binding.** Same structural correspondence as
   `button-literal-passive-v1`: the presentation reader rebuilds the program's
   `Dynamic` tree as the stored parser numbered it and binds a candidate only
-  when every stored `(node, kind, parent, position)` matches and the nearest
-  stored block above the nested block is the candidate's parent block with the
-  same `@Id`. Drift, a second program root, a duplicate program `ParameterBlock/@Id`,
+  when every stored `(node, kind, parent, position)` matches and the
+  candidate's whole enclosing block chain matches the stored block ancestors
+  (nearest first) with the same `@Id`s; `nested-block-cell-deep-v2` then
+  places the cell in the first chain ancestor with a renderable stored grid.
+  Drift, a second program root, a duplicate program `ParameterBlock/@Id`,
   an unreadable source, a non-unique owner or the existing event/depth budget
   refuses every nested cell of the program, never a subset. The read is skipped
   when no stored `ParameterBlock` has a stored `ParameterBlock` parent whose

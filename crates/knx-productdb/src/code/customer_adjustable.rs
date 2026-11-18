@@ -2,7 +2,10 @@
 
 use std::fmt;
 
-use super::{CodeError, Element, Parser, ProgramCode};
+use super::{
+    memory_placement, module_memory_placement, property_placement, unmodelled_placement, CodeError,
+    Element, ParameterPlacement, Parser, ProgramCode,
+};
 
 /// Closed declaration contexts; neither source identifiers nor values are public diagnostics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -200,6 +203,39 @@ enum ModuleScope {
     Static,
     Parameters,
     Union,
+    /// Marker returned by the `Parameter` arm after it consumed the
+    /// parameter subtree itself: the trailing `skip` must not run again.
+    Consumed,
+}
+
+/// The placement a module-local `Parameter` element's children give it:
+/// a `Memory` carrying `BaseOffset` first, else the plain `Memory`/`Property`
+/// reading, else `Unmodelled` — the same names `field_of` refuses by name.
+fn module_parameter_placement_of(
+    parser: &mut Parser<'_>,
+    element: &Element,
+) -> Result<Option<ParameterPlacement>, CodeError> {
+    let mut placement = None;
+    if element.empty {
+        return Ok(placement);
+    }
+    while let Some(child) = parser.next_inside(&element.name)? {
+        if placement.is_none() && matches!(child.name.as_str(), "Memory" | "Property") {
+            placement = Some(
+                if let Some(module_memory) = module_memory_placement(&child) {
+                    module_memory
+                } else {
+                    match (memory_placement(&child), property_placement(&child)) {
+                        (Some(memory), _) => ParameterPlacement::Memory(memory),
+                        (None, Some(property)) => ParameterPlacement::Property(property),
+                        (None, None) => unmodelled_placement(&child.name, &child),
+                    }
+                },
+            );
+        }
+        parser.skip(&child)?;
+    }
+    Ok(placement)
 }
 
 impl Parser<'_> {
@@ -250,13 +286,42 @@ impl Parser<'_> {
                         *parent,
                         Occurrence::Parameter(index),
                     );
+                    // The same walk also reads the parameter's placement into
+                    // `code.parameters`, keyed by its module-local `@Id`: a
+                    // module-local `Memory/@BaseOffset` is kept as
+                    // [`ParameterPlacement::ModuleMemory`] so the image builder
+                    // can resolve it per instantiation (ADR-0177). A non-empty
+                    // parameter subtree is consumed here (through its closing
+                    // tag), so the trailing `skip` must not run again.
+                    let id = child.attributes.get("Id").map(str::to_string);
+                    if !child.empty {
+                        if let Some(placement) = module_parameter_placement_of(self, &child)? {
+                            if let Some(id) = id {
+                                code.parameters.insert(id, placement);
+                            }
+                        }
+                        Some((ModuleScope::Consumed, Occurrence::Parameter(index)))
+                    } else {
+                        None
+                    }
+                }
+                (ModuleScope::Union, "Memory" | "Property") => {
+                    // The union's own placement; its members are read above.
+                    // A `Memory/@BaseOffset` here is promoted per member in
+                    // `parameter_placement` via the member's own reading, so
+                    // just skip it here.
+                    self.skip(&child)?;
                     None
                 }
                 _ => None,
             };
             if let Some((next, occurrence)) = edge.filter(|_| !child.empty) {
-                let parent = Some(code.customer_adjustable.append_node(*parent, occurrence));
-                frames.push((next, 0, parent));
+                if matches!(next, ModuleScope::Consumed) {
+                    // Subtree already consumed inside the arm — do not skip again.
+                } else {
+                    let parent = Some(code.customer_adjustable.append_node(*parent, occurrence));
+                    frames.push((next, 0, parent));
+                }
             } else {
                 self.skip(&child)?;
             }

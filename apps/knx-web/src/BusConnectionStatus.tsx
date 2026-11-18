@@ -15,6 +15,7 @@ import { splitGatewayEndpoint, validateGatewayFields, type GatewayValidation } f
 import { usePreferredGateway } from "./gatewayPreference";
 import { describeHolder, gatewayRefusalMessage } from "./gatewayRefusal";
 import { useTranslate, type Translate, type TranslatableKey } from "./i18n";
+import { useSessionTelegramCounters } from "./sessionTelegramCounters";
 import "./BusConnectionStatus.css";
 
 const INVALID_REASON: Record<Exclude<GatewayValidation, { ok: true }>["reason"], TranslatableKey> = {
@@ -87,6 +88,7 @@ function actionError(result: BusActionResult<unknown>, fallback: TranslatableKey
 export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSettings: () => void }) {
   const t = useTranslate();
   const connection = useBusConnection();
+  const counters = useSessionTelegramCounters();
   const discovery = useBusDiscovery();
   const [selected, select] = usePreferredGateway();
   const [transport] = useBusTransport();
@@ -185,6 +187,15 @@ export default function BusConnectionStatus({ onOpenBusSettings }: { onOpenBusSe
       <span className="bus-connection-state" title={detailText(connection, t)}>
         <span className="bus-connection-indicator" data-tone={tone(connection)} aria-hidden="true" />
         {stateText(connection, t)}
+        {counters !== null && (
+          <span
+            className="bus-connection-counters"
+            title={t("busConnection.counters.title")}
+            aria-label={t("busConnection.counters.ariaLabel", { received: counters.received, sent: counters.sent })}
+          >
+            {t("busConnection.counters.value", { received: counters.received, sent: counters.sent })}
+          </span>
+        )}
         {(connection.view.phase === "connected" || connection.view.phase === "lost")
           && isExperimentalTransport(!!connection.view.serial, connection.view.transport) && <ExperimentalTransportBadge />}
       </span>

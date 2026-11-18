@@ -23,6 +23,7 @@ import BusConnectionStatus from "./BusConnectionStatus";
 import { refreshBusConnection, resetBusConnectionForTests } from "./busConnection";
 import { resetBusDiscoveryForTests, searchBusInterfaces } from "./busDiscovery";
 import { loadPreferredGateway, savePreferredGateway } from "./gatewayPreference";
+import { recordReceivedTelegrams, recordSentTelegram, resetSessionTelegramCounters } from "./sessionTelegramCounters";
 import { resetSettingsForTests, setSetting } from "./settingsStore";
 import { UI_LANGUAGE_STORAGE_KEY } from "./uiLanguage";
 import { messages as en } from "./messages/en";
@@ -70,6 +71,7 @@ async function click(element: HTMLElement) {
 
 beforeEach(() => {
   resetBusConnectionForTests();
+  resetSessionTelegramCounters(null);
   resetBusDiscoveryForTests();
   resetSettingsForTests();
   localStorage.clear();
@@ -250,6 +252,35 @@ describe("BusConnectionStatus", () => {
       Object.entries(catalogue).filter(([key]) => key.startsWith("busConnection.")).map(([, text]) => text).join(" ");
     expect(ours(en)).not.toMatch(/usb/i);
     expect(ours(de)).not.toMatch(/usb/i);
+  });
+});
+
+describe("WP-44.2: session telegram counters next to the connected state", () => {
+  const session = { sessionId: 5, serverIncarnation: "process-a" };
+
+  it("counts received and sent telegrams live beside the state text and resets on session change", async () => {
+    apiMock.busActivity.mockResolvedValue(snapshot({ sessions: [monitor("active")] }));
+    resetSessionTelegramCounters(session);
+    recordReceivedTelegrams(session, 3);
+    recordSentTelegram(session);
+    await render();
+    const counters = () => q(".bus-connection-counters");
+    expect(counters()!.textContent).toBe(en["busConnection.counters.value"].replace("{received}", "3").replace("{sent}", "1"));
+    expect(counters()!.getAttribute("aria-label")).toBe(
+      en["busConnection.counters.ariaLabel"].replace("{received}", "3").replace("{sent}", "1"));
+    expect(stateText()).toContain("Connected to 192.0.2.10:3671");
+    await act(async () => { recordReceivedTelegrams(session, 2); });
+    expect(counters()!.textContent).toContain("5");
+    // A different session's events are ignored; a new session resets.
+    await act(async () => { recordSentTelegram({ sessionId: 9, serverIncarnation: "process-a" }); });
+    expect(counters()!.textContent).toContain("1");
+    await act(async () => { resetSessionTelegramCounters({ sessionId: 6, serverIncarnation: "process-a" }); });
+    expect(counters()!.textContent).toBe(en["busConnection.counters.value"].replace("{received}", "0").replace("{sent}", "0"));
+  });
+
+  it("hides the counters when no session is current", async () => {
+    await render();
+    expect(q(".bus-connection-counters")).toBe(null);
   });
 });
 

@@ -30,7 +30,11 @@ fn program(dynamic: &str) -> String {
         .map(|id| {
             // ADR-0177: P-4 is the text parameter axis captions reference.
             let kind = if *id == "P-4" { "PT-T" } else { "PT-1" };
-            let value = if *id == "P-4" { r#"Value="Fictional P-4""# } else { r#"Value="0""# };
+            let value = if *id == "P-4" {
+                r#"Value="Fictional P-4""#
+            } else {
+                r#"Value="0""#
+            };
             format!(
                 r#"<Parameter Id="{id}" Text="Fictional {id}" ParameterType="{kind}" {value}{}/>"#,
                 suffix(id)
@@ -74,10 +78,7 @@ async fn panel(dynamic: &str) -> Value {
 }
 
 #[allow(clippy::field_reassign_with_default)]
-async fn panel_with_stored(
-    dynamic: &str,
-    parameters: Vec<(&str, &str)>,
-) -> Value {
+async fn panel_with_stored(dynamic: &str, parameters: Vec<(&str, &str)>) -> Value {
     let dir = tempfile::tempdir().unwrap();
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     knx_productdb::ingest_file(&products, "M-1/Hardware.xml", HARDWARE.as_bytes()).unwrap();
@@ -256,7 +257,11 @@ async fn an_axis_text_parameter_ref_resolves_to_the_parameter_value_with_provena
     );
     let row = &grid["rows"][0];
     assert_eq!(row["text"], "First pair", "literal axis text unchanged");
-    assert_eq!(row["textFill"], Value::Null, "no fill without TextParameterRefId");
+    assert_eq!(
+        row["textFill"],
+        Value::Null,
+        "no fill without TextParameterRefId"
+    );
 }
 
 /// ADR-0177: an axis reference naming no `ParameterRef` of the program keeps
@@ -280,7 +285,10 @@ async fn an_unknown_axis_text_parameter_ref_keeps_the_source_text_and_names_the_
 async fn a_stored_axis_text_parameter_value_wins_over_the_product_default() {
     let dto = panel_with_stored(GRID, vec![("P-4_R-1", "Kitchen")]).await;
     let column = &dto["sections"][0]["groupLayouts"][0]["columns"][1];
-    assert_eq!(column["text"], "Kitchen", "stored value replaces the caption");
+    assert_eq!(
+        column["text"], "Kitchen",
+        "stored value replaces the caption"
+    );
     assert_eq!(column["textFill"]["source"], json!("StoredValue"));
 }
 

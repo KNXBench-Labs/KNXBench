@@ -74,10 +74,12 @@ fn grid_dto(
             .rows
             .iter()
             .map(|row| {
+                let (text, text_fill) = captions.copy_axis_text(definition, row)?;
                 Ok(ParameterGridRowDto {
                     id: row.id.clone(),
-                    text: captions.copy_axis_text(definition, row)?,
+                    text,
                     text_parameter_ref_id: row.text_parameter_ref_id.clone(),
+                    text_fill,
                     collapse_if_empty: row.collapse_if_empty.clone(),
                 })
             })
@@ -86,10 +88,12 @@ fn grid_dto(
             .columns
             .iter()
             .map(|column| {
+                let (text, text_fill) = captions.copy_axis_text(definition, column)?;
                 Ok(ParameterGridColumnDto {
                     id: column.id.clone(),
-                    text: captions.copy_axis_text(definition, column)?,
+                    text,
                     text_parameter_ref_id: column.text_parameter_ref_id.clone(),
+                    text_fill,
                     width: column.width.clone(),
                 })
             })

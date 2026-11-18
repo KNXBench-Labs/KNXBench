@@ -47,6 +47,29 @@ impl TextParameters {
     pub fn from_parts(refs: TextParameterRefs, facts: HashMap<String, TextParameterFact>) -> Self {
         Self { refs, facts }
     }
+
+    /// ADR-0177: add the facts of further `ParameterRef` ids — axis
+    /// `TextParameterRefId` values are not stored on `dynamic_node`, so
+    /// [`load`](Self::load) never saw them. Ids already known keep their fact.
+    pub fn extend_facts(
+        &mut self,
+        conn: &Connection,
+        program_id: &str,
+        ref_ids: &[&str],
+    ) -> Result<(), ProductDbError> {
+        let fresh: Vec<&str> = ref_ids
+            .iter()
+            .copied()
+            .filter(|id| !self.facts.contains_key(*id))
+            .collect();
+        if fresh.is_empty() {
+            return Ok(());
+        }
+        for (id, fact) in text_parameter_facts(conn, program_id, &fresh)? {
+            self.facts.insert(id, fact);
+        }
+        Ok(())
+    }
 }
 
 /// Where a host sits, for finding its value on one device.

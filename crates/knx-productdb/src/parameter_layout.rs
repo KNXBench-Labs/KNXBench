@@ -88,10 +88,7 @@ pub struct ParameterLayout {
     literal_grid_axes: std::collections::HashSet<String>,
 }
 impl ParameterLayout {
-    pub(crate) fn literal_grid_axes(
-        &self,
-        program: &str,
-    ) -> Option<&std::collections::HashSet<String>> {
+    pub fn literal_grid_axes(&self, program: &str) -> Option<&std::collections::HashSet<String>> {
         (self.axis_program == program).then_some(&self.literal_grid_axes)
     }
     /// `button-literal-passive-v1`: the admitted literal of the program-owned
@@ -115,6 +112,15 @@ impl ParameterLayout {
     /// The grid declaration of `block_node` in `definition`'s tree, if any.
     pub fn grid(&self, definition: &str, block_node: i64) -> Option<&BlockGrid> {
         self.grids.get(&(definition.to_owned(), block_node))
+    }
+
+    /// ADR-0177: every grid declared in the program's own tree, for resolving
+    /// axis `TextParameterRefId` captions. Module trees hold no literal axes.
+    pub fn program_grids(&self) -> impl Iterator<Item = &BlockGrid> {
+        self.grids
+            .iter()
+            .filter(|((definition, _), _)| definition.is_empty())
+            .map(|(_, grid)| grid)
     }
     pub fn separator(&self, definition: &str, node: i64) -> Option<&SeparatorPlacement> {
         self.separators.get(&(definition.to_owned(), node))

@@ -48,6 +48,7 @@ mod malformed_input;
 mod master_evidence_rederive;
 mod master_language_evidence;
 mod master_provenance;
+mod module_scoped_image;
 mod nested_module_private;
 mod nested_module_storage;
 mod package_identity;

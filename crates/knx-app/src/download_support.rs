@@ -730,19 +730,24 @@ mod tests {
     }
 
     #[test]
-    fn the_shipped_evidence_names_the_hager_button_three_scopes() {
+    fn the_shipped_evidence_names_the_hager_button_all_four_scopes() {
         let shipped = shipped_evidence().expect("the shipped file parses");
         let hager = shipped
             .get("M-0006_A-E052-12-3406")
             .expect("the Hager push button is verified");
-        // Three tester reports (issue #38), one file per scope (ADR-0121).
-        // Group addresses only never ran, so it is not listed.
+        // Four tester reports, one file per scope (ADR-0121): issues #38
+        // (complete, parameters, both) and #49 (group addresses only).
         assert_eq!(
             hager.scopes,
-            ["complete", "partial-parameters", "partial-both"],
+            [
+                "complete",
+                "partial-parameters",
+                "partial-group-addresses",
+                "partial-both"
+            ],
             "{hager:?}"
         );
-        assert_eq!(hager.date, "2026-11-12");
+        assert_eq!(hager.date, "2026-11-17");
         assert!(hager.reference.starts_with("docs/evidence/"), "{hager:?}");
     }
 

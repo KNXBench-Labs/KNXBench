@@ -27,6 +27,7 @@ fn native21_selective_mapping_keeps_destination_evidence_and_copied_devices_inhe
         parameter: BaselineChange::Record(ParameterBaseline {
             program_id: "P".into(),
             values: Default::default(),
+            scoped_values: Default::default(),
             object_flags: Some(Default::default()),
             at: chrono::DateTime::UNIX_EPOCH,
         }),

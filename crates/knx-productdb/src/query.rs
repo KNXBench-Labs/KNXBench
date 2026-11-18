@@ -2527,6 +2527,45 @@ mod tests {
         );
     }
 
+    #[test]
+    fn catalog_item_details_carry_section_name_mask_and_medium() {
+        let (_dir, conn) = db();
+        ingest_catalog(&conn, "sha-c", "M-006A/Catalog.xml", CATALOG.as_bytes()).unwrap();
+
+        let all = catalog_items(&conn, None, None, None).unwrap();
+        assert_eq!(all.len(), 1);
+        let details = all[0].details.as_ref().expect("details attached");
+        assert_eq!(details.catalog_section_id.as_deref(), Some("M-006A_CG-1"));
+        assert_eq!(details.catalog_section_name.as_deref(), Some("Actuators"));
+        assert_eq!(details.mask_version.as_deref(), Some("MV-0701"));
+        assert_eq!(details.medium_types.as_deref(), Some("MT-0"));
+    }
+
+    #[test]
+    fn catalog_item_details_stay_none_without_a_hardware2program_link() {
+        let (_dir, conn) = db();
+        const BARE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11">
+  <ManufacturerData>
+    <Manufacturer RefId="M-006A">
+      <Catalog>
+        <CatalogSection Id="M-006A_CG-1" Name="Actuators" Number="1">
+          <CatalogItem Id="M-006A_CI-2" Name="Nur Text" Number="T-1" />
+        </CatalogSection>
+      </Catalog>
+    </Manufacturer>
+  </ManufacturerData>
+</KNX>"#;
+        ingest_catalog(&conn, "sha-b", "M-006A/Bare.xml", BARE.as_bytes()).unwrap();
+
+        let all = catalog_items(&conn, None, Some("Nur Text"), None).unwrap();
+        assert_eq!(all.len(), 1);
+        let details = all[0].details.as_ref().expect("details attached");
+        assert_eq!(details.catalog_section_name.as_deref(), Some("Actuators"));
+        assert_eq!(details.mask_version, None);
+        assert_eq!(details.medium_types, None);
+    }
+
     /// A `de-DE` translation of the catalog item's `Name`, mirroring
     /// `parse::translation`'s own `CATALOG` fixture: the `Languages` block
     /// is a sibling of `Catalog`, scoped by `Manufacturer/@RefId`, not the

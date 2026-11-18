@@ -3,7 +3,10 @@
 //! `device_evaluation` (ADR-0090) and the `ValueStatus` classification the
 //! adapter reports as visibility.
 
-use knx_productdb::device_evaluation::{evaluate_device, EvaluationFinding, ValueStatus};
+use knx_core::{DeviceId, ModuleInstance, ModuleInstanceId, SourceRef};
+use knx_productdb::device_evaluation::{
+    evaluate_device, resolve_mi_authority, EvaluationFinding, MiAuthority, ValueStatus,
+};
 use rusqlite::Connection;
 
 /// `P-1` (Mode, Restriction 0/1) shows `P-2` when 1 and `P-3` when 0. One
@@ -179,4 +182,53 @@ fn a_module_scoped_value_is_judged_in_its_own_module_after_feedback() {
         off.value_status("MOD-1_M-1_MI-1_P-2_R-1"),
         ValueStatus::Inactive
     );
+}
+
+fn module_instance(k: u32) -> ModuleInstance {
+    ModuleInstance {
+        id: ModuleInstanceId(k),
+        device: DeviceId(1),
+        source: SourceRef {
+            path: String::new(),
+            ets_id: "MD-71_M-93".into(),
+        },
+        repeat_index: format!("71x{k}"),
+        instance_ets_id: format!("MD-71_M-93_MI-{k}"),
+        arguments: vec![],
+    }
+}
+
+/// ADR-0177: a repeated module whose program-side `Module/@Id` carries the
+/// instance counter (`…_MI-2`) is resolved to the instance with that
+/// counter — no longer `Ambiguous` by construction.
+#[test]
+fn a_repeated_module_id_with_a_well_formed_mi_counter_resolves_to_that_instance() {
+    let instances = vec![module_instance(2), module_instance(4)];
+    assert!(matches!(
+        resolve_mi_authority(&instances, "A-TEST_MD-71_M-93_MI-2"),
+        MiAuthority::Found(ref d) if d == "2"
+    ));
+    assert!(matches!(
+        resolve_mi_authority(&instances, "A-TEST_MD-71_M-93_MI-4"),
+        MiAuthority::Found(ref d) if d == "4"
+    ));
+}
+
+/// ADR-0177: a counter no imported instance carries, or a missing/malformed
+/// `MI-` tail, keeps the repeated module ambiguous — never guessed.
+#[test]
+fn a_repeated_module_id_without_a_matching_counter_stays_ambiguous() {
+    let instances = vec![module_instance(2), module_instance(4)];
+    assert!(matches!(
+        resolve_mi_authority(&instances, "A-TEST_MD-71_M-93_MI-9"),
+        MiAuthority::Ambiguous { .. }
+    ));
+    assert!(matches!(
+        resolve_mi_authority(&instances, "A-TEST_MD-71_M-93"),
+        MiAuthority::Ambiguous { .. }
+    ));
+    assert!(matches!(
+        resolve_mi_authority(&instances, "A-TEST_MD-71_M-93_MI-x"),
+        MiAuthority::Ambiguous { .. }
+    ));
 }

@@ -547,7 +547,9 @@ changes, the project does not. Saving or exporting a project file is something e
    shown plan. **Only what the project marks pending** lets the server choose the
    scope from the device's programming marks: the complete download if the
    application is marked pending, otherwise the pending parameters and/or group
-   addresses, otherwise nothing (no plan is built). The plan then says which scope it
+   addresses, otherwise nothing (no plan is built; the tab then offers to prepare
+   the explicit **Complete download** anyway, which the server plans like any
+   explicitly chosen scope, #52). The plan then says which scope it
    resolved to, and starting it writes exactly that scope. On **Download** the server
    reads the marks again in the same project snapshot it prepares the plan from, and
    refuses and asks for a new plan if they now advise another scope or nothing. A mark

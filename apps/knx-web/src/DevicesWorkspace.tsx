@@ -1,12 +1,15 @@
-/** Device table with preserved list state and snapshot-bound product metadata. */
+/** Device table with preserved list state, snapshot-bound metadata and a column chooser. */
 import ResizableTable from "./ResizableTable";
+import TableColumnChooser from "./TableColumnChooser";
+import { DEVICE_COMPARISON_COLUMN, DEVICE_SELECT_COLUMN, DEVICE_TABLE_COLUMNS, visibleColumns } from "./tableColumns";
+import { useTableColumnVisibility } from "./useTableColumnVisibility";
 import { useEffect, useMemo, useState } from "react";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { MultiSelection, Selection } from "./selection";
 import type { ItemClickHandler } from "./multiSelection";
 import { catalogueMatchesTree, projectDeviceRows, visibleDeviceRows,
-  type DeviceCatalog, type DeviceCatalogRow, type DeviceListRow, type DeviceSort, type DeviceSortColumn } from "./deviceList";
+  type DeviceCatalog, type DeviceCatalogRow, type DeviceListRow, type DeviceSort } from "./deviceList";
 import { useTranslate, type MessageKey } from "./i18n";
 import { maskHex, systemLabel } from "./deviceSystem";
 import { useProductLanguage } from "./productLanguage";
@@ -19,36 +22,7 @@ import type { DeviceComparisons } from "./useDeviceComparisons";
 import { ComparisonTag } from "./DeviceComparisonDialog";
 import "./deviceComparisons.css";
 
-const DEVICES_COLUMNS = [
-  { id: "select", width: 38, min: 32 },
-  { id: "address", width: 82, min: 48 },
-  { id: "name", width: 170, min: 48 },
-  { id: "programming", width: 88, min: 48 },
-  { id: "manufacturer", width: 132, min: 48 },
-  { id: "product", width: 146, min: 48 },
-  { id: "orderNumber", width: 88, min: 48 },
-  { id: "system", width: 90, min: 48 },
-  { id: "topology", width: 170, min: 48 },
-  { id: "building", width: 145, min: 48 },
-  { id: "com_object_count", width: 62, min: 48 },
-  { id: "description", width: 160, min: 48 },
-  { id: "comparison", width: 100, min: 48 }
-];
-
-const COLUMNS: { column: DeviceSortColumn; label: MessageKey }[] = [
-  { column: "address", label: "workbench.address" },
-  { column: "name", label: "workbench.name" },
-  { column: "programming", label: "devices.programming" },
-  { column: "manufacturer", label: "devices.manufacturer" },
-  { column: "product", label: "devices.product" },
-  { column: "orderNumber", label: "devices.orderNumber" },
-  { column: "system", label: "devices.system" },
-  { column: "topology", label: "devices.topology" },
-  { column: "building", label: "devices.building" },
-  { column: "com_object_count", label: "inspector.communicationObjects" },
-  { column: "description", label: "devices.description" },
-];
-const COMPACT_LABELS: Partial<Record<DeviceSortColumn, MessageKey>> = {
+const COMPACT_LABELS: Partial<Record<string, MessageKey>> = {
   address: "devices.addressShort", programming: "devices.programmingShort", manufacturer: "devices.manufacturerShort",
   orderNumber: "devices.orderNumberShort", topology: "devices.topologyShort", building: "devices.buildingShort",
   com_object_count: "devices.objectsShort", description: "devices.descriptionShort",
@@ -82,6 +56,8 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
   const [programmingMounted, setProgrammingMounted] = useState(active);
   if (active && !programmingMounted) setProgrammingMounted(true);
   const [sort, setSort] = useState<DeviceSort>({ column: "address", descending: false });
+  const { visible } = useTableColumnVisibility("devices", DEVICE_TABLE_COLUMNS.map((column) => column.id));
+  const columns = visibleColumns(DEVICE_TABLE_COLUMNS, visible);
   const [metadata, setMetadata] = useState<{ tree: ProjectTree; language: string | null; rows: DeviceCatalogRow[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -126,6 +102,27 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
       default: return t("devices.notResolved");
     }
   }
+  /** The cell content of one sortable column; the two fixed columns are rendered separately. */
+  const cell = (row: DeviceListRow, id: string) => {
+    switch (id) {
+      case "address": return <td key={id} className="mono"><button className="table-select" onClick={(event) => onItemClick(event, "device", row.id, { kind: "device", id: row.id }, visibleOrder, true)}>{row.address ?? t("workbench.unassigned")}</button></td>;
+      case "name": return <td key={id}><button className="table-select" onClick={(event) => onItemClick(event, "device", row.id, { kind: "device", id: row.id }, visibleOrder, true)}>{row.name}</button></td>;
+      case "programming": return <td key={id}>{programmingMounted ? programmingChips(row, row.id === system2Result?.deviceId ? system2Result : null) : null}</td>;
+      case "manufacturer": return <td key={id}>{row.catalog?.manufacturerName ?? row.catalog?.manufacturerId ?? resolution(row)}</td>;
+      case "product": return <td key={id}>{row.catalog?.productText ?? resolution(row)}
+        {productLanguage && fellBack(row.catalog?.productText, row.catalog?.productTextLanguage)
+          && <LanguageFallbackBadge selected={productLanguage} source={row.catalog?.productSourceLanguage} />}
+      </td>;
+      case "orderNumber": return <td key={id}>{row.catalog?.orderNumber ?? resolution(row)}</td>;
+      case "system": return <td key={id} title={row.catalog?.system.state === "family" ? t("devices.systemDeclared", { mask: maskHex(row.catalog.system.mask) }) : undefined}>
+        {systemText(row)}</td>;
+      case "topology": return <td key={id}>{row.topology.length ? row.topology.join(" · ") : t("workbench.unassigned")}</td>;
+      case "building": return <td key={id}>{row.building.length ? row.building.join(" · ") : t("workbench.unassigned")}</td>;
+      case "com_object_count": return <td key={id}>{row.com_object_count}</td>;
+      case "description": return <td key={id}>{row.description ?? "—"}</td>;
+      default: return null;
+    }
+  };
   return <section className="devices-workspace" aria-labelledby="devices-heading">
     <header className="workspace-heading"><div><h1 id="devices-heading">{t("workbench.devices")}</h1>
       <p role="status">{t("devices.count", { shown: rows.length, total })}</p></div></header>
@@ -136,17 +133,19 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
         onChange={(event) => setPendingOnly(event.target.checked)} />{t("devices.pendingOnly")}</label>
       <button type="button" onClick={() => setRefresh((value) => value + 1)} disabled={loading}>{t("devices.refresh")}</button>
       <button type="button" disabled={comparisons.running || rows.length === 0} onClick={() => comparisons.open(rows)}>{t("compare.all")}</button>
+      <TableColumnChooser tableId="devices" tableLabel="tableColumns.name.devices"
+        columns={DEVICE_TABLE_COLUMNS.map((column) => ({ id: column.id, label: column.label }))} />
     </div>
     {loading && <p role="status"><span className="task-status-text">{t("devices.loading")}</span></p>}
     {system2Snapshot.failed && <p className="field-error" role="status" data-system2-read-failed>{t("devices.system2.readFailed")}</p>}
     {error && <p className="field-error" role="alert">{t("devices.catalogueFailed", { reason: error })}</p>}
       <ResizableTable scrollClassName="workspace-table-wrap devices-table-scroll" scrollLabel={t("devices.table")} tableId="devices"
-        columns={DEVICES_COLUMNS} className="workspace-table devices-table"><thead><tr>
+        columns={[DEVICE_SELECT_COLUMN, ...columns, DEVICE_COMPARISON_COLUMN]} className="workspace-table devices-table"><thead><tr>
         <th><span className="sr-only">{t("addressTable.selectColumn")}</span></th>
-        {COLUMNS.map(({ column, label }) => <th key={column} aria-sort={sort.column === column ? (sort.descending ? "descending" : "ascending") : "none"}>
-          <button type="button" aria-label={t(label)} title={t(label)} onClick={() => setSort({ column, descending: sort.column === column && !sort.descending })}>
-            <span className="table-column-label">{t(COMPACT_LABELS[column] ?? label)}</span><span className="table-sort-indicator" aria-hidden="true" style={{ visibility: sort.column === column ? "visible" : "hidden" }}>{sort.column === column ? sort.descending ? "↓" : "↑" : ""}</span>
-          </button></th>)}
+        {columns.map(({ sort: column, label }) => { const sortColumn = column ?? "name"; return <th key={label} aria-sort={sort.column === sortColumn ? (sort.descending ? "descending" : "ascending") : "none"}>
+          <button type="button" aria-label={t(label)} title={t(label)} onClick={() => setSort({ column: sortColumn, descending: sort.column === sortColumn && !sort.descending })}>
+            <span className="table-column-label">{t(COMPACT_LABELS[sortColumn] ?? label)}</span><span className="table-sort-indicator" aria-hidden="true" style={{ visibility: sort.column === sortColumn ? "visible" : "hidden" }}>{sort.column === sortColumn ? sort.descending ? "↓" : "↑" : ""}</span>
+          </button></th>; })}
       <th><span aria-label={t("compare.column")} title={t("compare.column")}>{t("compare.one")}</span></th>
       </tr></thead><tbody>{rows.map((row) => <tr key={row.id} data-rename-kind="device" data-rename-id={row.id} data-rename-value={row.name}
         onClick={(event) => {
@@ -157,20 +156,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
         <td><input type="checkbox" aria-label={t("devices.select", { name: row.name })}
           checked={multiSelection?.kind === "device" && multiSelection.ids.has(row.id) || false}
           onChange={() => onItemClick(CHECKBOX_CLICK, "device", row.id, { kind: "device", id: row.id }, visibleOrder)} /></td>
-        <td className="mono"><button className="table-select" onClick={(event) => onItemClick(event, "device", row.id, { kind: "device", id: row.id }, visibleOrder, true)}>{row.address ?? t("workbench.unassigned")}</button></td>
-        <td><button className="table-select" onClick={(event) => onItemClick(event, "device", row.id, { kind: "device", id: row.id }, visibleOrder, true)}>{row.name}</button></td>
-        <td>{programmingMounted ? programmingChips(row, row.id === system2Result?.deviceId ? system2Result : null) : null}</td>
-        <td>{row.catalog?.manufacturerName ?? row.catalog?.manufacturerId ?? resolution(row)}</td>
-        <td>{row.catalog?.productText ?? resolution(row)}
-          {productLanguage && fellBack(row.catalog?.productText, row.catalog?.productTextLanguage)
-            && <LanguageFallbackBadge selected={productLanguage} source={row.catalog?.productSourceLanguage} />}
-        </td>
-        <td>{row.catalog?.orderNumber ?? resolution(row)}</td>
-        <td title={row.catalog?.system.state === "family" ? t("devices.systemDeclared", { mask: maskHex(row.catalog.system.mask) }) : undefined}>
-          {systemText(row)}</td>
-        <td>{row.topology.length ? row.topology.join(" · ") : t("workbench.unassigned")}</td>
-        <td>{row.building.length ? row.building.join(" · ") : t("workbench.unassigned")}</td>
-        <td>{row.com_object_count}</td><td>{row.description ?? "—"}</td>
+        {columns.map((column) => cell(row, column.id))}
         <td className="device-comparison-actions"><ComparisonTag entry={comparisons.entry(row.id)} onClick={() => comparisons.inspect(row)} />
           <button type="button" disabled={comparisons.running} onClick={() => comparisons.open([row])}>{t("compare.one")}</button></td>
       </tr>)}</tbody></ResizableTable>

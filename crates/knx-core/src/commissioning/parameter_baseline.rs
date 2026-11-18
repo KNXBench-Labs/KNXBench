@@ -16,6 +16,13 @@ use crate::{DeviceId, DeviceInstance, Project};
 /// product default, exactly as the image builder consumed them.
 pub type ParameterValues = BTreeMap<String, String>;
 
+/// One module instantiation's written value: the program-side `Module/@Id`
+/// (e.g. `MD-2_M-1_MI-3`) plus the declared `ParameterRef` id. The stored
+/// module-qualified id is decomposed once, on the write side, via
+/// `instance_counter` (ADR-0177); the baseline keeps the two halves so a
+/// re-numbered instance never silently adopts another's evidence.
+pub type ScopedParameterValues = BTreeMap<(String, String), String>;
+
 /// What one completed download wrote parameters from.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ParameterBaseline {
@@ -24,6 +31,10 @@ pub struct ParameterBaseline {
     /// The written request's values, defaults resolved in the same catalogue
     /// lease that proved the source unchanged.
     pub values: ParameterValues,
+    /// Module-scoped values the written request carried, keyed by
+    /// `(Module/@Id, ParameterRef id)` — present but empty when the run
+    /// wrote no module-scoped parameter (WP-37, schema 22).
+    pub scoped_values: ScopedParameterValues,
     /// Unknown is distinct from a completed write with no active objects.
     pub object_flags: Option<ObjectFlagValues>,
     /// When the run's settlement recorded it.
@@ -224,6 +235,16 @@ pub struct ParameterDifference {
     pub current: Option<String>,
 }
 
+/// One module-scoped ref whose value at the last download is not its current
+/// value: the `Module/@Id`, the declared ref id, and both sides.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScopedParameterDifference {
+    pub module_id: String,
+    pub ref_id: String,
+    pub downloaded: Option<String>,
+    pub current: Option<String>,
+}
+
 /// The refs whose effective values differ between `downloaded` and
 /// `current`, by id. Values compare as exact raw strings; a ref with a value
 /// on exactly one side differs, a ref on neither side is not compared
@@ -240,6 +261,31 @@ pub fn differences(
             let (was, now) = (downloaded.get(id), current.get(id));
             (was != now).then(|| ParameterDifference {
                 ref_id: id.clone(),
+                downloaded: was.cloned(),
+                current: now.cloned(),
+            })
+        })
+        .collect()
+}
+
+/// The module-scoped refs whose values differ, ordered by `(module_id,
+/// ref_id)`: same exact-raw-string rule as [`differences`].
+pub fn scoped_differences(
+    downloaded: &ScopedParameterValues,
+    current: &ScopedParameterValues,
+) -> Vec<ScopedParameterDifference> {
+    let mut keys: Vec<&(String, String)> = downloaded.keys().chain(current.keys()).collect();
+    keys.sort();
+    keys.dedup();
+    keys.into_iter()
+        .filter_map(|(module_id, ref_id)| {
+            let (was, now) = (
+                downloaded.get(&(module_id.clone(), ref_id.clone())),
+                current.get(&(module_id.clone(), ref_id.clone())),
+            );
+            (was != now).then(|| ScopedParameterDifference {
+                module_id: module_id.clone(),
+                ref_id: ref_id.clone(),
                 downloaded: was.cloned(),
                 current: now.cloned(),
             })
@@ -297,6 +343,7 @@ mod tests {
             object_flags: None,
             program_id: "P".into(),
             values: values(&[("R-1", "1")]),
+            scoped_values: ScopedParameterValues::new(),
             at: DateTime::<Utc>::UNIX_EPOCH,
         };
         let device = DeviceId(4);
@@ -310,5 +357,47 @@ mod tests {
         assert_eq!(all.get(device), Some(&baseline));
         all.apply(&BaselineChange::Remove.edit_for(device).unwrap());
         assert!(all.is_empty());
+    }
+
+    fn scoped(pairs: &[(&str, &str, &str)]) -> ScopedParameterValues {
+        pairs
+            .iter()
+            .map(|(m, r, v)| ((m.to_string(), r.to_string()), v.to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn scoped_differences_compare_exact_raws_in_module_ref_order() {
+        let downloaded = scoped(&[
+            ("MD-2_M-1_MI-1", "P-1_R-1", "1"),
+            ("MD-2_M-1_MI-2", "P-1_R-1", "x"),
+            ("MD-2_M-1_MI-1", "P-1_R-2", "same"),
+        ]);
+        let current = scoped(&[
+            ("MD-2_M-1_MI-1", "P-1_R-1", "01"),
+            ("MD-2_M-1_MI-2", "P-1_R-1", "x"),
+            ("MD-2_M-1_MI-1", "P-1_R-3", "new"),
+            ("MD-2_M-1_MI-1", "P-1_R-2", "same"),
+        ]);
+        assert_eq!(
+            scoped_differences(&downloaded, &current),
+            vec![
+                ScopedParameterDifference {
+                    module_id: "MD-2_M-1_MI-1".into(),
+                    ref_id: "P-1_R-1".into(),
+                    downloaded: Some("1".into()),
+                    current: Some("01".into()),
+                },
+                ScopedParameterDifference {
+                    module_id: "MD-2_M-1_MI-1".into(),
+                    ref_id: "P-1_R-3".into(),
+                    downloaded: None,
+                    current: Some("new".into()),
+                },
+            ]
+        );
+        // The MI-2 row is identical on both sides, so one instantiation's
+        // evidence never leaks into another's comparison.
+        assert!(scoped_differences(&downloaded, &downloaded).is_empty());
     }
 }

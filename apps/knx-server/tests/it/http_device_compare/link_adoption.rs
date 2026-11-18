@@ -338,6 +338,7 @@ async fn association_rows_adopt_links_at_the_mount_undo_and_never_write() {
                 object_flags: Some(Default::default()),
                 program_id: "A-1".into(),
                 values: [("P-1_R-1".to_string(), "5".to_string())].into(),
+                scoped_values: Default::default(),
                 at: chrono::DateTime::UNIX_EPOCH,
             };
             (device.id, baseline)

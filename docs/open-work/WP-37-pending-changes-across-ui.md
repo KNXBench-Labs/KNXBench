@@ -4,8 +4,9 @@ External report by the issue reporter, 10 November 2026; triaged 11 November 202
 **Status update — 14 November 2026:** step 4's reporter-acceptance task is
 **done**. The reporter confirmed the area/section/ancestor marks on
 `0.1.0-alpha.21+g6a9336c5` and closed #48. Steps 1–4 shipped in Alpha 21;
-module-scoped parameters and the other exclusions below remain outside this
-closure. [Reporter evidence](../status/2026-11-14-issues36-48-reporter-closure.md).
+module-scoped parameters shipped 17 November 2026 as the first WP-07-authority
+consumer (native schema 22, ADR-0177 key; see "Module-scoped parameters" below);
+the other exclusions below remain outside this closure. [Reporter evidence](../status/2026-11-14-issues36-48-reporter-closure.md).
 
 Historical implementation status: **step 1 implemented (11 November 2026, main only); step 2 implemented
 (server part 11 November, parameter-editor UI 12 November 2026, main only) per
@@ -86,9 +87,10 @@ create another client-side value comparator, baseline or settlement path.
   ref updates its section and ancestors, unrelated marks remain, and the next
   accepted GET replaces the comparison. Refreshing is not proof that the device
   is up to date. No stale marks after a device, program or project switch.
-- No difference marks for missing or unusable comparisons or module-scoped
-  parameters. Keep the existing explanatory summary and whole-device pending
-  flags distinct from these last-programming differences.
+- No difference marks for missing or unusable comparisons. Module-scoped
+  parameters are marked too (17 November 2026, schema 22). Keep the existing
+  explanatory summary and whole-device pending flags distinct from these
+  last-programming differences.
 - Provide an English/German accessible description, not colour alone or a
   mouse-only tooltip; preserve section names and keyboard navigation. Verify
   forced colours and no horizontal overflow at narrow and desktop widths.
@@ -235,8 +237,11 @@ programming-flag changes; no hardware, release or deployment authority.
   the only differing one, the line is left out until the read decides. Under `forced-colors: active` the row dot, the summary dot and
   the step-1 dot (`device-pending-dot`) keep `forced-color-adjust: none` and paint
   in `CanvasText`. `refId` is the `ParameterRef` id, which is the unscoped field's
-  `etsId` (`domain.rs` sets `ets_id: view.id`; baselines hold unscoped refs
-  only, `resolve_unscoped_values`); module-scoped rows are never marked.
+  `etsId` (`domain.rs` sets `ets_id: view.id`; unscoped baselines hold
+  unscoped refs only, `resolve_unscoped_values`). Module-scoped rows are
+  marked by `scopedDiffering`, keyed `(moduleId, refId)` with the
+  `Module/@Id` the WP-07 authority carries in its `_MI-<k>` suffix
+  (ADR-0177), compared by `scoped_differences` (schema 22).
 - **Summary line** (Parameters view only, above the fields, static text, not a
   live region): “{count} values differ from the last download ({time}).” with
   singular/plural, plus “{hidden} of them are not shown with the current
@@ -311,8 +316,19 @@ description after the name.
 - Group-address views carry no last-download marks (ADR-0174 §5).
 - Differences on object numbers without a selected project row are counted in
   the communication-object summary, not listed.
-- Module-scoped parameters (no baseline until module downloads exist); a write
-  of a module-scoped row never drops the unscoped ref's mark.
+- ~~Module-scoped parameters (no baseline until module downloads exist)~~
+  **shipped 17 November 2026**: a completed download's settlement now records
+  the module-scoped values it wrote as `scoped_values` keyed
+  `(Module/@Id, ParameterRef id)` (native schema 22, pure addition
+  `device_parameter_baseline_scoped_value`; migration v21→v22), decomposed on
+  the write side via the WP-07 authority's `instance_counter` (ADR-0177) so a
+  re-numbered instance is a new key, never a silent overwrite. The comparison
+  answers `scopedDiffering` beside `differing` and the panel marks module-scoped
+  rows by their section's `moduleId`; a module-scoped write drops only its own
+  `(moduleId, refId)` pair, never the unscoped ref's mark. The image builder
+  still refuses module instances (`ImageError::Unsupported`), so module-scoped
+  baseline rows only ever come from a request whose values carried them; no
+  module download exists yet.
 - The caption beside an open checked editor is visible but not linked to the
   editor's controls as their description.
 - Devices imported, programmed by the System-2 path or marked by hand show only
@@ -418,7 +434,8 @@ Step 2, UI part (intercepted fictional data, no bus):
   written ref (by `etsId` and by `writeEtsId`) and with the line dimmed,
   `aria-busy` while waiting, no "no value differs" before the read when the
   only differing ref was written, a module-scoped write keeping the unscoped
-  mark, replacement by the next read, no carry-over to another program, no retention
+  mark and dropping only its own scoped pair, replacement by the next read, no
+  carry-over to another program, no retention
   after a device switch with a late write answer, at the row and at the read
   model.
 - `apps/knx-web/src/parameterLastDownload.test.ts` (6): the two counts kept

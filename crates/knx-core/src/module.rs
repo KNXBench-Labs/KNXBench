@@ -11,6 +11,13 @@
 //! stays exactly as retained-but-uninterpreted as `parameter.rs`'s;
 //! import never needs to evaluate it, because `GroupObjectTree` already
 //! carries ETS's own answer (ADR-0014).
+//!
+//! The one interpreted piece is [`instance_counter`]: the accepted WP-07
+//! mapping witness (docs/research/2026-11-17-wp07-module-mapping-witness.md)
+//! counts the `_MI-<k>` suffix of `instance_ets_id` as the instance index `k`
+//! used by the stride rule `Start + Allocates·(k−1)` — 149/149 instances,
+//! 292/292 argument values. `repeat_index` stays opaque (ADR-0108); only
+//! the `MI-` digits are read here.
 
 use crate::ids::{DeviceId, ModuleInstanceId, SourceRef};
 
@@ -36,6 +43,23 @@ pub struct ModuleInstance {
     /// `Arguments/Argument`, as `(source, value)` pairs. Uninterpreted, same
     /// policy as `ParameterInstanceRef::value`.
     pub arguments: Vec<(SourceRef, String)>,
+}
+
+impl ModuleInstance {
+    /// The instance counter `k` of `instance_ets_id`'s trailing `_MI-<k>`
+    /// suffix — the index the accepted WP-07 witness counts into the stride
+    /// rule `Start + Allocates·(k−1)` (149/149 instances). `None` when the id
+    /// does not decompose as `<source.ets_id>_MI-<digits>` with all-ASCII
+    /// digits; never guessed, never defaulted.
+    pub fn instance_counter(&self) -> Option<u32> {
+        let digits = self
+            .instance_ets_id
+            .strip_prefix(&format!("{}_MI-", self.source.ets_id))?;
+        if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+            return None;
+        }
+        digits.parse().ok()
+    }
 }
 
 #[cfg(test)]
@@ -97,5 +121,40 @@ mod tests {
         let mut other = base.clone();
         other.arguments[0].1 = "2".into();
         assert_ne!(base, other);
+    }
+
+    /// WP-07 witness rule 1's index: the `_MI-<k>` digits of a well-formed
+    /// `instance_ets_id`, counted 149/149 across the accepted witness.
+    #[test]
+    fn instance_counter_reads_the_mi_suffix() {
+        let m = ModuleInstance {
+            id: ModuleInstanceId(4),
+            device: DeviceId(1),
+            source: source("MD-1_M-1"),
+            repeat_index: "288x4 289x1".into(),
+            instance_ets_id: "MD-1_M-1_MI-4".into(),
+            arguments: vec![],
+        };
+        assert_eq!(m.instance_counter(), Some(4));
+    }
+
+    #[test]
+    fn instance_counter_refuses_a_mismatched_or_malformed_suffix() {
+        let mut m = ModuleInstance {
+            id: ModuleInstanceId(1),
+            device: DeviceId(1),
+            source: source("MD-2_M-4"),
+            repeat_index: "32x1".into(),
+            instance_ets_id: "MD-2_M-4_MI-1".into(),
+            arguments: vec![],
+        };
+        // A different RefId prefix than source.ets_id: no counter.
+        m.instance_ets_id = "MD-2_M-5_MI-1".into();
+        assert_eq!(m.instance_counter(), None);
+        // Non-digit or empty suffix: no counter, never a default.
+        m.instance_ets_id = "MD-2_M-4_MI-x".into();
+        assert_eq!(m.instance_counter(), None);
+        m.instance_ets_id = "MD-2_M-4_MI-".into();
+        assert_eq!(m.instance_counter(), None);
     }
 }

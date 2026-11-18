@@ -291,6 +291,21 @@ pub enum ParameterPlacement {
     /// counted from the first octet of element 1, which a parameter-filled
     /// `LdCtrlWriteProp` writes (ADR-0161).
     Property(PropertyPlacement),
+    /// A `ModuleDef/Static` parameter's `Memory` carrying `BaseOffset`: the
+    /// absolute octet is the bound argument's value plus `@Offset`, per
+    /// instantiation (owner-accepted WP-07 witness, ADR-0177; inference —
+    /// not hardware-verified).
+    ModuleMemory {
+        /// `Memory/@CodeSegment`.
+        code_segment: String,
+        /// `Memory/@Offset`, relative to the base offset argument.
+        offset: u32,
+        /// `Memory/@BitOffset` (0–7).
+        bit_offset: u8,
+        /// `Memory/@BaseOffset`: the name of the `ModuleDef/Arguments`
+        /// argument whose bound value is the base octet.
+        base_offset_arg: String,
+    },
     /// Anything else (a `Union/Property` placement, attributes that do not
     /// parse), kept by name so that it can be refused by name.
     Unmodelled {
@@ -489,7 +504,7 @@ struct Parser<'a> {
 }
 
 /// What an element event carries, owned, so the reader can move on.
-struct Element {
+pub(super) struct Element {
     name: String,
     attributes: Attrs,
     empty: bool,
@@ -531,6 +546,14 @@ impl<'a> Parser<'a> {
 
     /// Like [`Self::next`], but the end of the file is an error: it is only
     /// called inside an element that has not closed yet.
+    ///
+    /// A closing tag (`End`) yields `Ok(None)` and is NOT consumed by the
+    /// caller — wait, it IS consumed here (the event is already read), and
+    /// the `None` result tells the caller "your element has closed". The
+    /// subtle part: `skip` treats `None` as "one level closed" and `skip`
+    /// of an `Empty` element is a no-op, so a subtree is consumed exactly
+    /// when its start (or empty) element plus all descendants plus the
+    /// matching end tag have been read.
     fn next_inside(&mut self, parent: &str) -> Result<Option<Element>, CodeError> {
         self.next()?
             .ok_or_else(|| self.malformed(format!("the file ends inside <{parent}>")))
@@ -1181,7 +1204,7 @@ fn verbatim(attributes: &Attrs) -> BTreeMap<String, String> {
 /// A `Memory` element's placement, or `None` if it is not a `Memory` with
 /// a segment, an octet offset and a bit offset of 0–7
 /// (*Project Schema23* §1.1.3.17: `BitOffset_t` is 0–7).
-fn memory_placement(element: &Element) -> Option<MemoryPlacement> {
+pub(super) fn memory_placement(element: &Element) -> Option<MemoryPlacement> {
     let a = &element.attributes;
     if element.name != "Memory" {
         return None;
@@ -1195,10 +1218,30 @@ fn memory_placement(element: &Element) -> Option<MemoryPlacement> {
     })
 }
 
+/// A `Memory` carrying `BaseOffset` inside a `ModuleDef/Static`: the base
+/// octet comes from the named bound argument, per instantiation, so the
+/// placement stays relative until the image builder resolves it
+/// (ADR-0177; inference — not hardware-verified).
+pub(super) fn module_memory_placement(element: &Element) -> Option<ParameterPlacement> {
+    let a = &element.attributes;
+    if element.name != "Memory" {
+        return None;
+    }
+    let base_offset_arg = a.get("BaseOffset")?.to_string();
+    let bit_offset: u8 = a.get("BitOffset")?.parse().ok()?;
+    (bit_offset <= 7).then_some(())?;
+    Some(ParameterPlacement::ModuleMemory {
+        code_segment: a.get("CodeSegment")?.to_string(),
+        offset: a.get("Offset")?.parse().ok()?,
+        bit_offset,
+        base_offset_arg,
+    })
+}
+
 /// A `Property` element's placement, or `None` if it is not a `Property`
 /// with an object index, a property id, an octet offset and a bit offset of
 /// 0–7.
-fn property_placement(element: &Element) -> Option<PropertyPlacement> {
+pub(super) fn property_placement(element: &Element) -> Option<PropertyPlacement> {
     let a = &element.attributes;
     if element.name != "Property" {
         return None;
@@ -1221,7 +1264,7 @@ fn member_offsets(member: &Element) -> Option<(u32, u8)> {
     Some((a.get("Offset")?.parse().ok()?, bit_offset))
 }
 
-fn unmodelled_placement(name: &str, element: &Element) -> ParameterPlacement {
+pub(super) fn unmodelled_placement(name: &str, element: &Element) -> ParameterPlacement {
     ParameterPlacement::Unmodelled {
         name: name.to_string(),
         attributes: verbatim(&element.attributes),

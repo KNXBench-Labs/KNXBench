@@ -151,6 +151,11 @@ fn comparable(code: &ProgramCode) -> Comparable {
                         "Property {}/{}",
                         property.object_index, property.property_id
                     )),
+                    ParameterPlacement::ModuleMemory {
+                        base_offset_arg, ..
+                    } => Err(format!(
+                        "ModuleMemory (base offset argument {base_offset_arg})"
+                    )),
                     ParameterPlacement::Unmodelled { name, attributes } => {
                         Err(format!("{name} {attributes:?}"))
                     }

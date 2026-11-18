@@ -198,7 +198,9 @@ values; requests and confirmations do not carry that same assertion. A
 session-closed notice is not a frame, so it has no control fields. An older
 server that does not send them is shown without invented defaults. The same
 facts appear in the selected row's details. This is display-only; inspecting
-a row does not send a telegram.
+a row does not send a telegram. The details pane stays visible while the
+telegram table scrolls past it (on narrow windows it stacks below the table
+again).
 
 The **Decoded** column is the interesting one. If a project is open when you connect,
 KNXBench takes a snapshot of that project's group addresses and their datapoint types
@@ -875,7 +877,10 @@ connected (with the observed target), connection lost, gateway busy (for example
 download or System-2 operation), unclear, unknown, or not connected. "Not
 connected" means KNXBench saw no own connection; it does not prove the bus is
 idle. Connecting opens the selected transport and buffers bus telegrams for the
-bus monitor.
+bus monitor. While connected, the status also shows the session's telegram
+counters — received (↓) and sent (↑) — counting up live and resetting when a
+new session starts; the connected indicator carries a gentle pulse that stays
+off under reduced motion.
 
 While a device download runs, the status bar also shows it from every view
 (since issue #43): the device address, how many steps are done, the share of

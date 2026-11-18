@@ -23,9 +23,14 @@ feature at a time, never inferred manufacturer behaviour.
   module-scoped, cross-target and text-parameter renames remain open (see below).
 - Translated row/column captions outside the bounded literal program-owned
   implementation; module/Repeat, template and text-reference semantics remain open.
-- Inline sections and nested blocks. `Row/@CollapseIfEmpty` is applied since
+- Inline sections. `Row/@CollapseIfEmpty` is applied since
   17 November 2026 (truthy value + row holds no field/label hides the row in
   the matrix; see [contract](../contracts/parameter-workspace.md)).
+- Nested blocks: a program-owned nested `ParameterBlock`'s own `@Cell` now
+  places its literal caption in the parent grid
+  (`nested-block-cell-passive-v1`, contract section added 18 November 2026);
+  the nested block's fields stay in the row view. Deeper nesting levels and
+  nested-block actions remain open.
 - Button actions inside grid cells (`EventHandler*`, online callbacks, own
   `Access`, translated or text-parameter Button text, module-scoped Buttons).
   Admitted literal in-cell text alone is delivered as passive labels. The

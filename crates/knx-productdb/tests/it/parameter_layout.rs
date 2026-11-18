@@ -2,6 +2,7 @@
 use knx_productdb::{ingest_file, open_and_migrate, parameter_layout::load};
 
 mod passive_buttons;
+mod passive_nested_cells;
 
 fn source(dynamic: &str) -> String {
     format!(

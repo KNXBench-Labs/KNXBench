@@ -1,6 +1,6 @@
 /** Source-bound parameter workspace indexing and search contracts. */
 import { describe, expect, it } from "vitest";
-import type { ParameterField, ParameterGroupLayout, ParameterPassiveLabel, ParameterSection, ParameterSeparator } from "./api";
+import type { ParameterField, ParameterGroupLayout, ParameterNestedCell, ParameterPassiveLabel, ParameterSection, ParameterSeparator } from "./api";
 import { indexParameterWorkspace, matchesParameterSearch, parameterSectionKeys } from "./parameterWorkspace";
 
 const field = (etsId: string, group?: ParameterField["group"]): ParameterField => ({
@@ -39,7 +39,7 @@ describe("parameter workspace index", () => {
     expect(new Set(index.rows.map(row => row.key)).size).toBe(3);
     expect(index.groups).toHaveLength(2);
     expect(index.groups[1].label).toBe("");
-    expect(indexParameterWorkspace([])).toEqual({ rows: [], groups: [], items: [], passiveLabels: [] });
+    expect(indexParameterWorkspace([])).toEqual({ rows: [], groups: [], items: [], passiveLabels: [], nestedCells: [] });
   });
 
   // WP-15 / ADR-0063: two nameless nested instances of one definition share
@@ -144,5 +144,33 @@ describe("passive source labels", () => {
     const index = indexParameterWorkspace([{ scope: null, fields: [field("A", { key: "g", label: "Page" })],
       passiveLabels: [passive("B-1", { key: "g", label: "Page" })] }]);
     expect(index.rows.filter(row => matchesParameterSearch(row, "Literal"))).toEqual([]);
+  });
+});
+
+describe("nested block cells (nested-block-cell-passive-v1)", () => {
+  const nested = (elementId: string, group: ParameterNestedCell["group"], text: string | undefined, row = 1, column = 2): ParameterNestedCell => ({
+    elementId, text, cell: { row, column }, group, blockAccess: null });
+  const grid = (groupKey: string): ParameterGroupLayout => ({ groupKey, version: 1, declaredLayout: "Grid", status: "grid",
+    rows: [{ id: "R", text: null, textParameterRefId: null, collapseIfEmpty: null }],
+    columns: [{ id: "C1", text: null, textParameterRefId: null, width: "46%" }, { id: "C2", text: null, textParameterRefId: null, width: "53%" }],
+    labels: [], issues: [] });
+
+  it("indexes nested cells into their parent group without adding rows, after passive labels", () => {
+    const sections: ParameterSection[] = [{ scope: null, fields: [field("A", { key: "g", label: "Page" })],
+      groupLayouts: [grid("g")],
+      passiveLabels: [{ kind: "buttonLiteral", elementId: "B-1", text: "Label", cell: { row: 1, column: 1 }, group: { key: "g", label: "Page" }, blockAccess: null }],
+      nestedCells: [nested("N-1", { key: "g", label: "Page" }, "Nested caption", 1, 2),
+        nested("N-2", { key: "g", label: "Page" }, undefined, 1, 1)] }];
+    const before = JSON.stringify(sections);
+    const index = indexParameterWorkspace(sections);
+    expect(index.rows.map(row => row.field.etsId)).toEqual(["A"]);
+    expect(index.nestedCells.map(entry => [entry.cell.elementId, entry.cell.text, entry.cell.cell]))
+      .toEqual([["N-1", "Nested caption", { row: 1, column: 2 }], ["N-2", undefined, { row: 1, column: 1 }]]);
+    expect(index.nestedCells.every(entry => entry.groupKey === index.groups[0].key)).toBe(true);
+    expect(new Set(index.nestedCells.map(entry => entry.key)).size).toBe(2);
+    // Existing keys stay stable without nested cells.
+    expect(index.rows[0].key).toBe(indexParameterWorkspace([{ ...sections[0], nestedCells: [] }]).rows[0].key);
+    expect(index.groups[0].key).toBe(indexParameterWorkspace([{ ...sections[0], nestedCells: [] }]).groups[0].key);
+    expect(JSON.stringify(sections)).toBe(before);
   });
 });

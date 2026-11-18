@@ -6,9 +6,11 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 mod button;
 mod grid;
+mod nested;
 pub use button::{ButtonBinding, ButtonLiteral};
 pub(crate) use grid::{layout_attribute_is_known, layout_element_is_known};
 pub use grid::{BlockGrid, Cell, GridAxis, GridIssue, GridIssueKind, GridStatus, MAX_GRID_EVENTS};
+pub use nested::{NestedBinding, NestedBlockCell};
 
 /// Exact program ownership shared by every presentation reader of the source.
 mod ownership {
@@ -83,6 +85,10 @@ pub struct ParameterLayout {
     separators: HashMap<(String, i64), SeparatorPlacement>,
     declarations: HashMap<(String, i64), SeparatorDeclaration>,
     buttons: HashMap<i64, ButtonLiteral>,
+    /// `nested-block-cell-passive-v1`: program-owned nested blocks placed in
+    /// their parent grid, bound by structure.
+    nested_cells: HashMap<i64, NestedBlockCell>,
+    nested_binding: NestedBinding,
     button_binding: ButtonBinding,
     axis_program: String,
     literal_grid_axes: std::collections::HashSet<String>,
@@ -100,6 +106,19 @@ impl ParameterLayout {
         self.buttons.get(&node)
     }
     /// Whether the program's `Button` literals could be bound to stored nodes at all.
+    /// `nested-block-cell-passive-v1`: the admitted cell of the program-owned
+    /// nested block `node`, when its parent grid can render it.
+    pub fn nested_cell(&self, definition: &str, node: i64) -> Option<&NestedBlockCell> {
+        if !definition.is_empty() {
+            return None;
+        }
+        self.nested_cells.get(&node)
+    }
+
+    pub fn nested_binding(&self) -> NestedBinding {
+        self.nested_binding
+    }
+
     pub fn button_binding(&self) -> ButtonBinding {
         self.button_binding
     }
@@ -183,6 +202,7 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
     }
     let mut result = ParameterLayout {
         button_binding: ButtonBinding::Bound,
+        nested_binding: NestedBinding::Bound,
         axis_program: program.to_owned(),
         ..ParameterLayout::default()
     };
@@ -381,6 +401,16 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
             );
             result.button_binding = binding;
             result.buttons = buttons;
+            // nested-block-cell-passive-v1: program-owned nested blocks only.
+            let (nested_binding, nested_cells) = nested::bind(
+                source.as_deref(),
+                program,
+                Some(&nodes),
+                &scope_grids,
+                &captions,
+            );
+            result.nested_binding = nested_binding;
+            result.nested_cells = nested_cells;
         }
         for (id, grid) in scope_grids {
             result.grids.insert((scope.clone(), id), grid);

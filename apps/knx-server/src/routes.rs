@@ -507,7 +507,7 @@ pub(crate) struct ParameterGridRowDto {
     pub(crate) id: String,
     pub(crate) text: Option<String>,
     pub(crate) text_parameter_ref_id: Option<String>,
-    /// Preserved, not applied by any client in this build.
+    /// `Row/@CollapseIfEmpty`, verbatim; the web matrix plan applies it when truthy and the row holds no field or label.
     pub(crate) collapse_if_empty: Option<String>,
 }
 

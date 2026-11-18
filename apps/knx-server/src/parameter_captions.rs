@@ -70,12 +70,9 @@ impl CaptionFills {
                     Some(text) if text.contains("{{") => text.to_owned(),
                     _ => "{{0}}".to_owned(),
                 };
-                let filled = knx_productdb::dynamic::fill_positional(
-                    &template,
-                    value,
-                    &mut self.budget,
-                )
-                .map_err(|e| e.to_string())?;
+                let filled =
+                    knx_productdb::dynamic::fill_positional(&template, value, &mut self.budget)
+                        .map_err(|e| e.to_string())?;
                 self.budget
                     .admit_copy(&template)
                     .map_err(|e| e.to_string())?;
@@ -86,13 +83,13 @@ impl CaptionFills {
                         .admit_copy(&filled.text)
                         .map_err(|e| e.to_string())?;
                 }
-                if let Some(fill) = crate::com_object_activation::text_fill(filled.source, &template)
+                if let Some(fill) =
+                    crate::com_object_activation::text_fill(filled.source, &template)
                 {
                     self.budget
                         .admit_copy(&fill.template)
                         .map_err(|e| e.to_string())?;
-                    self.axis_texts
-                        .insert(axis.id.clone(), (filled.text, fill));
+                    self.axis_texts.insert(axis.id.clone(), (filled.text, fill));
                 }
             }
         }

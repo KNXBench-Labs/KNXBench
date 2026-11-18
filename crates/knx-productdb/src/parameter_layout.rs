@@ -88,10 +88,7 @@ pub struct ParameterLayout {
     literal_grid_axes: std::collections::HashSet<String>,
 }
 impl ParameterLayout {
-    pub fn literal_grid_axes(
-        &self,
-        program: &str,
-    ) -> Option<&std::collections::HashSet<String>> {
+    pub fn literal_grid_axes(&self, program: &str) -> Option<&std::collections::HashSet<String>> {
         (self.axis_program == program).then_some(&self.literal_grid_axes)
     }
     /// `button-literal-passive-v1`: the admitted literal of the program-owned

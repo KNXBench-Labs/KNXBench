@@ -1,14 +1,6 @@
-# Restart snapshot — WP-42.2+WP-42.3 delivered via PR !57 (merge 271584690 on main, 2026-11-17, owner WebUI open-work); WP-43 confirmed fully delivered via PR !55 (0b80d289: A1/C/B/A2 all on main) — open-work queue has no queued WP left; worktree <sources>/KNXBench-wp43-b-20261117 holds only a docs commit marking WP-43 delivered
-## WP-42 storage + editor (DELIVERED 2026-11-17)
-- PR !57 merged as 271584690: feature 8bf71a037 + origin/main, schema 22 (device_config_profile + WP-37 scoped baselines in one v21->v22), review findings fixed, package gate success=True (rust 9187/0, web 1456 browser cases, corpus 155/155). Branch/worktree cleaned.
-## WP-43 (CONFIRMED DELIVERED 2026-11-17)
-- Commits 607f35578 (B/#51), 748c7ff3e+82116457b (A2/#50), 0b80d289 (merge, contains A1 #52 and C #49) verified ancestors of origin/main. OPEN_WORK + WP-43 doc updated on branch work/wp43-b-20261117 (docs-only, pending push).
-NEXT: no queued open-work package remains; await owner for next package or push the WP-43 docs commit. No bus/hardware/release/deploy; other tracks preserved.
-
----
-
-## WP-43 issue batch (DELIVERED 2026-11-17 via PR !55; owner WebUI issue-packages; observed 2026-11-16 21:20 CET)
-- Owner Go: Mistral subagents, A1 (#52) -> C (#49) -> B (#51) -> A2 (#50). A1 candidate afc1788c1+d8c1e3627 on work/issues49-52-a1-20261116, `<sources>/KNXBench-issues49-52-20261116`; HTTP9/9, unit20/20, default+production browser6/6 each, parent inspected offer/plan pixels. Original reporter cause unproven, no automatic #52 closure; finding-closure review and selected gate/publication pending. C/B/A2 queued; no hardware/bus/VM/release/deploy. Root/private/foreign tracks preserved. Evidence `<profile-scratch>/issue-feedback-20261116/`.
+# Restart snapshot — WP-05 CollapseIfEmpty on `work/wp05-collapse-if-empty-20261117` in `<sources>/KNXBench-wp05-collapse-20261117` (2026-11-17, owner WebUI open-work)
+## WP-05 Row/@CollapseIfEmpty (RUNNING; observed 2026-11-17)
+- Web matrix plan now hides a declared row with truthy CollapseIfEmpty when it holds no field and no separator label (parameterMatrix.ts + 5 vitest cases); contract + WP-05 doc updated. Package gate re-running after CURRENT_STATE compaction. NEXT: review, PR, merge; then next open item. No bus/hardware/release/deploy.
 ## Reko online catalogue (RUNNING; owner WebUI Reko; observed 2026-11-16)
 - Owner implementation Go/continuation; branch `work/reko-catalogue-20261115`, worktree `<sources>/KNXBench-reko-catalogue-20261115`, rebased onto origin/main `6690503de` as commit `6c8b07298`. Manual sync, encrypted shared account, digest-bound existing imports implemented. Local proof 2026-11-16: COMPLETE package gate vs origin/main success=True pre-rebase (fmt, web-gate incl. 1368 browser tests, clippy, rust 9168/0, bindings 100/0, corpus 155/155; receipt target/package-gates/1794830078633096689) plus post-rebase focused rechecks backend 73/73 and UI 23/23. Codex reviews fixed; polled-auth login regression added. Pending: owner push authorization (not granted); no real provider login/download, bus, VM, release/deploy. Evidence `<profile-scratch>/reko/`; root stale/dirty and foreign stops preserved; rights/provenance audit excluded for this package, not deemed proven.
 Release freeze: released by claude-release-alpha22 (`v0.1.0-alpha.22` at `aed48fe0b`, observed 2026-11-15); `main` is open for code again. Evidence `<profile>/release-evidence/alpha22-20261115/`; knxproj writer branch stays outside Alpha 22.

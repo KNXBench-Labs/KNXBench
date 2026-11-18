@@ -100,7 +100,7 @@ function ParameterLabelRow(props: { field: ParameterField; language: string | nu
     <div className="parameter-field parameter-label-row" data-ets-id={field.etsId}>
       <span className="parameter-label-text">{text}</span>
       {untranslated && language !== null && (
-        <LanguageFallbackBadge selected={language} source={sourceLanguage} part={untranslated} />
+        <LanguageFallbackBadge selected={language} source={sourceLanguage} part={untranslated} compact />
       )}
     </div>
   );
@@ -335,19 +335,13 @@ function ParameterFieldRow(props: {
       <span className="parameter-field-name">{label}{downloadNote && <span className="parameter-download-mark"
         title={downloadNote} aria-hidden="true" />}</span>
       {field.access && <span className="provenance-badge" title={field.access}>{parameterMetadataLabel(t, "access", field.access)}</span>}
+      {/* WP-46.3: the access state is the compact per-value marker (the badge
+          above); the long caption is gone per field and appears once per view
+          in the section-level summary. */}
       {untranslated && language !== null && (
-        <LanguageFallbackBadge selected={language} source={sourceLanguage} part={untranslated} />
+        <LanguageFallbackBadge selected={language} source={sourceLanguage} part={untranslated} compact />
       )}
       {withSuffix(control, field.suffixText)}
-      {restricted && (
-        <span className="parameter-field-caption">
-          {t(manufacturerAccess === null
-            ? (moduleScoped ? "parameters.sharedReadOnlyCaption" : "parameters.readOnlyCaption")
-            : manufacturerAccess.from === "field"
-              ? (manufacturerAccess.access === "None" ? "parameters.accessNoneCaption" : "parameters.accessReadCaption")
-              : (manufacturerAccess.access === "None" ? "parameters.blockAccessNoneCaption" : "parameters.blockAccessReadCaption"))}
-        </span>
-      )}
       {!restricted && binding === null && <span className="parameter-field-caption">{t("parameters.noContextCaption")}</span>}
       {/* The field waits for its HTTP command result, not journal completion.
           Background persistence has its own project-level status. */}
@@ -405,10 +399,30 @@ function UntranslatedSummary(props: { panel: ParameterPanelDto; language: string
   );
 }
 
+// WP-46.3: one line per access state for the whole view, instead of a long
+// caption repeated under every restricted field.
+function RestrictedSummary(props: { sections: readonly ParameterSection[]; view: ParameterView }) {
+  const { sections, view } = props;
+  const t = useTranslate();
+  if (view !== "restricted") return null;
+  let none = 0; let read = 0;
+  for (const section of sections) for (const field of section.fields) {
+    const access = restrictingAccess(field);
+    if (access === null) continue;
+    if (access.access === "None") none += 1; else read += 1;
+  }
+  if (none === 0 && read === 0) return null;
+  return <>
+    {none > 0 && <p className="inspector-description parameter-restricted-summary">
+      {t(`parameters.restrictedSummary.none.${none === 1 ? "one" : "other"}` as const, { count: none })}</p>}
+    {read > 0 && <p className="inspector-description parameter-restricted-summary">
+      {t(`parameters.restrictedSummary.read.${read === 1 ? "one" : "other"}` as const, { count: read })}</p>}
+  </>;
+}
+
 // KNOWN_LIMITATIONS.md §66: `ParameterDiagnostic.message` used to be
 // server-composed English prose rendered verbatim regardless of UI
-// language. `ParameterDiagnosticKindDto` (`apps/knx-server/src/routes.rs`)
-// gives every one of the nineteen possible messages a closed, stable tag
+// language. `ParameterDiagnosticKindDto` (`apps/knx-server/src/routes.rs`)// gives every one of the nineteen possible messages a closed, stable tag
 // with no dynamic payload of its own (every id/count they'd want to name
 // lives in `.detail` instead) — so, unlike `CatalogBrowser.tsx`'s
 // `describeCreationDiagnostic`, this is a plain lookup, not a
@@ -632,7 +646,6 @@ function LastDownloadSummary(props: { lastDownload: LastDownload; sections: read
 }
 
 export type ParameterView = "parameters" | "diagnostics" | "restricted" | "functions";
-
 type ParameterPanelProps = {
   deviceId: number;
   /** Accepted authoritative project snapshot; commands/Undo/Redo invalidate
@@ -816,6 +829,9 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
       <h3>{t(title)}</h3>
       {view === "functions" && <p className="inspector-description">{t("parameters.functionsHint")}</p>}
       {view === "restricted" && <p className="inspector-description">{t("parameters.restrictedDescription")}</p>}
+      {/* WP-46.3: access-state hint once per view, not per field. */}
+      <RestrictedSummary sections={sections} view={view} />
+      <UntranslatedSummary panel={panel} language={language} />
       {/* Outside the branch below: a restore's summary must survive the
           reload that makes the program resolve (#21, ADR-0128). */}
       <UnresolvedProgramNotice key={deviceId} unresolved={panel.programId === null}

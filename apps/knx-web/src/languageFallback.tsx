@@ -12,11 +12,14 @@ export function fellBack(text: string | null | undefined, answered: string | nul
   return text !== null && text !== undefined && (answered ?? null) === null;
 }
 
-/** The badge beside such a text; `source` is the declared language, never guessed. */
+/** The badge beside such a text; `source` is the declared language, never guessed.
+ *  WP-46.3: `compact` keeps only the marker ("Untranslated"/"Unübersetzt"); the
+ *  full "(source)" detail stays in the `title` and in the section-level summary. */
 export function LanguageFallbackBadge(props: {
   selected: string;
   source: string | null | undefined;
   part?: "label" | "options";
+  compact?: boolean;
 }) {
   const t = useTranslate();
   const options = props.part === "options";
@@ -25,7 +28,9 @@ export function LanguageFallbackBadge(props: {
     <span className="provenance-badge language-fallback-badge" title={t("untranslated.title", { language: props.selected })}>
       {source === null
         ? t(options ? "untranslated.optionsUnknown" : "untranslated.labelUnknown")
-        : t(options ? "untranslated.options" : "untranslated.label", { source })}
+        : props.compact
+          ? t(options ? "untranslated.optionsCompact" : "untranslated.labelCompact")
+          : t(options ? "untranslated.options" : "untranslated.label", { source })}
     </span>
   );
 }

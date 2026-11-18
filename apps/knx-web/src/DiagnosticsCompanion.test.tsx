@@ -490,6 +490,7 @@ describe("one editing workspace", () => {
       "serialTransport.ts",
       "session.ts",
       "sessionLogExport.ts",
+      "sessionTelegramCounters.ts", // WP-44.2: in-memory session counters only; no API, no fetch, no project state.
       "settingsDiagnostic.ts",
       "settingsStore.ts",
       "sourceReports.ts",

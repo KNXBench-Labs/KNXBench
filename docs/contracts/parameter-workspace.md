@@ -158,11 +158,16 @@ live-backend, native or hardware test.
   separator label; the row then takes no grid track and its header is not
   rendered. The attribute value is never evaluated beyond truthiness and never
   names another row's state. Rows holding a field or a label always stay.
+- **`Row`/`Column` captions via `TextParameterRefId` (applied since 17 November
+  2026, WP-05, ADR-0177).** A declared row or column whose caption names a
+  `TextParameter` renders that parameter's current value (via the existing
+  caption-template fill, including its provenance marker `textFill` in the
+  wire DTO). Bounded to the literal program-owned axis translation; module-scoped,
+  cross-target and `Rename` text-parameter captions remain open.
 - **Not reproduced.** Visual differences between `Table` and `Grid` (the
-  referenced rules document is not available locally),
-  `TextParameterRefId` captions, buttons and nested blocks in cells, and module
-  placeholders inside row/column captions. They are preserved on the wire or
-  reported as issues, never guessed.
+  referenced rules document is not available locally), buttons and nested
+  blocks in cells, and module placeholders inside row/column captions. They are
+  preserved on the wire or reported as issues, never guessed.
 
 ## Manufacturer separators and block access (ADR-0139)
 

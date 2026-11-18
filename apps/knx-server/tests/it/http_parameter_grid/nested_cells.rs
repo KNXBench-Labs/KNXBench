@@ -57,7 +57,7 @@ fn state(program: &str) -> (tempfile::TempDir, Arc<knx_server::AppState>) {
         parameters: vec![],
     });
     project.ids = knx_core::project::IdAllocators::from_counts(1, 0, 0, 0, 0, 0, 0, 0, 0);
-    let mut state = knx_server::AppState {
+    let state = knx_server::AppState {
         product_db: Some(
             knx_server::CatalogueOwner::adopt_opened(products, std::path::PathBuf::new()).unwrap(),
         ),

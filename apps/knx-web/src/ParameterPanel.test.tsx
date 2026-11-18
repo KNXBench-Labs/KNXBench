@@ -956,6 +956,9 @@ describe("ParameterPanel", () => {
   // their count, and stay one click from view; nothing is dropped.
   const field = (etsId: string, access: string | null, editable = access === null || access === "ReadWrite") => ({
     ...fixture.sections[0].fields[0], etsId, name: `Field ${etsId}`, access, editable,
+    // WP-46.3: an Access None/Read row is manufacturer-restricted (no per-field
+    // caption); an editable=false row without manufacturer access keeps its
+    // one-line reason. Default to the manufacturer case, matching ADR-0080.
     writeEtsId: editable ? etsId : null,
   });
   const authorityPanel = (fields: ParameterPanelDto["sections"][number]["fields"], kinds: string[]): ParameterPanelDto => ({
@@ -998,8 +1001,13 @@ describe("ParameterPanel", () => {
     const inputs = [...host!.querySelectorAll<HTMLInputElement>("input")];
     expect(inputs.map((input) => input.value)).toEqual(["5", "5", "5"]);
     expect(inputs.every((input) => input.disabled)).toBe(true);
-    expect(host!.textContent).toContain("Hidden by the manufacturer (Access None)");
-    expect(host!.textContent).toContain("Read-only by the manufacturer (Access Read)");
+    // WP-46.3: the per-field captions are gone; the access states appear once
+    // in the view-level summary instead.
+    expect(host!.textContent).not.toContain("Hidden by the manufacturer (Access None)");
+    expect(host!.textContent).not.toContain("Read-only by the manufacturer (Access Read)");
+    expect(host!.textContent).toContain("2 fields are hidden by the manufacturer (Access None)");
+    expect(host!.textContent).toContain("1 field is read-only by the manufacturer (Access Read)");
+    expect(host!.querySelectorAll(".parameter-restricted-summary")).toHaveLength(2);
     expect(apiMock.deviceParameters).toHaveBeenCalledTimes(1);
     root.unmount();
   });
@@ -1036,8 +1044,11 @@ describe("ParameterPanel", () => {
     expect(ids()).toEqual(["B", "C"]);
     expect(host!.querySelectorAll("[data-separator]")).toHaveLength(0);
     expect([...host!.querySelectorAll<HTMLInputElement>("input")].every((input) => input.disabled)).toBe(true);
-    expect(host!.textContent).toContain("In a parameter group the manufacturer made read-only (Access Read)");
-    expect(host!.textContent).toContain("In a parameter group the manufacturer hides (Access None)");
+    // WP-46.3: block-level access is summarised once at the top of the view.
+    expect(host!.textContent).not.toContain("In a parameter group the manufacturer made read-only (Access Read)");
+    expect(host!.textContent).not.toContain("In a parameter group the manufacturer hides (Access None)");
+    expect(host!.textContent).toContain("1 field is read-only by the manufacturer (Access Read)");
+    expect(host!.textContent).toContain("1 field is hidden by the manufacturer (Access None)");
     root.unmount();
   });
 
@@ -1052,9 +1063,12 @@ describe("ParameterPanel", () => {
   it("keeps non-manufacturer read-only module fields in the editor with a Diagnostics pointer", async () => {
     apiMock.deviceParameters.mockResolvedValue(fixture);
     const root = await renderPanel();
-    expect(host!.querySelector('[data-parameter-row="P2_M7_MI-1"]')!.textContent).toContain(
-      "Shared across every instantiation of this module");
-    expect(host!.querySelector('[data-parameter-row="P2_M7_MI-1"]')!.textContent).toContain("diagnostics");
+    const row = host!.querySelector('[data-parameter-row="P2_M7_MI-1"]')!;
+    // WP-46.3: only manufacturer-access rows lost their per-field caption; a
+    // module-scoped read-only row still gets its one-line reason (ADR-0080),
+    // and the info button (Diagnostics pointer) stays.
+    expect(row.textContent).toContain("Shared across every instantiation of this module");
+    expect(row.querySelector(".parameter-workspace-info")).not.toBeNull();
     root.unmount();
   });
 
@@ -1096,14 +1110,17 @@ describe("ParameterPanel", () => {
     apiMock.deviceParameters.mockResolvedValue(languagePanel("en-US", mixedFields()));
     const root = await renderPanel();
     expect(badgeOf("A")).toBeNull();
-    expect(badgeOf("B")!.textContent).toBe("Untranslated (en-US)");
+    expect(badgeOf("B")!.textContent).toBe("Untranslated");
     expect(badgeOf("B")!.getAttribute("title")).toBe("No de translation is stored; this is the original text.");
-    expect(badgeOf("C")!.textContent).toBe("Options untranslated (en-US)");
+    expect(badgeOf("C")!.textContent).toBe("Options untranslated");
     expect(badgeOf("D")).toBeNull();
     expect(badgeOf("E")).toBeNull();
     expect(badgeOf("F")).toBeNull();
     expect(badgeOf("G")).toBeNull();
-    expect(host!.querySelector(".parameter-language-summary")).toBeNull();
+    // WP-46.3: the summary line moved from the diagnostics view to every view,
+    // so it is already present in the parameters view.
+    expect(host!.querySelector(".parameter-language-summary")!.textContent).toBe(
+      "2 fields are not fully translated into de; they show the program's own text (en-US).");
     await act(async () => root.render(<ParameterPanel deviceId={1} view="diagnostics" onValueApplied={() => {}} />));
     expect(host!.querySelector(".parameter-language-summary")!.textContent).toBe(
       "2 fields are not fully translated into de; they show the program's own text (en-US).");
@@ -1123,7 +1140,9 @@ describe("ParameterPanel", () => {
     apiMock.deviceParameters.mockResolvedValue(languagePanel(null, [lang("B", { text: "Channel A" })]));
     const root = await renderPanel();
     expect(badgeOf("B")!.textContent).toBe("Untranslated");
-    expect(host!.querySelector(".parameter-language-summary")).toBeNull();
+    // WP-46.3: the summary is on every view now, including the parameters view.
+    expect(host!.querySelector(".parameter-language-summary")!.textContent).toBe(
+      "1 field is not fully translated into de; it shows the program's own text.");
     await act(async () => root.render(<ParameterPanel deviceId={1} view="diagnostics" onValueApplied={() => {}} />));
     expect(host!.querySelector(".parameter-language-summary")!.textContent).toBe(
       "1 field is not fully translated into de; it shows the program's own text.");
@@ -1144,9 +1163,11 @@ describe("ParameterPanel", () => {
     setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
     apiMock.deviceParameters.mockResolvedValue(languagePanel("en-US", mixedFields()));
     const root = await renderPanel();
-    expect(badgeOf("B")!.textContent).toBe("Unübersetzt (en-US)");
-    expect(badgeOf("C")!.textContent).toBe("Optionen unübersetzt (en-US)");
-    expect(host!.querySelector(".parameter-language-summary")).toBeNull();
+    expect(badgeOf("B")!.textContent).toBe("Unübersetzt");
+    expect(badgeOf("C")!.textContent).toBe("Optionen unübersetzt");
+    // WP-46.3: the summary is on every view now, including the parameters view.
+    expect(host!.querySelector(".parameter-language-summary")!.textContent).toBe(
+      "2 Felder sind nicht vollständig in de übersetzt; sie zeigen den eigenen Text des Programms (en-US).");
     await act(async () => root.render(<ParameterPanel deviceId={1} view="diagnostics" onValueApplied={() => {}} />));
     expect(host!.querySelector(".parameter-language-summary")!.textContent).toBe(
       "2 Felder sind nicht vollständig in de übersetzt; sie zeigen den eigenen Text des Programms (en-US).");
@@ -1175,7 +1196,9 @@ describe("ParameterPanel", () => {
       expect(row(id).textContent).not.toContain("d_space");
     }
     expect(host!.querySelectorAll(".parameter-field input")).toHaveLength(1);
-    expect(host!.textContent).not.toContain("Not editable here");
+    // WP-46.3: manufacturer-access rows carry no per-field caption; these
+    // TypeNone rows have access=null, so the read-only reason may appear.
+    expect(host!.querySelector('[data-ets-id="H"] .parameter-field-caption')).toBeNull();
     root.unmount();
   });
 
@@ -1191,7 +1214,7 @@ describe("ParameterPanel", () => {
     setSetting(PRODUCT_LANGUAGE_STORAGE_KEY, "de");
     apiMock.deviceParameters.mockResolvedValue(languagePanel("en-US", [displayOnly("H", "Timing"), displayOnly("S", "")]));
     const root = await renderPanel();
-    expect(badgeOf("H")!.textContent).toBe("Untranslated (en-US)");
+    expect(badgeOf("H")!.textContent).toBe("Untranslated");
     expect(badgeOf("S")).toBeNull();
     await act(async () => root.render(<ParameterPanel deviceId={1} view="diagnostics" onValueApplied={() => {}} />));
     expect(host!.querySelector(".parameter-language-summary")!.textContent).toBe(

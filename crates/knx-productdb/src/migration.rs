@@ -350,7 +350,11 @@ fn migrations() -> Vec<Migration> {
 /// it. Older parsers keep `@Inline` in `extra`, which is not re-parseable, so
 /// no promotion of historical blobs is attempted.
 fn migrate_v33_to_v34(conn: &Connection) -> Result<(), ProductDbError> {
-    conn.execute_batch("ALTER TABLE dynamic_node ADD COLUMN inline INTEGER;")?;
+    // Idempotent against databases that already carry the column (e.g. a
+    // rewound test fixture whose version alone says v33).
+    if !column_exists(conn, "dynamic_node", "inline")? {
+        conn.execute_batch("ALTER TABLE dynamic_node ADD COLUMN inline INTEGER;")?;
+    }
     Ok(())
 }
 

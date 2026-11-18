@@ -196,7 +196,7 @@
       },
       {
         "name": "dynamic_node",
-        "ncol": 18,
+        "ncol": 19,
         "schema": "main",
         "strict": 1,
         "type": "table",
@@ -831,7 +831,7 @@
         "name": "dynamic_node",
         "rootpage": 60,
         "schema_rowid": 55,
-        "sql": "CREATE TABLE dynamic_node (\n            program_id    TEXT NOT NULL,\n            module_def_id TEXT NOT NULL,\n            node_id       INTEGER NOT NULL,\n            parent_id     INTEGER,\n            position      INTEGER NOT NULL,\n            kind          TEXT NOT NULL,\n            element_id    TEXT,\n            ref_id        TEXT,\n            test          TEXT,\n            is_default    INTEGER,\n            text          TEXT,\n            extra         TEXT, value TEXT, name TEXT, number TEXT, text_parameter_ref_id TEXT, access TEXT, ui_hint TEXT,\n            PRIMARY KEY (program_id, module_def_id, node_id)\n        ) STRICT",
+        "sql": "CREATE TABLE dynamic_node (\n            program_id    TEXT NOT NULL,\n            module_def_id TEXT NOT NULL,\n            node_id       INTEGER NOT NULL,\n            parent_id     INTEGER,\n            position      INTEGER NOT NULL,\n            kind          TEXT NOT NULL,\n            element_id    TEXT,\n            ref_id        TEXT,\n            test          TEXT,\n            is_default    INTEGER,\n            text          TEXT,\n            extra         TEXT, value TEXT, name TEXT, number TEXT, text_parameter_ref_id TEXT, access TEXT, ui_hint TEXT, inline INTEGER,\n            PRIMARY KEY (program_id, module_def_id, node_id)\n        ) STRICT",
         "tbl_name": "dynamic_node",
         "type": "table"
       },
@@ -2922,7 +2922,7 @@
         ],
         "tableList": {
           "name": "dynamic_node",
-          "ncol": 18,
+          "ncol": 19,
           "schema": "main",
           "strict": 1,
           "type": "table",
@@ -3090,6 +3090,15 @@
             "notnull": 0,
             "pk": 0,
             "type": "TEXT"
+          },
+          {
+            "cid": 18,
+            "name": "inline",
+            "type": "INTEGER",
+            "notnull": 0,
+            "dflt_value": null,
+            "pk": 0,
+            "hidden": 0
           }
         ]
       },

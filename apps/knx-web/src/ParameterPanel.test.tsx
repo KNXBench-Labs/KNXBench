@@ -956,6 +956,9 @@ describe("ParameterPanel", () => {
   // their count, and stay one click from view; nothing is dropped.
   const field = (etsId: string, access: string | null, editable = access === null || access === "ReadWrite") => ({
     ...fixture.sections[0].fields[0], etsId, name: `Field ${etsId}`, access, editable,
+    // WP-46.3: an Access None/Read row is manufacturer-restricted (no per-field
+    // caption); an editable=false row without manufacturer access keeps its
+    // one-line reason. Default to the manufacturer case, matching ADR-0080.
     writeEtsId: editable ? etsId : null,
   });
   const authorityPanel = (fields: ParameterPanelDto["sections"][number]["fields"], kinds: string[]): ParameterPanelDto => ({
@@ -1061,9 +1064,10 @@ describe("ParameterPanel", () => {
     apiMock.deviceParameters.mockResolvedValue(fixture);
     const root = await renderPanel();
     const row = host!.querySelector('[data-parameter-row="P2_M7_MI-1"]')!;
-    // WP-46.3: the long read-only caption moved out of the per-field row; the
-    // compact info button (Diagnostics pointer) stays.
-    expect(row.textContent).not.toContain("Shared across every instantiation of this module");
+    // WP-46.3: only manufacturer-access rows lost their per-field caption; a
+    // module-scoped read-only row still gets its one-line reason (ADR-0080),
+    // and the info button (Diagnostics pointer) stays.
+    expect(row.textContent).toContain("Shared across every instantiation of this module");
     expect(row.querySelector(".parameter-workspace-info")).not.toBeNull();
     root.unmount();
   });
@@ -1192,7 +1196,9 @@ describe("ParameterPanel", () => {
       expect(row(id).textContent).not.toContain("d_space");
     }
     expect(host!.querySelectorAll(".parameter-field input")).toHaveLength(1);
-    expect(host!.textContent).not.toContain("Not editable here");
+    // WP-46.3: manufacturer-access rows carry no per-field caption; these
+    // TypeNone rows have access=null, so the read-only reason may appear.
+    expect(host!.querySelector('[data-ets-id="H"] .parameter-field-caption')).toBeNull();
     root.unmount();
   });
 

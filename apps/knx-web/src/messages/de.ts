@@ -2232,6 +2232,8 @@ export const messages: Record<MessageKey, string> = {
   "untranslated.title": "Keine Übersetzung für {language} gespeichert; das ist der Originaltext.",
   "parameters.untranslated.summary.one": "{count} Feld ist nicht vollständig in {language} übersetzt; es zeigt den eigenen Text des Programms ({source}).",
   "parameters.untranslated.summary.other": "{count} Felder sind nicht vollständig in {language} übersetzt; sie zeigen den eigenen Text des Programms ({source}).",
+  "parameters.readOnlyCaption": "Nicht bearbeitbar hier – siehe Diagnose für den Grund.",
+  "parameters.sharedReadOnlyCaption": "Wird von jeder Instanziierung dieses Moduls gemeinsam genutzt; hier nicht bearbeitbar – siehe die Diagnosen für den Grund.",
   "parameters.untranslated.summaryUnknown.one": "{count} Feld ist nicht vollständig in {language} übersetzt; es zeigt den eigenen Text des Programms.",
   "parameters.untranslated.summaryUnknown.other": "{count} Felder sind nicht vollständig in {language} übersetzt; sie zeigen den eigenen Text des Programms.",
   "parameters.staleValuesHeading": "Veraltete Werte ({count})",

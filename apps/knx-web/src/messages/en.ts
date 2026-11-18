@@ -2250,6 +2250,8 @@ export const messages = {
   "untranslated.title": "No {language} translation is stored; this is the original text.",
   "parameters.untranslated.summary.one": "{count} field is not fully translated into {language}; it shows the program's own text ({source}).",
   "parameters.untranslated.summary.other": "{count} fields are not fully translated into {language}; they show the program's own text ({source}).",
+  "parameters.readOnlyCaption": "Not editable here — see Diagnostics for the reason.",
+  "parameters.sharedReadOnlyCaption": "Shared across every instantiation of this module; not editable here — see the diagnostics for why.",
   "parameters.untranslated.summaryUnknown.one": "{count} field is not fully translated into {language}; it shows the program's own text.",
   "parameters.untranslated.summaryUnknown.other": "{count} fields are not fully translated into {language}; they show the program's own text.",
   "parameters.staleValuesHeading": "Stale values ({count})",

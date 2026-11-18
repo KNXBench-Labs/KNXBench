@@ -342,6 +342,12 @@ function ParameterFieldRow(props: {
         <LanguageFallbackBadge selected={language} source={sourceLanguage} part={untranslated} compact />
       )}
       {withSuffix(control, field.suffixText)}
+      {/* WP-46.3: the manufacturer's long access caption is gone per field; a
+          non-manufacturer read-only row keeps its one-line reason (ADR-0080),
+          and a view-level summary carries the access states once. */}
+      {restricted && manufacturerAccess === null && (
+        <span className="parameter-field-caption">{t(moduleScoped ? "parameters.sharedReadOnlyCaption" : "parameters.readOnlyCaption")}</span>
+      )}
       {!restricted && binding === null && <span className="parameter-field-caption">{t("parameters.noContextCaption")}</span>}
       {/* The field waits for its HTTP command result, not journal completion.
           Background persistence has its own project-level status. */}

@@ -22,7 +22,9 @@ feature at a time, never inferred manufacturer behaviour.
   renames remain open (see below).
 - Translated row/column captions outside the bounded literal program-owned
   implementation; module/Repeat, template and text-reference semantics remain open.
-- Inline sections, nested blocks and `CollapseIfEmpty`.
+- Inline sections and nested blocks. `Row/@CollapseIfEmpty` is applied since
+  17 November 2026 (truthy value + row holds no field/label hides the row in
+  the matrix; see [contract](../contracts/parameter-workspace.md)).
 - Button actions inside grid cells (`EventHandler*`, online callbacks, own
   `Access`, translated or text-parameter Button text, module-scoped Buttons).
   Admitted literal in-cell text alone is delivered as passive labels. The

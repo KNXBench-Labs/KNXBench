@@ -2750,7 +2750,7 @@ export interface ParameterGridAxis {
   textParameterRefId: string | null;
   /** Columns only, e.g. `40%`. */
   width?: string | null;
-  /** Rows only; preserved, not applied. */
+  /** Rows only; `Row/@CollapseIfEmpty`, applied by the matrix plan when truthy and the row holds no field or label. */
   collapseIfEmpty?: string | null;
 }
 

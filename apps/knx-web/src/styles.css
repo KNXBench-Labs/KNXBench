@@ -4138,7 +4138,12 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
    the width it does set already scales down on its own. */
 
 .monitor-data { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 20px; align-items: start; }
-.monitor-table-scroll { overflow: auto; border: 1px solid var(--knx-border); border-radius: 8px; background: var(--knx-surface); }
+.monitor-table-scroll { overflow: auto; border: 1px solid var(--knx-border); border-radius: 8px; background: var(--knx-surface); max-height: 75dvh; }
+/* WP-44.1: the details pane stays visible while the table scrolls —
+   `position: sticky` pins it to the viewport while the page scrolls past
+   the table, and the aside keeps its own scroll when its content is taller
+   than the viewport. The narrow-pane fallback below stacks the two. */
+.telegram-details { position: sticky; top: 12px; overflow: auto; max-height: calc(100dvh - 24px); }
 .bus-monitor-table { margin: 0; }
 .bus-monitor-table td { font-family: var(--knx-font-mono); font-size: 12px; }
 .bus-monitor-table tr[aria-selected="true"] { background: color-mix(in srgb, var(--knx-accent) 16%, var(--knx-surface)); }
@@ -4168,6 +4173,10 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .bus-monitor-filters { margin: 18px 0; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 @media (max-width: 1350px) {
   .monitor-data { grid-template-columns: minmax(0, 1fr); }
+  /* WP-44.1 narrow-pane fallback: single column, both panes scroll with the
+     page again — no fixed heights. */
+  .monitor-table-scroll, .telegram-details { max-height: none; }
+  .telegram-details { position: static; }
   .telegram-details dl { display: grid; grid-template-columns: minmax(110px, 1fr) 3fr; gap: 10px; }
   .telegram-details dt, .telegram-details dd { margin: 0; }
 }

@@ -27,6 +27,7 @@ import { messages as de } from "./messages/de";
 import BusConnectionStatus from "./BusConnectionStatus";
 import BusMonitorPanel from "./BusMonitorPanel";
 import { knownTcpSession, readBusConnectionForTests, resetBusConnectionForTests } from "./busConnection";
+import { resetSessionTelegramCounters } from "./sessionTelegramCounters";
 import { resetBusDiscoveryForTests } from "./busDiscovery";
 import { savePreferredGateway } from "./gatewayPreference";
 import { getSetting, resetSettingsForTests, setSetting } from "./settingsStore";
@@ -94,6 +95,7 @@ async function connectFromPanel() {
 beforeEach(() => {
   vi.useFakeTimers();
   resetBusConnectionForTests(); resetBusDiscoveryForTests(); resetSettingsForTests(); resetUiLanguageForTests();
+  resetSessionTelegramCounters(null);
   localStorage.clear();
   for (const fn of Object.values(apiMock)) fn.mockReset();
   apiMock.discoverBusInterfaces.mockResolvedValue({ interfaces: [] });
@@ -134,7 +136,9 @@ describe("a saved TCP preference", () => {
     expect(apiMock.startTcpBusMonitor).toHaveBeenCalledExactlyOnceWith(GATEWAY);
     expect(sessionLine()).toContain(en["busTransport.ipTunnel.observed"].replace("{transport}", "TCP"));
     // TCP has no real-interface test yet: footer and monitor mark it experimental (REL-01 B-14).
-    expect(footerState()).toBe(en["busConnection.state.connected"].replace("{gateway}", `${GATEWAY} · TCP`) + " " + en["transport.experimental"]);
+    expect(footerState()).toBe(en["busConnection.state.connected"].replace("{gateway}", `${GATEWAY} · TCP`)
+      + en["busConnection.counters.value"].replace("{received}", "0").replace("{sent}", "0")
+      + " " + en["transport.experimental"]);
     expect(host.querySelector(".bus-monitor-session .transport-experimental-badge")!.textContent).toBe(en["transport.experimental"]);
     expect(knownTcpSession({ sessionId: 7, serverIncarnation: "process-a" })).toBe(true);
     // The transport choice is locked with the session; the panel's own select is disabled.
@@ -171,7 +175,8 @@ describe("the observed transport wins over the saved preference", () => {
     apiMock.busActivity.mockResolvedValue(snapshot([monitor(3, "udp")]));
     apiMock.pollBusTelegrams.mockResolvedValue(poll(3, "udp"));
     await mount(); await tick(2000);
-    expect(footerState()).toBe(en["busConnection.state.connected"].replace("{gateway}", GATEWAY));
+    expect(footerState()).toBe(en["busConnection.state.connected"].replace("{gateway}", GATEWAY)
+      + en["busConnection.counters.value"].replace("{received}", "0").replace("{sent}", "0"));
     expect(footerState()).not.toContain("TCP");
     expect(sessionLine()).toContain(en["busTransport.ipTunnel.observed"].replace("{transport}", "UDP"));
     expect(sessionLine()).not.toContain("TCP");
@@ -196,7 +201,8 @@ describe("the observed transport wins over the saved preference", () => {
     apiMock.busActivity.mockResolvedValue(snapshot([monitor(5)]));
     apiMock.pollBusTelegrams.mockResolvedValue(poll(5));
     await mount(); await tick(2000);
-    expect(footerState()).toBe(en["busConnection.state.connected"].replace("{gateway}", GATEWAY));
+    expect(footerState()).toBe(en["busConnection.state.connected"].replace("{gateway}", GATEWAY)
+      + en["busConnection.counters.value"].replace("{received}", "0").replace("{sent}", "0"));
     expect(host.querySelector('[data-testid="bus-session-transport"]')).toBeNull();
     expect(host.querySelector<HTMLInputElement>(".bus-compose-destination")!.disabled).toBe(false);
   });
@@ -241,7 +247,8 @@ describe("known TCP fails closed", () => {
       expect(destination().disabled).toBe(true);
       // Neither relabelled as UDP nor claimed as verified TCP.
       expect(sessionLine()).not.toContain("UDP"); expect(sessionLine()).not.toContain(" · TCP");
-      expect(footerState()).toBe(en["busConnection.state.unknown"]); // The footer failed closed too.
+      expect(footerState()).toBe(en["busConnection.state.unknown"]
+        + en["busConnection.counters.value"].replace("{received}", "0").replace("{sent}", "0")); // The footer failed closed too.
     }
     // The server states TCP again: the lock lifts.
     apiMock.pollBusTelegrams.mockResolvedValue(poll(7, "tcp"));
@@ -258,7 +265,8 @@ describe("known TCP fails closed", () => {
     await tick(2000);
     expect(host.textContent).not.toContain(en["busTransport.ipTunnel.unverified"]);
     expect(sessionLine()).not.toContain("TCP");
-    expect(footerState()).toBe(en["busConnection.state.connected"].replace("{gateway}", GATEWAY));
+    expect(footerState()).toBe(en["busConnection.state.connected"].replace("{gateway}", GATEWAY)
+      + en["busConnection.counters.value"].replace("{received}", "0").replace("{sent}", "0"));
   });
 });
 

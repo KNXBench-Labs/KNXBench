@@ -127,3 +127,51 @@ describe("passive source labels (button-literal-passive-v1)", () => {
     expect(plan.rowHeaders).toEqual([]);
   });
 });
+
+describe("Row/@CollapseIfEmpty (WP-05, preserved attribute now applied)", () => {
+  const collapsing = (collapseIfEmpty: string | null): ParameterGroupLayout => layout({
+    rows: [{ id: "R-1", text: "Keep", textParameterRefId: null, collapseIfEmpty: null },
+      { id: "R-2", text: "Maybe", textParameterRefId: null, collapseIfEmpty }],
+    columns: [{ id: "C-1", text: null, textParameterRefId: null, width: "100%" }],
+    labels: [],
+  });
+
+  it("hides a declared row with no field and no label when its CollapseIfEmpty is truthy", () => {
+    const plan = planParameterMatrix(collapsing("R-2"), [{ key: "f1", cell: { row: 1, column: 1 } }]);
+    expect(plan.rowHeaders.map(header => header.text)).toEqual(["Keep"]); // R-2 header hidden
+    expect([...plan.fields.keys()]).toEqual(["f1"]);
+    expect(plan.fields.get("f1")!.row).toBe(1); // no column header track, collapsed row took no track
+  });
+
+  it("keeps the row when a field sits in it, even with a truthy CollapseIfEmpty", () => {
+    const plan = planParameterMatrix(collapsing("R-2"), [{ key: "f2", cell: { row: 2, column: 1 } }]);
+    expect(plan.rowHeaders.map(header => header.text)).toEqual(["Keep", "Maybe"]);
+    expect(plan.fields.get("f2")!.row).toBe(2);
+  });
+
+  it("keeps the row when a separator label sits in it", () => {
+    const withLabel = collapsing("R-2");
+    withLabel.labels = [{ row: 2, column: 1, text: "Note" }];
+    const plan = planParameterMatrix(withLabel, []);
+    expect(plan.rowHeaders.map(header => header.text)).toEqual(["Keep", "Maybe"]);
+    expect(plan.labels.map(label => label.text)).toContain("Note");
+  });
+
+  it("treats an empty CollapseIfEmpty value as false and never collapses", () => {
+    const plan = planParameterMatrix(collapsing(""), []);
+    expect(plan.rowHeaders.map(header => header.text)).toEqual(["Keep", "Maybe"]);
+  });
+
+  it("collapses several empty rows independently and renumbers the remaining tracks", () => {
+    const three = layout({
+      rows: [{ id: "R-1", text: "A", textParameterRefId: null, collapseIfEmpty: null },
+        { id: "R-2", text: "B", textParameterRefId: null, collapseIfEmpty: "R-2" },
+        { id: "R-3", text: "C", textParameterRefId: null, collapseIfEmpty: "yes" }],
+      columns: [{ id: "C-1", text: null, textParameterRefId: null, width: "100%" }],
+      labels: [],
+    });
+    const plan = planParameterMatrix(three, [{ key: "f1", cell: { row: 1, column: 1 } }]);
+    expect(plan.rowHeaders.map(header => header.text)).toEqual(["A"]);
+    expect(plan.fields.get("f1")!.row).toBe(1);
+  });
+});

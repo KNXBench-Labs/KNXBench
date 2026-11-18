@@ -152,8 +152,14 @@ live-backend, native or hardware test.
   width under **Not placed in the declared grid**. Issues are listed in a closed
   disclosure. Column `Width` percentages become relative track weights with a
   minimum width; on narrow panes the matrix scrolls locally.
+- **`Row/@CollapseIfEmpty` (applied since 17 November 2026, WP-05).** A declared
+  row whose `CollapseIfEmpty` value is truthy (non-empty) hides in the matrix
+  when every declared cell in that row holds no field and no activated
+  separator label; the row then takes no grid track and its header is not
+  rendered. The attribute value is never evaluated beyond truthiness and never
+  names another row's state. Rows holding a field or a label always stay.
 - **Not reproduced.** Visual differences between `Table` and `Grid` (the
-  referenced rules document is not available locally), `CollapseIfEmpty`,
+  referenced rules document is not available locally),
   `TextParameterRefId` captions, buttons and nested blocks in cells, and module
   placeholders inside row/column captions. They are preserved on the wire or
   reported as issues, never guessed.

@@ -2748,6 +2748,8 @@ export interface ParameterGridAxis {
   id: string;
   text: string | null;
   textParameterRefId: string | null;
+  /** ADR-0177: provenance when the caption was resolved from the text parameter. */
+  textFill?: import("./bindings/TextFill").TextFill | null;
   /** Columns only, e.g. `40%`. */
   width?: string | null;
   /** Rows only; `Row/@CollapseIfEmpty`, applied by the matrix plan when truthy and the row holds no field or label. */

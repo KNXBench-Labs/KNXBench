@@ -6824,6 +6824,38 @@ fn assemble_parameter_panel_for_project(
         values,
         activation,
     } = evaluate_device(products, &program_id, stored, &module_instances, language)?;
+    // ADR-0177: axis captions with a declared `TextParameterRefId` resolve the
+    // named text parameter in the program scope, reusing the device's own
+    // evaluated values via a borrowed view (no second evaluation).
+    {
+        let mut parameters =
+            knx_productdb::text_parameters::TextParameters::load(products, &program_id)
+                .map_err(|e| e.to_string())?;
+        let layout_for_axes =
+            knx_productdb::parameter_layout::load(products, &program_id).map_err(|e| e.to_string())?;
+        // ADR-0177: axis `TextParameterRefId`s are not modelled on
+        // `dynamic_node`; load their facts directly so the reference resolves.
+        let axis_ref_ids: Vec<&str> = layout_for_axes
+            .program_grids()
+            .flat_map(|grid| grid.rows.iter().chain(grid.columns.iter()))
+            .filter_map(|axis| axis.text_parameter_ref_id.as_deref())
+            .collect();
+        parameters
+            .extend_facts(products, &program_id, &axis_ref_ids)
+            .map_err(|e| e.to_string())?;
+        let values_view = knx_productdb::device_evaluation::DeviceEvaluation {
+            supplied: supplied.clone(),
+            validated_scoped: validated_scoped.clone(),
+            values: values.clone(),
+            ..Default::default()
+        };
+        let texts = knx_productdb::text_parameters::DeviceTexts {
+            parameters: &parameters,
+            evaluation: &values_view,
+            module_instances: &module_instances,
+        };
+        caption_fills.load_axis_texts(&layout_for_axes, &program_id, &texts)?;
+    }
     // ADR-0062: a truncated traversal cannot rule out unseen duplicate
     // module authority. Preserve its prefix for inspection, never for writes.
     let resource_limited = activation.diagnostics.iter().any(|scoped| {

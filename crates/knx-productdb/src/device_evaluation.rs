@@ -185,6 +185,7 @@ fn mi_counter_of(module_id: &str) -> Option<u32> {
 /// (design D21/D42). Shared by the parameter panel and, since ISSUE-08, by
 /// the device detail's communication objects, so both read the same
 /// activation instead of two implementations drifting apart.
+#[derive(Debug, Clone, Default)]
 pub struct DeviceEvaluation {
     pub ref_ids: HashSet<String>,
     pub supplied: HashMap<String, String>,

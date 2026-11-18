@@ -8,11 +8,13 @@ use knx_projection::TextFill;
 
 pub(crate) type CaptionKey = (Option<Vec<i64>>, i64);
 /// One request's resolver and DTO-copy admission context. Never reset per label or section.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub(crate) struct CaptionFills {
     fills: HashMap<CaptionKey, TextFill>,
     budget: TextProjectionBudget,
     axes: knx_productdb::query::GridAxisCaptions,
+    /// ADR-0177: resolved parameter-driven axis captions, keyed by axis `Id`.
+    axis_texts: HashMap<String, (String, knx_projection::TextFill)>,
 }
 
 impl CaptionFills {
@@ -34,20 +36,116 @@ impl CaptionFills {
         Ok(())
     }
 
+    /// ADR-0177: resolve every declared axis's `TextParameterRefId` in the
+    /// program scope through the existing positional resolver and retain the
+    /// fill provenance per axis `Id`, charged to the same sticky budget.
+    pub(crate) fn load_axis_texts(
+        &mut self,
+        layout: &knx_productdb::parameter_layout::ParameterLayout,
+        program: &str,
+        texts: &knx_productdb::text_parameters::DeviceTexts<'_>,
+    ) -> Result<(), String> {
+        let Some(axes) = layout.literal_grid_axes(program) else {
+            return Ok(());
+        };
+        for grid in layout.program_grids() {
+            for axis in grid.rows.iter().chain(grid.columns.iter()) {
+                let Some(reference) = axis.text_parameter_ref_id.as_deref() else {
+                    continue;
+                };
+                if !axes.contains(&axis.id) {
+                    continue;
+                }
+                let value = texts.value(
+                    Some(reference),
+                    knx_productdb::text_parameters::TextParameterScope::Program,
+                );
+                // ADR-0177 / support.knx.org 360000160080: a declared
+                // `TextParameterRefId` replaces the axis caption with the
+                // parameter's value; the census shows axis texts carry no
+                // `{{0}}` placeholder, so a placeholder-less literal text is
+                // wrapped to make the replacement explicit. A literal text
+                // that does carry placeholders keeps template semantics.
+                let template = match axis.text.as_deref() {
+                    Some(text) if text.contains("{{") => text.to_owned(),
+                    _ => "{{0}}".to_owned(),
+                };
+                let filled =
+                    knx_productdb::dynamic::fill_positional(&template, value, &mut self.budget)
+                        .map_err(|e| e.to_string())?;
+                self.budget
+                    .admit_copy(&template)
+                    .map_err(|e| e.to_string())?;
+                if filled.source != knx_productdb::dynamic::PositionalSource::NoPlaceholder {
+                    // Retain the resolved caption text itself as the fill's
+                    // payload, plus its provenance template.
+                    self.budget
+                        .admit_copy(&filled.text)
+                        .map_err(|e| e.to_string())?;
+                }
+                if let Some(fill) =
+                    crate::com_object_activation::text_fill(filled.source, &template)
+                {
+                    self.budget
+                        .admit_copy(&fill.template)
+                        .map_err(|e| e.to_string())?;
+                    self.axis_texts.insert(axis.id.clone(), (filled.text, fill));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// ADR-0177: the resolved axis captions collected by `load_axis_texts`.
+    #[cfg(test)]
+    #[allow(dead_code)]
+    pub(crate) fn axis_texts(&self) -> HashMap<String, (String, TextFill)> {
+        self.axis_texts
+            .iter()
+            .map(|(id, entry)| (id.clone(), entry.clone()))
+            .collect()
+    }
+
     pub(crate) fn copy_axis_text(
         &mut self,
         definition: &str,
         axis: &knx_productdb::parameter_layout::GridAxis,
-    ) -> Result<Option<String>, String> {
-        let text = definition
+    ) -> Result<(Option<String>, Option<knx_projection::TextFill>), String> {
+        let translated = definition
             .is_empty()
             .then(|| self.axes.texts.get(&axis.id))
             .flatten()
-            .map(String::as_str)
-            .or(axis.text.as_deref());
-        text.map(|text| self.budget.copy_text(text))
+            .map(String::as_str);
+        let base = translated.or(axis.text.as_deref());
+        // ADR-0177: a program-owned literal axis whose declared
+        // `TextParameterRefId` resolved shows the parameter-driven caption and
+        // its fill provenance; unresolved references keep the axis's own text.
+        let (text, fill) = if definition.is_empty() {
+            if let Some((resolved, fill)) = self.axis_texts.get(&axis.id) {
+                let shown = match fill.source {
+                    knx_projection::TextFillSource::StoredValue
+                    | knx_projection::TextFillSource::ProductDefault => Some(resolved.clone()),
+                    knx_projection::TextFillSource::TemplateDefault
+                    | knx_projection::TextFillSource::EmptyValue => base.map(str::to_owned),
+                    _ => base.map(str::to_owned),
+                };
+                (shown, Some(fill.clone()))
+            } else {
+                (base.map(str::to_owned), None)
+            }
+        } else {
+            (base.map(str::to_owned), None)
+        };
+        let text = text
+            .map(|text| self.budget.copy_text(&text))
             .transpose()
-            .map_err(|e| e.to_string())
+            .map_err(|e| e.to_string())?;
+        if let Some(fill) = &fill {
+            self.budget
+                .admit_copy(&fill.template)
+                .map_err(|e| e.to_string())?;
+        }
+        Ok((text, fill))
     }
 
     pub(crate) fn axis_unsupported(&self, definition: &str, id: &str) -> bool {
@@ -211,6 +309,7 @@ pub(crate) fn apply(
         fills,
         budget,
         axes: Default::default(),
+        axis_texts: Default::default(),
     })
 }
 

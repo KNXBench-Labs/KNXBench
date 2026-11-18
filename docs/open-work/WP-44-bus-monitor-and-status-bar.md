@@ -40,9 +40,9 @@ issue; intake through the owner.
 
 | Package | Outcome | Status |
 | --- | --- | --- |
-| 44.1 | Sticky telegram-details pane in the bus monitor (both densities, narrow-pane fallback, keyboard/a11y unchanged) | Not started |
-| 44.2 | Session rx/tx counters beside "Verbunden" in the status bar, live counting, reset on new session, i18n de/en | Not started |
-| 44.3 | Subtle connected-state animation on the bus indicator, theme-aware, reduced-motion off, honouring existing motion settings | Not started |
+| 44.1 | Sticky telegram-details pane in the bus monitor (both densities, narrow-pane fallback, keyboard/a11y unchanged) | Delivered on work/wp44-20261118 (58fbf302c); package gate running |
+| 44.2 | Session rx/tx counters beside "Verbunden" in the status bar, live counting, reset on new session, i18n de/en | Delivered on work/wp44-20261118 (58fbf302c); package gate running |
+| 44.3 | Subtle connected-state animation on the bus indicator, theme-aware, reduced-motion off, honouring existing motion settings | Delivered on work/wp44-20261118 (58fbf302c); package gate running |
 
 ## Boundaries
 

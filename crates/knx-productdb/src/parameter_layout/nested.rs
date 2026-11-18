@@ -325,7 +325,10 @@ fn read(bytes: &[u8], program: &str, budget: usize) -> Result<SourceTree, Nested
                 // A nested program-owned block with a cell in a dynamic tree is
                 // a candidate; only its own `@Cell` places it in the parent grid.
                 // The candidate's parent is the *inherited* block, not this one.
-                if let Some(node) = (same && dynamic && kind == "ParameterBlock").then_some(node).flatten() {
+                if let Some(node) = (same && dynamic && kind == "ParameterBlock")
+                    .then_some(node)
+                    .flatten()
+                {
                     if let Some(id) = attr.evidence_value("Id") {
                         duplicate |= !block_ids.insert(id.to_owned());
                     }

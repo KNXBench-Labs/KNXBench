@@ -17,9 +17,10 @@ feature at a time, never inferred manufacturer behaviour.
 
 ## Open (each needs its own evidence)
 
-- Parameter-driven row/column captions (`TextParameterRefId`). `Rename` is implemented only for the
-  literal leaf that retitles its enclosing block; module-scoped, cross-target and text-parameter
-  renames remain open (see below).
+- Parameter-driven row/column captions (`TextParameterRefId`): grid axis captions now resolve
+  the referenced text parameter (delivered 17 November 2026, ADR-0177; contract updated).
+  `Rename` is implemented only for the literal leaf that retitles its enclosing block;
+  module-scoped, cross-target and text-parameter renames remain open (see below).
 - Translated row/column captions outside the bounded literal program-owned
   implementation; module/Repeat, template and text-reference semantics remain open.
 - Inline sections and nested blocks. `Row/@CollapseIfEmpty` is applied since

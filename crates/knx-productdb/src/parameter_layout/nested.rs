@@ -53,8 +53,10 @@ struct Candidate {
     element_id: String,
     text: Option<String>,
     cell: String,
-    block_node: i64,
-    block_id: String,
+    /// `nested-block-cell-deep-v2`: the candidate's enclosing block chain,
+    /// outermost first; the cell is placed in the first entry whose stored
+    /// grid can render it.
+    block_chain: Vec<(i64, String)>,
 }
 
 /// The program's own `Dynamic` tree as the parser numbered it, plus candidates.
@@ -74,6 +76,10 @@ struct Entry {
     children: i64,
     /// Nearest enclosing exact-namespace `Dynamic` `ParameterBlock`.
     block: Option<(i64, Option<String>)>,
+    /// `nested-block-cell-deep-v2`: every enclosing exact-namespace
+    /// `Dynamic` `ParameterBlock`, outermost first, so a block nested two or
+    /// more levels deep can be placed in any ancestor grid.
+    block_chain: Vec<(i64, Option<String>)>,
 }
 
 const MAX_DEPTH: usize = 64;
@@ -162,21 +168,35 @@ fn bind_source(
     }
     let mut cells = HashMap::new();
     for candidate in source.candidates {
-        // The candidate's own parent block must be the same stored node with
-        // the same `@Id`.
-        let Some((block_node, block)) = nearest_block(stored, candidate.node) else {
-            continue;
-        };
-        if block_node != candidate.block_node || block.id.as_deref() != Some(&candidate.block_id) {
-            return Err(NestedBinding::StructuralDrift);
+        // `nested-block-cell-deep-v2`: the candidate's own enclosing chain must
+        // match the stored ancestors exactly, outermost first; the cell binds
+        // in the first enclosing block whose stored grid can render it.
+        let mut chain_ok = true;
+        let mut chosen: Option<((i64, &Node), super::grid::Cell)> = None;
+        // The source chain is outermost first; the stored walk from the
+        // candidate upward is nearest first, so compare in reverse.
+        for (depth, (block_node, block_id)) in candidate.block_chain.iter().rev().enumerate() {
+            let Some((stored_node, block)) = nearest_block_at(stored, candidate.node, depth) else {
+                chain_ok = false;
+                break;
+            };
+            if stored_node != *block_node || block.id.as_deref() != Some(block_id.as_str()) {
+                return Err(NestedBinding::StructuralDrift);
+            }
+            if let Some(grid) = grids
+                .get(&stored_node)
+                .filter(|grid| grid.status == GridStatus::Grid)
+            {
+                if let Ok(cell) = parse_cell(&candidate.cell, grid.rows.len(), grid.columns.len()) {
+                    chosen = Some(((stored_node, block), cell));
+                    break;
+                }
+            }
         }
-        let Some(grid) = grids
-            .get(&block_node)
-            .filter(|grid| grid.status == GridStatus::Grid)
-        else {
-            continue;
-        };
-        let Ok(cell) = parse_cell(&candidate.cell, grid.rows.len(), grid.columns.len()) else {
+        let Some(((block_node, block), cell)) = chosen else {
+            if !chain_ok {
+                return Err(NestedBinding::StructuralDrift);
+            }
             continue;
         };
         cells.insert(
@@ -186,7 +206,7 @@ fn bind_source(
                     node_id: block_node,
                     element_id: block.id.clone(),
                     text: block.text.clone(),
-                    caption_ref: captions.get(&candidate.block_id).cloned(),
+                    caption_ref: captions.get(&block.id.clone().unwrap_or_default()).cloned(),
                 },
                 cell,
                 element_id: candidate.element_id,
@@ -195,6 +215,25 @@ fn bind_source(
         );
     }
     Ok(cells)
+}
+
+/// The `depth`-th nearest stored `ParameterBlock` above `node` (0 = nearest),
+/// stopping at a cycle or a missing ancestor.
+fn nearest_block_at(stored: &BTreeMap<i64, Node>, node: i64, depth: usize) -> Option<(i64, &Node)> {
+    let mut seen = HashSet::new();
+    let mut parent = stored.get(&node).and_then(|node| node.parent);
+    let mut found = 0;
+    while let Some(at) = parent {
+        let ancestor = stored.get(&at).filter(|_| seen.insert(at))?;
+        if ancestor.kind == "ParameterBlock" {
+            if found == depth {
+                return Some((at, ancestor));
+            }
+            found += 1;
+        }
+        parent = ancestor.parent;
+    }
+    None
 }
 
 /// Text this literal form shows: present, not blank, not `#`, no placeholder delimiter.
@@ -313,8 +352,10 @@ fn read(bytes: &[u8], program: &str, budget: usize) -> Result<SourceTree, Nested
                 }
                 let parent = stack.last();
                 let inherited = parent.and_then(|p| p.block.clone());
-                // A nested block's own `@Cell` places it in its parent's grid,
-                // so its candidate parent is the inherited block, not itself.
+                let inherited_chain = parent.map(|p| p.block_chain.clone()).unwrap_or_default();
+                // A nested block's own `@Cell` places it in an ancestor's
+                // grid, so its candidate chain is the inherited chain, not
+                // itself.
                 let block = if dynamic && kind == "ParameterBlock" {
                     inherited.clone().or_else(|| {
                         node.map(|node| (node, attr.evidence_value("Id").map(str::to_owned)))
@@ -322,9 +363,19 @@ fn read(bytes: &[u8], program: &str, budget: usize) -> Result<SourceTree, Nested
                 } else {
                     inherited.clone()
                 };
+                let block_chain = if dynamic && kind == "ParameterBlock" {
+                    let mut chain = inherited_chain.clone();
+                    if let Some(node) = node {
+                        chain.push((node, attr.evidence_value("Id").map(str::to_owned)));
+                    }
+                    chain
+                } else {
+                    inherited_chain.clone()
+                };
                 // A nested program-owned block with a cell in a dynamic tree is
-                // a candidate; only its own `@Cell` places it in the parent grid.
-                // The candidate's parent is the *inherited* block, not this one.
+                // a candidate; only its own `@Cell` places it in an ancestor
+                // grid. The candidate's chain is the *inherited* chain, not
+                // including this block.
                 if let Some(node) = (same && dynamic && kind == "ParameterBlock")
                     .then_some(node)
                     .flatten()
@@ -333,16 +384,20 @@ fn read(bytes: &[u8], program: &str, budget: usize) -> Result<SourceTree, Nested
                         duplicate |= !block_ids.insert(id.to_owned());
                     }
                     let ancestry = parent.is_some_and(|p| p.dynamic);
-                    if let (true, true, Some((block_node, Some(block_id)))) =
-                        (ancestry, admitted_attributes(&attr), inherited.clone())
-                    {
+                    if let (true, true, true) = (
+                        ancestry,
+                        admitted_attributes(&attr),
+                        !inherited_chain.is_empty(),
+                    ) {
                         candidates.push(Candidate {
                             node,
                             element_id: attr.evidence_value("Id").unwrap_or_default().to_owned(),
                             text: attr.evidence_value("Text").and_then(literal_text),
                             cell: attr.evidence_value("Cell").unwrap_or_default().to_owned(),
-                            block_node,
-                            block_id,
+                            block_chain: inherited_chain
+                                .iter()
+                                .filter_map(|(node, id)| id.clone().map(|id| (*node, id)))
+                                .collect(),
                         });
                     }
                 }
@@ -354,6 +409,7 @@ fn read(bytes: &[u8], program: &str, budget: usize) -> Result<SourceTree, Nested
                         node,
                         children: 0,
                         block,
+                        block_chain,
                     });
                     if stack.len() > MAX_DEPTH {
                         return Err(unavailable);

@@ -32,8 +32,10 @@ feature at a time, never inferred manufacturer behaviour.
 - Nested blocks: a program-owned nested `ParameterBlock`'s own `@Cell` now
   places its literal caption in the parent grid
   (`nested-block-cell-passive-v1`, contract section added 18 November 2026);
-  the nested block's fields stay in the row view. Deeper nesting levels and
-  nested-block actions remain open.
+  the nested block's fields stay in the row view. Since 18 November 2026 a
+  block nested two or more levels deep binds in the first ancestor with a
+  renderable grid (`nested-block-cell-deep-v2`). Nested-block actions remain
+  open.
 - Button actions inside grid cells (`EventHandler*`, online callbacks, own
   `Access`, translated or text-parameter Button text, module-scoped Buttons).
   Admitted literal in-cell text alone is delivered as passive labels. The

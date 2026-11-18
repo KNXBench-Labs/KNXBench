@@ -15,6 +15,7 @@ fn node(id: i64, parent: Option<i64>, kind: &str) -> DynamicNode {
         name: None,
         number: None,
         control_kind: None,
+        inline: false,
     }
 }
 

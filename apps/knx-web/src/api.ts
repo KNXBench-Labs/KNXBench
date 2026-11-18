@@ -2904,10 +2904,12 @@ export interface ParameterNestedCell {
  * target; handler data is not part of the wire shape. Unknown `kind`s are newer.
  */
 export interface ParameterPassiveLabel {
-  kind: "buttonLiteral" | (string & {});
+  kind: "buttonLiteral" | "inlineHeading" | (string & {});
   elementId: string;
   text: string;
-  cell: ParameterGridCell;
+  textFill?: import("./bindings/TextFill").TextFill | null;
+  /** `null` for `inlineHeading`, which renders in the row view, not a grid cell. */
+  cell: ParameterGridCell | null;
   /** The nearest grid block; the server always sends it, so there is no ungrouped label. */
   group: ParameterGroup;
   /** As `ParameterField.blockAccess`. */

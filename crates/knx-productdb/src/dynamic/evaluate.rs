@@ -1598,6 +1598,10 @@ pub struct Activation {
     pub separators: Vec<ActiveSeparator>,
     /// Reached `Button`s in document order; never an activation or a label.
     pub buttons: Vec<ActiveButton>,
+    /// Reached nested `ParameterBlock`s in document order;
+    /// `nested-block-cell-passive-v1` presents at most a passive cell caption,
+    /// never an activation or a write target.
+    pub nested_blocks: Vec<ActiveButton>,
     /// The one active replacement caption per renamed block, in document order. The block's
     /// own [`ActiveLabel`] keeps the base caption; the consumer chooses which to show.
     pub renames: Vec<ActiveRename>,
@@ -2228,6 +2232,16 @@ fn walk(
         return;
     };
     if is_transparent_container(&node.kind) {
+        // nested-block-cell-passive-v1: a block inside another block is a
+        // placement candidate for the parent grid; recorded like a Button.
+        if node.kind == "ParameterBlock" && path.block.is_some() {
+            activation.nested_blocks.push(ActiveButton {
+                scope: scope.cloned(),
+                channel: path.channel.cloned(),
+                node_id,
+                block_access: path.block_access.map(|access| access.to_string()),
+            });
+        }
         let _ = record_label(activation, scope, node);
         if activation.work_budget_exhausted {
             return;

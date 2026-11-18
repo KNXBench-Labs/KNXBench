@@ -445,6 +445,10 @@ pub(crate) struct ParameterSectionDto {
     /// `button-literal-passive-v1`: activated source `Button` literals placed
     /// in their nearest grid block, in document order. Always present.
     pub(crate) passive_labels: Vec<ParameterPassiveLabelDto>,
+    /// `nested-block-cell-passive-v1`: activated nested `ParameterBlock`s
+    /// placed by their own `@Cell` in a parent grid, in document order.
+    /// Always present (possibly empty). Display only.
+    pub(crate) nested_cells: Vec<ParameterNestedCellDto>,
 }
 
 /// The one passive-label kind this build reports. Known kind means only this
@@ -468,6 +472,23 @@ pub(crate) struct ParameterPassiveLabelDto {
     /// The nearest enclosing grid block, keyed like the fields' `group`.
     pub(crate) group: ParameterGroupDto,
     /// As `ParameterFieldDto.blockAccess`.
+    pub(crate) block_access: Option<String>,
+}
+
+/// `nested-block-cell-passive-v1`: one activated nested block's placement in
+/// its parent grid. `text` is its literal `@Text` when displayable, else
+/// `None` (the cell then shows no caption). Never a write target.
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParameterNestedCellDto {
+    /// The nested block's `@Id`, verbatim.
+    pub(crate) element_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) text: Option<String>,
+    pub(crate) cell: ParameterGridCellDto,
+    /// The parent grid block, keyed like the fields' `group`.
+    pub(crate) group: ParameterGroupDto,
+    /// As `ParameterFieldDto.blockAccess` (the path's enclosing block access).
     pub(crate) block_access: Option<String>,
 }
 

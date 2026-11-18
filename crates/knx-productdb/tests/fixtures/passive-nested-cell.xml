@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Independently authored structural fixture; no manufacturer payload or XSD-validity claim. -->
+<KNX xmlns="http://knx.org/xml/project/20">
+  <ManufacturerData><Manufacturer RefId="M-FIX"><ApplicationPrograms>
+    <ApplicationProgram Id="A-FIX" Name="Fictional nested cell fixture" ApplicationVersion="1" MaskVersion="MV-091A" DefaultLanguage="en-US">
+      <Static>
+        <ParameterTypes>
+          <ParameterType Id="PT-NUMBER"><TypeNumber SizeInBit="8" Type="unsignedInt" minInclusive="0" maxInclusive="100"/></ParameterType>
+        </ParameterTypes>
+        <Parameters>
+          <Parameter Id="P-EDIT" Text="Fictional editable value" ParameterType="PT-NUMBER" Value="17" Access="ReadWrite"/>
+        </Parameters>
+        <ParameterRefs><ParameterRef Id="PR-EDIT" RefId="P-EDIT"/></ParameterRefs>
+      </Static>
+      <Dynamic>
+        <ParameterBlock Id="PB-OUTER" Text="Fictional outer page" Layout="Grid">
+          <Rows><Row Id="OUT-R1"/></Rows><Columns><Column Id="OUT-C1" Width="46%"/><Column Id="OUT-C2" Width="53%"/></Columns>
+          <ParameterRefRef RefId="PR-EDIT" Cell="1,1"/>
+          <ParameterBlock Id="PB-NESTED" Cell="1,2" Text="Fictional nested caption">
+            <ParameterRefRef RefId="PR-EDIT" Cell="1,1"/>
+          </ParameterBlock>
+          <ParameterBlock Id="PB-SILENT" Cell="1,1"/>
+        </ParameterBlock>
+      </Dynamic>
+    </ApplicationProgram>
+  </ApplicationPrograms></Manufacturer></ManufacturerData>
+</KNX>

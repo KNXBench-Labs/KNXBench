@@ -56,6 +56,8 @@ struct ElementSpec {
     access_attr: Option<&'static str>,
     /// ADR-0139: a separator's presentation hint, verbatim.
     ui_hint_attr: Option<&'static str>,
+    /// WP-05 `inline-section-flatten-v1`: a block's `@Inline` marker.
+    inline_attr: Option<&'static str>,
 }
 
 const UNMODELLED: ElementSpec = ElementSpec {
@@ -71,6 +73,7 @@ const UNMODELLED: ElementSpec = ElementSpec {
     text_parameter_ref_attr: None,
     access_attr: None,
     ui_hint_attr: None,
+    inline_attr: None,
 };
 
 /// Which optional `dynamic_node` columns the database being written has. An
@@ -82,6 +85,8 @@ struct Modelled {
     text_parameter_refs: bool,
     /// v24, ADR-0139: `access` and `ui_hint`.
     presentation: bool,
+    /// v34, WP-05 inline sections: `inline`.
+    inline: bool,
 }
 
 /// Design D4's table. `choose`'s `@ParamRefId`, `Channel`/`ParameterBlock`/
@@ -134,12 +139,14 @@ fn spec_for(kind: &str) -> ElementSpec {
                 "Name",
                 "TextParameterRefId",
                 "Access",
+                "Inline",
             ],
             id_attr: Some("Id"),
             ref_attrs: &["RefId"],
             text_attr: Some("Text"),
             text_parameter_ref_attr: Some("TextParameterRefId"),
             access_attr: Some("Access"),
+            inline_attr: Some("Inline"),
             ..UNMODELLED
         },
         // WP-05: a literal leaf retitling its enclosing block. Only these three attributes
@@ -203,7 +210,9 @@ pub(crate) fn kind_is_modelled(kind: &str) -> bool {
 
 pub(crate) fn attribute_is_known(kind: &str, name: &str, value: Option<&str>) -> bool {
     let spec = spec_for(kind);
-    spec.known.contains(&name) && (Some(name) != spec.default_attr || value == Some("true"))
+    spec.known.contains(&name)
+        && (Some(name) != spec.default_attr || value == Some("true"))
+        && (Some(name) != spec.inline_attr || matches!(value, Some("true") | Some("1")))
 }
 
 /// One open element's node id and the position its next child will get.
@@ -270,9 +279,11 @@ pub(crate) fn parse_dynamic_trees_detailed(
         crate::migration::column_exists(conn, "dynamic_node", "text_parameter_ref_id")?;
     // ADR-0139: likewise before v24 for `Access` and `UIHint`.
     let presentation_modelled = crate::migration::column_exists(conn, "dynamic_node", "access")?;
+    let inline_modelled = crate::migration::column_exists(conn, "dynamic_node", "inline")?;
     let modelled = Modelled {
         text_parameter_refs: text_parameter_refs_modelled,
         presentation: presentation_modelled,
+        inline: inline_modelled,
     };
 
     loop {
@@ -550,6 +561,9 @@ fn insert_node(
         spec.access_attr = None;
         spec.ui_hint_attr = None;
     }
+    if !modelled.inline {
+        spec.inline_attr = None;
+    }
     let xpath = if module_def_id.is_empty() {
         format!("/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Dynamic/{kind}")
     } else {
@@ -575,6 +589,7 @@ fn insert_node(
         .filter(|name| attribute_is_known(kind, name, a.get(name)))
         .filter(|name| modelled.text_parameter_refs || *name != "TextParameterRefId")
         .filter(|name| modelled.presentation || *name != "Access")
+        .filter(|name| modelled.inline || *name != "Inline")
         .collect();
     crate::parse::report_unknown_attrs(unknown, &xpath, a, &known);
 
@@ -588,6 +603,10 @@ fn insert_node(
     let text_parameter_ref_id = spec.text_parameter_ref_attr.and_then(|n| a.get(n));
     let access = spec.access_attr.and_then(|n| a.get(n));
     let ui_hint = spec.ui_hint_attr.and_then(|n| a.get(n));
+    // Only the literal `true` (and `1`, xsd:boolean) marks the block inline;
+    // any other value stays in `extra`, like `default` above.
+    let inline_value = spec.inline_attr.and_then(|n| a.get(n));
+    let is_inline = matches!(inline_value, Some("true") | Some("1")).then_some(1i64);
 
     let mut captured: Vec<&str> = Vec::new();
     captured.extend(spec.id_attr);
@@ -603,6 +622,9 @@ fn insert_node(
     captured.extend(spec.text_parameter_ref_attr);
     captured.extend(spec.access_attr);
     captured.extend(spec.ui_hint_attr);
+    if is_inline.is_some() {
+        captured.extend(spec.inline_attr);
+    }
     // `extra` is a human-readable audit trail, not a re-parseable encoding:
     // "name=value" pairs, sorted, newline-joined (design D2), which cannot
     // be split unambiguously back apart when a value itself contains `=` or
@@ -651,6 +673,10 @@ fn insert_node(
             columns.push_str(", access, ui_hint");
             values.push(&access);
             values.push(&ui_hint);
+        }
+        if modelled.inline {
+            columns.push_str(", inline");
+            values.push(&is_inline);
         }
         let placeholders = (1..=values.len())
             .map(|i| format!("?{i}"))

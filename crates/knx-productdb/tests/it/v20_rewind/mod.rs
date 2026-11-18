@@ -98,6 +98,23 @@ pub fn drop_v25_objects(conn: &Connection) {
     }
 }
 
+/// Removes the schema-v34 `inline` column (WP-05 inline sections), so that
+/// `migrate_v33_to_v34` finds no column already there.
+#[allow(dead_code)]
+pub fn drop_v34_objects(conn: &Connection) {
+    let present: bool = conn
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM pragma_table_info('dynamic_node') WHERE name = 'inline')",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    if present {
+        conn.execute_batch("ALTER TABLE dynamic_node DROP COLUMN inline;")
+            .unwrap();
+    }
+}
+
 /// Removes the schema-v24 `access` and `ui_hint` columns (ADR-0139), and the
 /// newer ones first, so that `migrate_v23_to_v24` finds no column already
 /// there. Only the columns: a rewind that needs a genuine v23 report uses
@@ -105,6 +122,7 @@ pub fn drop_v25_objects(conn: &Connection) {
 #[allow(dead_code)]
 pub fn drop_v24_objects(conn: &Connection) {
     drop_v25_objects(conn);
+    drop_v34_objects(conn);
     for column in ["access", "ui_hint"] {
         let present: bool = conn
             .query_row(

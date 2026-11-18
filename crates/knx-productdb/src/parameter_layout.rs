@@ -92,6 +92,9 @@ pub struct ParameterLayout {
     button_binding: ButtonBinding,
     axis_program: String,
     literal_grid_axes: std::collections::HashSet<String>,
+    /// `inline-section-flatten-v1`: `(definition, inline block node)` → the
+    /// outer group its heading renders in.
+    inline_label_groups: HashMap<(String, i64), Group>,
 }
 impl ParameterLayout {
     pub fn literal_grid_axes(&self, program: &str) -> Option<&std::collections::HashSet<String>> {
@@ -117,6 +120,12 @@ impl ParameterLayout {
 
     pub fn nested_binding(&self) -> NestedBinding {
         self.nested_binding
+    }
+
+    /// `inline-section-flatten-v1`: the outer group an activated `Inline`
+    /// block's heading renders in, if the walk found one.
+    pub fn inline_label_group(&self, definition: &str, node: i64) -> Option<&Group> {
+        self.inline_label_groups.get(&(definition.to_owned(), node))
     }
 
     pub fn button_binding(&self) -> ButtonBinding {
@@ -164,6 +173,8 @@ struct Node {
     text: Option<String>,
     access: Option<String>,
     ui_hint: Option<String>,
+    /// `ParameterBlock/@Inline = true/1` (v34, inline-section-flatten-v1).
+    inline: bool,
 }
 
 /// Uses normalized parent relationships, never names, numbers or manufacturer-specific IDs.
@@ -178,7 +189,7 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
     let grids = source
         .as_deref()
         .and_then(|bytes| grid::read_grids(bytes, program));
-    let mut stmt = conn.prepare("SELECT module_def_id,node_id,parent_id,kind,ref_id,element_id,text,access,ui_hint,position FROM dynamic_node WHERE program_id=?1 ORDER BY module_def_id,node_id")?;
+    let mut stmt = conn.prepare("SELECT module_def_id,node_id,parent_id,kind,ref_id,element_id,text,access,ui_hint,position,COALESCE(inline,0) FROM dynamic_node WHERE program_id=?1 ORDER BY module_def_id,node_id")?;
     let rows = stmt.query_map([program], |r| {
         Ok((
             r.get::<_, String>(0)?,
@@ -192,6 +203,7 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
                 text: r.get(6)?,
                 access: r.get(7)?,
                 ui_hint: r.get(8)?,
+                inline: r.get::<_, i64>(10)? == 1,
             },
         ))
     })?;
@@ -240,6 +252,43 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
         let mut targets: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
         let mut dependencies: HashMap<String, BTreeSet<String>> = HashMap::new();
         let mut groups: HashMap<String, Option<Group>> = HashMap::new();
+        // inline-section-flatten-v1: an `Inline` block's heading renders in the
+        // group of its nearest non-inline block ancestor. Recorded for every
+        // inline block, before the field walk below skips non-field kinds.
+        for (&node_id, node) in &nodes {
+            if node.kind == "ParameterBlock" && node.inline {
+                let mut outer = None;
+                let mut parent = node.parent;
+                let mut seen = BTreeSet::new();
+                while let Some(at) = parent {
+                    if !seen.insert(at) || seen.len() > 64 {
+                        break;
+                    }
+                    let Some(ancestor) = nodes.get(&at) else {
+                        break;
+                    };
+                    if ancestor.kind == "ParameterBlock" && !ancestor.inline {
+                        outer = Some(Group {
+                            node_id: at,
+                            element_id: ancestor.id.clone(),
+                            text: ancestor.text.clone(),
+                            caption_ref: ancestor
+                                .id
+                                .as_ref()
+                                .and_then(|id| captions.get(id))
+                                .cloned(),
+                        });
+                        break;
+                    }
+                    parent = ancestor.parent;
+                }
+                if let Some(group) = outer {
+                    result
+                        .inline_label_groups
+                        .insert((scope.clone(), node_id), group);
+                }
+            }
+        }
         for (&node_id, node) in &nodes {
             if !matches!(
                 node.kind.as_str(),
@@ -263,7 +312,9 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
                         parents.insert(reference.clone());
                     }
                 }
-                if group.is_none() && ancestor.kind == "ParameterBlock" {
+                // inline-section-flatten-v1: an `Inline` block renders inside
+                // its parent page, so it is not the group owner below it.
+                if group.is_none() && ancestor.kind == "ParameterBlock" && !ancestor.inline {
                     group = Some(Group {
                         node_id: at,
                         element_id: ancestor.id.clone(),

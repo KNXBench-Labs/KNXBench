@@ -384,6 +384,7 @@ mod tests {
             name: None,
             number: None,
             control_kind: None,
+            inline: false,
         }
     }
 

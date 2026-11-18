@@ -798,7 +798,9 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
     (field) => isManufacturerRestricted(field) === (view === "restricted")
       && (view !== "functions" || field.controlsComObjects === true && field.kind === "Restriction"),
     (separator) => view === "parameters" && !isSeparatorRestricted(separator),
-    (label) => view === "parameters" && label.kind === "buttonLiteral" && !isPassiveLabelRestricted(label),
+    // inline-section-flatten-v1: inline headings follow the same rule as
+    // button literals (blockAccess is null, so never restricted).
+    (label) => view === "parameters" && (label.kind === "buttonLiteral" || label.kind === "inlineHeading") && !isPassiveLabelRestricted(label),
   )).filter((section) => section.fields.length > 0 || (section.separators?.length ?? 0) > 0
     || (section.passiveLabels?.length ?? 0) > 0);
 

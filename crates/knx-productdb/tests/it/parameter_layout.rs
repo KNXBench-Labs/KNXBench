@@ -1,6 +1,7 @@
 //! Public synthetic regressions for structural parameter grouping; no vendor source.
 use knx_productdb::{ingest_file, open_and_migrate, parameter_layout::load};
 
+mod inline_sections;
 mod passive_buttons;
 mod passive_nested_cells;
 

@@ -101,17 +101,38 @@ describe("parameter workspace search", () => {
       separators: [separator(2, { key: "info", label: "About" }, "Notes"), separator(0, { key: "g", label: "Page" }, "Head"),
         separator(1, { key: "g", label: "Page" }, null)] }];
     const index = indexParameterWorkspace(sections);
-    expect(index.items.map(item => item.kind === "field" ? item.row.field.etsId : item.separator.separator.text ?? "rule"))
+    expect(index.items.map(item => item.kind === "field" ? item.row.field.etsId
+      : item.kind === "separator" ? item.separator.separator.text ?? "rule" : "inline"))
       .toEqual(["Head", "A", "rule", "B", "Notes"]);
     expect(index.rows.map(row => row.field.etsId)).toEqual(["A", "B"]);
     expect(index.groups.map(group => group.label)).toEqual(["Page", "About"]);
     const notes = index.items[4];
     expect(notes.kind === "separator" && notes.separator.groupKey).toBe(index.groups[1].key);
-    expect(new Set(index.items.map(item => item.kind === "field" ? item.row.key : item.separator.key)).size).toBe(5);
+    expect(new Set(index.items.map(item => item.kind === "field" ? item.row.key
+      : item.kind === "separator" ? item.separator.key : item.heading.key)).size).toBe(5);
   });
 });
 
 // button-literal-passive-v1: a passive label may open its declared group, never a row.
+// inline-section-flatten-v1: an inline block's heading joins the row-view
+// items of its outer group and never becomes a grid label.
+describe("inline section headings (inline-section-flatten-v1)", () => {
+  const heading = (group: ParameterPassiveLabel["group"]): ParameterPassiveLabel => ({
+    kind: "inlineHeading", elementId: "", text: "Inline section", cell: null, group, blockAccess: null });
+
+  it("an inlineHeading becomes a row-view item in its outer group, not a passive grid label", () => {
+    const sections: ParameterSection[] = [{ scope: null,
+      fields: [field("A", { key: "g", label: "Page" })],
+      passiveLabels: [heading({ key: "g", label: "Page" })] }];
+    const index = indexParameterWorkspace(sections);
+    expect(index.passiveLabels).toHaveLength(1);
+    expect(index.items.map(item => item.kind)).toEqual(["field", "inlineHeading"]);
+    expect(index.items[1].kind === "inlineHeading" && index.items[1].heading.groupKey).toBe(index.groups[0].key);
+    // One group only: the inline block never opens an area of its own.
+    expect(index.groups).toHaveLength(1);
+  });
+});
+
 describe("passive source labels", () => {
   const passive = (elementId: string, group: ParameterPassiveLabel["group"], row = 1, column = 2): ParameterPassiveLabel => ({
     kind: "buttonLiteral", elementId, text: `Literal ${elementId}`, cell: { row, column }, group, blockAccess: null });

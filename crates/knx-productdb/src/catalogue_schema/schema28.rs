@@ -19,7 +19,7 @@ pub(super) const OBJECTS: &[[ValueRef<'static>; 4]] = &[
     [Text("index".as_bytes()), Text("com_object_ref_object".as_bytes()), Text("com_object_ref".as_bytes()), Text("CREATE INDEX com_object_ref_object ON com_object_ref (program_id, com_object_id)".as_bytes())],
     [Text("index".as_bytes()), Text("com_object_ref_program".as_bytes()), Text("com_object_ref".as_bytes()), Text("CREATE INDEX com_object_ref_program ON com_object_ref (program_id)".as_bytes())],
     [Text("table".as_bytes()), Text("datapoint_type".as_bytes()), Text("datapoint_type".as_bytes()), Text("CREATE TABLE datapoint_type (\n             id   TEXT PRIMARY KEY,\n             main INTEGER NOT NULL,\n             sub  INTEGER,\n             name TEXT,\n             text TEXT\n         ) STRICT".as_bytes())],
-    [Text("table".as_bytes()), Text("dynamic_node".as_bytes()), Text("dynamic_node".as_bytes()), Text("CREATE TABLE dynamic_node (\n            program_id    TEXT NOT NULL,\n            module_def_id TEXT NOT NULL,\n            node_id       INTEGER NOT NULL,\n            parent_id     INTEGER,\n            position      INTEGER NOT NULL,\n            kind          TEXT NOT NULL,\n            element_id    TEXT,\n            ref_id        TEXT,\n            test          TEXT,\n            is_default    INTEGER,\n            text          TEXT,\n            extra         TEXT, value TEXT, name TEXT, number TEXT, text_parameter_ref_id TEXT, access TEXT, ui_hint TEXT,\n            PRIMARY KEY (program_id, module_def_id, node_id)\n        ) STRICT".as_bytes())],
+    [Text("table".as_bytes()), Text("dynamic_node".as_bytes()), Text("dynamic_node".as_bytes()), Text("CREATE TABLE dynamic_node (\n            program_id    TEXT NOT NULL,\n            module_def_id TEXT NOT NULL,\n            node_id       INTEGER NOT NULL,\n            parent_id     INTEGER,\n            position      INTEGER NOT NULL,\n            kind          TEXT NOT NULL,\n            element_id    TEXT,\n            ref_id        TEXT,\n            test          TEXT,\n            is_default    INTEGER,\n            text          TEXT,\n            extra         TEXT, value TEXT, name TEXT, number TEXT, text_parameter_ref_id TEXT, access TEXT, ui_hint TEXT, inline INTEGER,\n            PRIMARY KEY (program_id, module_def_id, node_id)\n        ) STRICT".as_bytes())],
     [Text("index".as_bytes()), Text("dynamic_node_sibling".as_bytes()), Text("dynamic_node".as_bytes()), Text("CREATE UNIQUE INDEX dynamic_node_sibling\n            ON dynamic_node (program_id, module_def_id, parent_id, position)".as_bytes())],
     [Text("table".as_bytes()), Text("function_point".as_bytes()), Text("function_point".as_bytes()), Text("CREATE TABLE function_point (\n             id               TEXT PRIMARY KEY,\n             function_type_id TEXT NOT NULL,\n             datapoint_type   TEXT,\n             role             TEXT,\n             characteristics  TEXT,\n             text             TEXT\n         ) STRICT".as_bytes())],
     [Text("index".as_bytes()), Text("function_point_function_type".as_bytes()), Text("function_point".as_bytes()), Text("CREATE INDEX function_point_function_type ON function_point (function_type_id)".as_bytes())],
@@ -327,7 +327,7 @@ pub(super) const RELATIONS: &[ExpectedRelation] = &[
         ],
     },
     ExpectedRelation {
-        table: [Text("main".as_bytes()), Text("dynamic_node".as_bytes()), Text("table".as_bytes()), Integer(18), Integer(0), Integer(1)],
+        table: [Text("main".as_bytes()), Text("dynamic_node".as_bytes()), Text("table".as_bytes()), Integer(19), Integer(0), Integer(1)],
         columns: &[
             [Integer(0), Text("program_id".as_bytes()), Text("TEXT".as_bytes()), Integer(1), Null, Integer(1), Integer(0)],
             [Integer(1), Text("module_def_id".as_bytes()), Text("TEXT".as_bytes()), Integer(1), Null, Integer(2), Integer(0)],
@@ -347,6 +347,7 @@ pub(super) const RELATIONS: &[ExpectedRelation] = &[
             [Integer(15), Text("text_parameter_ref_id".as_bytes()), Text("TEXT".as_bytes()), Integer(0), Null, Integer(0), Integer(0)],
             [Integer(16), Text("access".as_bytes()), Text("TEXT".as_bytes()), Integer(0), Null, Integer(0), Integer(0)],
             [Integer(17), Text("ui_hint".as_bytes()), Text("TEXT".as_bytes()), Integer(0), Null, Integer(0), Integer(0)],
+            [Integer(18), Text("inline".as_bytes()), Text("INTEGER".as_bytes()), Integer(0), Null, Integer(0), Integer(0)],
         ],
         indexes: &[
             ExpectedIndex { list: [Text("dynamic_node_sibling".as_bytes()), Integer(1), Text("c".as_bytes()), Integer(0)], xinfo: &[

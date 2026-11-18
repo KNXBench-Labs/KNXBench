@@ -1356,7 +1356,7 @@ fn activate_values(
         .find(|active| active.scope.is_some())
     {
         return Err(ImageError::Unsupported {
-            what: format!("{}: a module instance object", active.ref_id),
+            what: format!("{}: a module instance", active.ref_id),
         });
     }
     Ok((values, activation))

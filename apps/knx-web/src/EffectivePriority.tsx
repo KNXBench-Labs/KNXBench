@@ -7,6 +7,7 @@ import * as api from "./api";
 import type { ComObjectNode } from "./bindings/ComObjectNode";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useComMutation } from "./ComMutationBoundary";
+import HelpTip from "./HelpTip";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 
 const REASON_KEYS: Record<EffectivePriorityUnresolved, MessageKey> = {
@@ -121,7 +122,7 @@ export function PriorityEditField(props: { com: ComObjectNode; onApplied: (tree:
       <option value="">{t("inspector.priorityEdit.none")}</option>
       {(["Low", "High", "Alert"] as const).map((token) => <option key={token} value={token}>{token}</option>)}
     </select>
-    <span id={`${id}-hint`} className="field-hint">{t("inspector.priorityEdit.hint")}</span>
+    <HelpTip labelKey="help.tip.priority.label" textKey="help.tip.priority.text" />
     {error && <span className="field-error">{error}</span>}
   </div>;
 }

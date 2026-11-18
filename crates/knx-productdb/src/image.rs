@@ -443,7 +443,10 @@ impl std::error::Error for ImageError {}
 impl fmt::Display for ImageError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ImageError::SourceBindingChanged => write!(f, "not supported for a download: source ownership binding mismatch"),
+            ImageError::SourceBindingChanged => write!(
+                f,
+                "not supported for a download: source ownership binding mismatch"
+            ),
             ImageError::Database(error) => write!(f, "{error}"),
             ImageError::Code(error) => write!(f, "{error}"),
             ImageError::UnknownProgram(id) => write!(f, "{id}: not in the product database"),
@@ -464,7 +467,10 @@ impl fmt::Display for ImageError {
                 cause,
             } => write!(f, "{parameter_ref}: {cause}"),
             ImageError::ConflictingValues { parameter } => {
-                write!(f, "{parameter}: two active references hold different values")
+                write!(
+                    f,
+                    "{parameter}: two active references hold different values"
+                )
             }
             ImageError::Overlap(overlap) => write!(f, "{overlap}"),
             ImageError::Parameter {
@@ -642,7 +648,7 @@ fn build_image_selected(
         Some(order) => {
             return Err(ImageError::UnsupportedByteOrder {
                 order: order.to_string(),
-            })
+            });
         }
     };
     let protected_tables = if layout == ImageLayout::System2 {
@@ -721,6 +727,9 @@ fn build_image_selected(
         });
     }
     let mut written: BTreeMap<String, (String, Encoded)> = BTreeMap::new();
+    // Scope-aware dedup for module-scoped parameters: keyed by the
+    // instantiation's `ModuleScope::node_chain` plus the `Parameter` id.
+    let mut written_scoped: BTreeMap<(Vec<i64>, String), (String, Encoded)> = BTreeMap::new();
     // Every field written so far, with its segment and `ParameterRef`, so
     // that an overlap can name both parties.
     let mut fields: Vec<(String, ParameterField, &str)> = Vec::new();
@@ -781,19 +790,44 @@ fn build_image_selected(
         if superseded.contains(parameter) {
             continue; // A later union member holds its bits.
         }
-        match written.get(parameter) {
-            Some((_, earlier)) if *earlier == value => continue,
-            Some(_) => {
-                return Err(ImageError::ConflictingValues {
-                    parameter: parameter.to_string(),
-                })
+        // The dedup key is scope-aware: two instantiations of one module
+        // share the `Parameter` id but write different fields (each resolves
+        // its own `BaseOffset` argument), so a plain parameter-id key would
+        // silently drop every instantiation after the first (ADR-0177).
+        let scope_key = scope.map(|s| s.node_chain());
+        match &scope_key {
+            Some(chain) => {
+                if let Some((_, earlier)) =
+                    written_scoped.get(&(chain.clone(), parameter.to_string()))
+                {
+                    if *earlier == value {
+                        continue;
+                    }
+                    return Err(ImageError::ConflictingValues {
+                        parameter: parameter.to_string(),
+                    });
+                }
             }
-            None => {}
+            None => match written.get(parameter) {
+                Some((_, earlier)) if *earlier == value => continue,
+                Some(_) => {
+                    return Err(ImageError::ConflictingValues {
+                        parameter: parameter.to_string(),
+                    });
+                }
+                None => {}
+            },
         }
         // Written into the property's image after this loop (ADR-0161).
         if let ParameterPlacement::Property(_) = placement {
             if let Encoded::Number(number) = &value {
                 parameters.insert(parameter_ref.to_string(), *number);
+            }
+            if let Some(chain) = &scope_key {
+                written_scoped.insert(
+                    (chain.clone(), parameter.to_string()),
+                    (parameter_ref.to_string(), value.clone()),
+                );
             }
             written.insert(parameter.to_string(), (parameter_ref.to_string(), value));
             continue;
@@ -946,6 +980,12 @@ fn build_image_selected(
                 None
             }
         };
+        if let Some(chain) = &scope_key {
+            written_scoped.insert(
+                (chain.clone(), parameter.to_string()),
+                (parameter_ref.to_string(), value.clone()),
+            );
+        }
         written.insert(parameter.to_string(), (parameter_ref.to_string(), value));
     }
     // Every time value written, by unit; invisible ones placed in a
@@ -1086,7 +1126,7 @@ fn build_image_selected(
         None if !objects.is_empty() => {
             return Err(ImageError::Unsupported {
                 what: "active group objects, but no ComObjectTable placement".to_string(),
-            })
+            });
         }
         None => {}
     }
@@ -1160,7 +1200,7 @@ fn build_image_selected(
             return Err(ImageError::Unsupported {
                 what: "group address links, but no AddressTable/AssociationTable placement"
                     .to_string(),
-            })
+            });
         }
         _ => {}
     }
@@ -1286,7 +1326,7 @@ fn assigned_invisible_values(
             Some((_, earlier)) => {
                 return refuse(format!(
                     "{target}: active Assign elements set {earlier:?} and {assigned:?}"
-                ))
+                ));
             }
             None => out.push((target.to_string(), assigned.to_string())),
         }
@@ -2621,7 +2661,9 @@ mod tests {
         let (_dir, baseline) = db(PROGRAM);
         let original = build_download_image(&baseline, &request(&[], vec![])).unwrap();
         for value in ["", "0", "1", "false", "true"] {
-            let inactive = format!("<Parameter Id=\"INACTIVE\" ParameterType=\"PT-N\" Value=\"2\" LegacyPatchAlways=\"{value}\"><Memory CodeSegment=\"AS-4400\" Offset=\"25\" BitOffset=\"0\" /></Parameter>");
+            let inactive = format!(
+                "<Parameter Id=\"INACTIVE\" ParameterType=\"PT-N\" Value=\"2\" LegacyPatchAlways=\"{value}\"><Memory CodeSegment=\"AS-4400\" Offset=\"25\" BitOffset=\"0\" /></Parameter>"
+            );
             let xml = PROGRAM.replace("</Parameters>", &format!("{inactive}</Parameters>"));
             let (_dir, conn) = db(&xml);
             let before = conn.total_changes();
@@ -3495,10 +3537,12 @@ mod tests {
             .unwrap();
         assert_eq!(signed.project.as_deref(), Some("300"));
         assert_eq!(signed.device.as_deref(), Some("401"));
-        assert!(rows.iter().any(|r| r.kind == "raw"
-            && r.device
-                .as_deref()
-                .is_some_and(|s| s.contains("35 20 A4 20 6F 6B"))));
+        assert!(rows.iter().any(|r| {
+            r.kind == "raw"
+                && r.device
+                    .as_deref()
+                    .is_some_and(|s| s.contains("35 20 A4 20 6F 6B"))
+        }));
         let device_values = held
             .regions
             .iter_mut()

@@ -547,10 +547,9 @@ impl<'a> Parser<'a> {
     /// Like [`Self::next`], but the end of the file is an error: it is only
     /// called inside an element that has not closed yet.
     ///
-    /// A closing tag (`End`) yields `Ok(None)` and is NOT consumed by the
-    /// caller — wait, it IS consumed here (the event is already read), and
-    /// the `None` result tells the caller "your element has closed". The
-    /// subtle part: `skip` treats `None` as "one level closed" and `skip`
+    /// A closing tag (`End`) yields `Ok(None)`: the event is already read
+    /// (consumed here), and `None` tells the caller "your element has
+    /// closed". `skip` treats `None` as "one level closed" and `skip`
     /// of an `Empty` element is a no-op, so a subtree is consumed exactly
     /// when its start (or empty) element plus all descendants plus the
     /// matching end tag have been read.

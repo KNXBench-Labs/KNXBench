@@ -13,6 +13,7 @@ import { emitAchievementEvent } from "./achievementEvents";
 import type { BusMonitorStartResponse, BusMonitorStopResponse, BusTelegramRow } from "./api";
 import { CAPTURE_CAPACITY, appendCapturedRows, saveBusCapture } from "./busMonitorCapture";
 import { calculateBusMonitorStatistics } from "./busMonitorStatistics";
+import { recordReceivedTelegrams, recordSentTelegram, resetSessionTelegramCounters } from "./sessionTelegramCounters";
 import BusComposeForm, { type ComposeResolution } from "./BusComposeForm";
 import { useFlowFeed, type FlowFeed } from "./flowFeed";
 import TelegramFlowView from "./TelegramFlowView";
@@ -435,6 +436,9 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
     sessionRef.current = next;
     if (!next) { serialRef.current = undefined; setSessionSerial(undefined); transportRef.current = undefined; setSessionTransport(undefined); setSkippedFrames(undefined); }
     setSession(next);
+    // WP-44.2: the status-bar session counters track exactly this session
+    // identity and reset whenever it changes (or ends).
+    resetSessionTelegramCounters(next === null ? null : { sessionId: next.sessionId, serverIncarnation: next.serverIncarnation });
     // Retain provenance for a capture exported after Disconnect or a 404.
     if (next) setCaptureIdentity(next);
   }
@@ -612,6 +616,9 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
             return { rows: appended.rows, pruned: previous.pruned + appended.pruned };
           });
           flowFeed.admit(attached, response.telegrams);
+          // WP-44.2: count only real wire telegrams; the synthetic
+          // `SessionClosed` marker is local status, not bus traffic.
+          recordReceivedTelegrams(attached, response.telegrams.filter((row) => row.service !== "SessionClosed").length);
         }
         // This tick's own batch only — never a running minimum kept across
         // ticks, or the marker would accumulate exactly the way it must not.
@@ -1143,6 +1150,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           // path locks on exactly the same condition the table does.
           contextStale={contextLock === "stale"}
           contextUnverified={contextLock === "unverified"}
+          onSent={() => { if (session) recordSentTelegram({ sessionId: session.sessionId, serverIncarnation: session.serverIncarnation }); }}
         /></div>
       )}
       {(session || rows.length > 0) && (

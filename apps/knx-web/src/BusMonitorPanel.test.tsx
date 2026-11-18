@@ -727,6 +727,29 @@ describe("BusMonitorPanel", () => {
     expect(css).toMatch(/\.bus-monitor-filters input\[type="text"\]\s*\{[^}]*flex:\s*1 1 18rem;[^}]*min-width:\s*min\(100%, 18rem\);/s);
   });
 
+  it("keeps the details pane as a separate scrollable grid item (WP-44.1)", async () => {
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ nextSince: 1, telegrams: [row({ seq: 0 })] }));
+    await renderPanel();
+    await flushReattach();
+    const data = host!.querySelector<HTMLElement>(".monitor-data")!;
+    const scroll = host!.querySelector<HTMLElement>(".monitor-table-scroll")!;
+    const details = host!.querySelector<HTMLElement>(".telegram-details")!;
+    // The details pane is a direct grid sibling of the table, not inside the
+    // table's scroll viewport.
+    expect(details.parentElement).toBe(data);
+    expect(scroll.parentElement).not.toBe(data);
+    expect(scroll.parentElement!.parentElement).toBe(data);
+    expect(scroll.contains(details)).toBe(false);
+    const css = readFileSync("src/styles.css", "utf8");
+    // Wide layout: only the table viewport scrolls, bounded; the details pane
+    // is sticky to the viewport with its own scroll (WP-44.1).
+    expect(css).toMatch(/\.monitor-table-scroll \{[^}]*max-height:\s*75dvh;/s);
+    expect(css).toMatch(/\.telegram-details \{\s*position:\s*sticky;[^}]*overflow:\s*auto;[^}]*max-height:\s*calc\(100dvh - 24px\);/s);
+    // Narrow-pane fallback: single column, both max-heights removed and the
+    // aside back to static.
+    expect(css).toMatch(/@media \(max-width: 1350px\) \{[^@]*\.monitor-table-scroll, \.telegram-details \{ max-height: none; \}[^@]*\.telegram-details \{ position: static; \}/s);
+  });
+
   it("filters rows client-side, without re-fetching", async () => {
     await renderPanel();
     await flushReattach();

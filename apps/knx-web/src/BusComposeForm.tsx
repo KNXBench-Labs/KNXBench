@@ -93,6 +93,9 @@ interface BusComposeFormProps {
   /// searchable combobox over them, keeping free-text entry for addresses
   /// outside the project. Empty/absent keeps the plain input.
   groupAddresses?: GroupAddressNode[];
+  /// WP-44.2: called once per telegram this session actually sent (after the
+  /// server accepted the write), so the status bar can count it.
+  onSent?: () => void;
 }
 
 // Task 5 review round 2: `SESSION_CLOSED_MESSAGE`/`NO_DPT_RESOLVED_MESSAGE`/
@@ -111,6 +114,7 @@ export default function BusComposeForm({
   contextStale,
   contextUnverified: contextUnverifiedProp = false,
   groupAddresses,
+  onSent,
 }: BusComposeFormProps) {
   const t = useTranslate();
   const passiveSerial = session.kind === "serial" && session.mode === "passive";
@@ -257,6 +261,7 @@ export default function BusComposeForm({
         ? await api.writeBoundBusValue(session.identity, canonicalGroupAddress(destination), dptToSend, value, inputFormat)
         : await api.writeBusValue(canonicalGroupAddress(destination), dptToSend, value, inputFormat);
       setSent(response);
+      onSent?.();
     } catch (e) {
       // `400`/`409`/`502` all land here — shown inline on the form, not
       // only as a toast (design §6: a `502` in particular is exactly the

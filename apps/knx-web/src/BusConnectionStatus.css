@@ -4,6 +4,19 @@
 .bus-connection-state { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
 .bus-connection-indicator { width: 8px; height: 8px; flex: none; border-radius: 50%; border: 1px solid var(--knx-muted); background: transparent; }
 .bus-connection-indicator[data-tone="connected"] { background: var(--knx-success-color); border-color: var(--knx-success-color); }
+/* WP-44.3: while connected, the indicator breathes gently — a calm,
+   theme-aware pulse. Both gates are structural: the OS reduced-motion
+   preference and the in-app motion level "off" each keep it static. */
+@keyframes knx-bus-connected-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--knx-success-color) 55%, transparent); }
+  50% { box-shadow: 0 0 0 4px transparent; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion-level="off"]) .bus-connection-indicator[data-tone="connected"] {
+    animation: knx-bus-connected-pulse calc(var(--knx-transition-duration) * 8) var(--knx-motion-easing) infinite;
+  }
+}
+.bus-connection-counters { color: var(--knx-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bus-connection-indicator[data-tone="warning"] { background: var(--knx-warning-color); border-color: var(--knx-warning-color); }
 .bus-connection-indicator[data-tone="pending"] { border-color: var(--knx-accent); background: color-mix(in srgb, var(--knx-accent) 40%, transparent); }
 .bus-connection-trigger, .bus-connection-action, .bus-connection-tools button {

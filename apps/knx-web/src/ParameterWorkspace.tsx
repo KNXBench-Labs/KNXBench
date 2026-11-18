@@ -24,7 +24,7 @@ export default function ParameterWorkspace({ sections, renderField, differs = NE
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
   const [selected, setSelected] = useState<string | null>(null);
-  const { rows, groups, items, passiveLabels } = indexParameterWorkspace(sections);
+  const { rows, groups, items, passiveLabels, nestedCells } = indexParameterWorkspace(sections);
   // Closed by default: no area opens until chosen; a vanished choice closes again.
   const activeKey = groups.some(group => group.key === active) ? active : null;
   const searching = query.trim() !== "";
@@ -52,8 +52,14 @@ export default function ParameterWorkspace({ sections, renderField, differs = NE
   const layoutView: GroupLayoutView | null = !searching && current ? current.layout : null;
   const matrix = layoutView?.kind === "matrix" ? planParameterMatrix(layoutView.layout,
     rows.filter(row => row.groupKey === current!.key).map(row => ({ key: row.key, cell: row.field.cell })),
-    passiveLabels.filter(entry => entry.groupKey === current!.key)
-      .map(entry => ({ key: `passive:${entry.key}`, text: entry.label.text, cell: entry.label.cell }))) : null;
+    [
+      ...passiveLabels.filter(entry => entry.groupKey === current!.key)
+        .map(entry => ({ key: `passive:${entry.key}`, text: entry.label.text, cell: entry.label.cell })),
+      // nested-block-cell-passive-v1: a nested block's literal caption sits in
+      // its own declared cell like a passive label; no text means no caption.
+      ...nestedCells.filter(entry => entry.groupKey === current!.key && entry.cell.text !== undefined)
+        .map(entry => ({ key: `nested:${entry.key}`, text: entry.cell.text!, cell: entry.cell.cell })),
+    ]) : null;
   const passiveIds = new Map(passiveLabels.map(entry => [`passive:${entry.key}`, entry.label.elementId]));
   const passiveCells = new Map(passiveLabels.map(entry =>
     [`passive:${entry.key}`, `${entry.label.cell.row},${entry.label.cell.column}`]));
@@ -61,6 +67,10 @@ export default function ParameterWorkspace({ sections, renderField, differs = NE
   // unplaced declaration. The cell matters: the grid reader names an Id-less Button by its RefId.
   const shownButtons = new Set(matrix?.labels.flatMap(caption => caption.passive
     ? [shownButtonKey(passiveIds.get(caption.key)!, passiveCells.get(caption.key)!)] : []) ?? []);
+  // nested-block-cell-passive-v1: a shown nested caption is no unshown content either.
+  const shownNested = new Set(matrix?.labels.flatMap(caption => caption.passive && caption.key.startsWith("nested:")
+    ? [caption.key.slice("nested:".length)] : []) ?? []);
+  const nestedKeys = new Map(nestedCells.map(entry => [`nested:${entry.key}`, `${entry.cell.elementId},${entry.cell.cell.row},${entry.cell.cell.column}`]));
   const marks = differingAreas(rows, groups, differs);
   const markNote = t("parameters.lastDownload.section");
   const resultCounts = new Map<string, number>();
@@ -127,7 +137,7 @@ export default function ParameterWorkspace({ sections, renderField, differs = NE
               <h4 title={current && !searching ? caption(current).title : undefined}>{searching ? t("parameters.workspace.results") : current && groupLabel(current)}</h4></div>
             <span>{t("parameters.workspace.sourceGroups")}</span>
           </header>
-          {layoutView && <LayoutNote view={layoutView} shownButtons={shownButtons} />}
+          {layoutView && <LayoutNote view={layoutView} shownButtons={shownButtons} shownNested={shownNested} nestedKeys={nestedKeys} />}
           {visible.size > 0 && !matrix && <div className="parameter-workspace-columns" aria-hidden="true">
             <span>{t("parameters.workspace.parameter")}</span><span>{t("parameters.workspace.value")}</span>
           </div>}
@@ -246,7 +256,7 @@ function shownButtonKey(reference: string, cell: string): string {
  * A functional `Button` whose passive label this grid shows keeps its own note
  * (action unsupported) and is not counted as a declaration that was not placed.
  */
-function LayoutNote({ view, shownButtons }: { view: GroupLayoutView; shownButtons: ReadonlySet<string> }) {
+function LayoutNote({ view, shownButtons, shownNested, nestedKeys }: { view: GroupLayoutView; shownButtons: ReadonlySet<string>; shownNested: ReadonlySet<string>; nestedKeys: ReadonlyMap<string, string> }) {
   const t = useTranslate();
   if (view.kind === "rows") {
     return <p className="parameter-workspace-layout-note">
@@ -258,8 +268,11 @@ function LayoutNote({ view, shownButtons }: { view: GroupLayoutView; shownButton
     const key = Object.hasOwn(ISSUE_KEYS, issue.kind) ? ISSUE_KEYS[issue.kind as keyof typeof ISSUE_KEYS] : "parameters.matrix.issue.unknown";
     return t(key, values);
   };
-  const labelShown = (issue: typeof layout.issues[number]) => issue.kind === "unshownContent" && issue.element === "Button"
-    && issue.reference !== null && issue.cell !== null && shownButtons.has(shownButtonKey(issue.reference, issue.cell));
+  const labelShown = (issue: typeof layout.issues[number]) => (issue.kind === "unshownContent" && issue.element === "Button"
+    && issue.reference !== null && issue.cell !== null && shownButtons.has(shownButtonKey(issue.reference, issue.cell)))
+    || (issue.kind === "unshownContent" && issue.element === "ParameterBlock"
+      && issue.reference !== null && issue.cell !== null
+      && [...shownNested].some(key => nestedKeys.get(key) === `${issue.reference},${issue.cell}`));
   const shown = layout.issues.filter(labelShown);
   const unplaced = layout.issues.filter(issue => !labelShown(issue));
   return <>

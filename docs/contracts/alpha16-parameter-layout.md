@@ -271,3 +271,50 @@ is written by the existing row when focus leaves it (a real browser has no
 draft that outlives the focus change); the same editor and the label survive
 area and search changes. The
 fixtures are self-authored (`crates/knx-productdb/tests/fixtures/passive-button-*`).
+
+## Nested block cells (`nested-block-cell-passive-v1`)
+
+Since 18 November 2026 (WP-05 increment; schema-20 `@Cell` on a nested
+`ParameterBlock`, counted in the 17 October 2026 census). This is KNXBench
+presentation policy, not observed ETS nested-block behaviour, handler support
+or Table/Grid visual equivalence.
+
+- **Admission.** Only a program-owned (not `ModuleDef`) exact-namespace
+  `Dynamic` `ParameterBlock` below traversable containers whose nearest
+  enclosing `ParameterBlock` has an `@Id` and a valid `Grid`. It declares
+  exactly unqualified `Id` and `Cell`, plus optionally `Text` as the caption.
+  Any other attribute (`Layout`, `Rows`, `Columns`, `Access`,
+  `TextParameterRefId`, qualified or unknown ones) refuses the candidate.
+  `Cell` uses the existing 1-based `row,column` parser; out-of-range or
+  malformed cells bind no cell. `Text`, when present, must be non-blank, not
+  `#` and free of `{{`/`}}`; otherwise the cell binds with no caption.
+- **Activation.** The single existing walker records each reached nested
+  `ParameterBlock` (`Activation.nested_blocks`, same shape as a reached
+  `Button`) and continues into it: the nested block's own fields stay in the
+  row view exactly as before. Inactive branches, `Repeat` and module scopes
+  yield no cell.
+- **Source binding.** Same structural correspondence as
+  `button-literal-passive-v1`: the presentation reader rebuilds the program's
+  `Dynamic` tree as the stored parser numbered it and binds a candidate only
+  when every stored `(node, kind, parent, position)` matches and the nearest
+  stored block above the nested block is the candidate's parent block with the
+  same `@Id`. Drift, a second program root, a duplicate program `ParameterBlock/@Id`,
+  an unreadable source, a non-unique owner or the existing event/depth budget
+  refuses every nested cell of the program, never a subset. The read is skipped
+  when no stored `ParameterBlock` has a stored `ParameterBlock` parent whose
+  grid could render (or whose source is unreadable).
+- **Wire shape.** `ParameterSection.nestedCells` (always present, possibly
+  empty): `{elementId, text?, cell:{row,column}, group:{key,label},
+  blockAccess}`. No field identity, value, `writeEtsId`, editor or handler
+  data; the nested block's contents remain ordinary fields of their own
+  group. A section and its grid group are seeded from admitted cells too.
+  Copies charge the existing caption/copy budget.
+- **Browser.** In a selected matrix, a nested cell caption stacks exactly like
+  a passive label (separator captions, then passive labels and nested
+  captions in source order, then fields) as a plain passive `span`. A
+  `CollapseIfEmpty`-hidden row hides the nested caption with the row. Where
+  the selected grid shows the nested block's caption, the client no longer
+  counts its `unshownContent` issue among unplaced declarations. The nested
+  block's own fields render in the row view under their own group, unchanged.
+- **Limits.** Bounded by the same event/depth budgets as the Button pass;
+  programs without stored nested blocks skip the read.

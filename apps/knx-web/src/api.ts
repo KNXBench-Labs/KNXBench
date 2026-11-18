@@ -2878,6 +2878,24 @@ export interface ParameterSection {
   groupLayouts?: ParameterGroupLayout[];
   /** `button-literal-passive-v1`: absent on older servers. Display only. */
   passiveLabels?: ParameterPassiveLabel[];
+  /** `nested-block-cell-passive-v1`: absent on older servers. Display only. */
+  nestedCells?: ParameterNestedCell[];
+}
+
+/**
+ * `nested-block-cell-passive-v1`: an activated nested `ParameterBlock`'s own
+ * `@Cell` in its parent grid, shown as a passive cell caption when `text` is
+ * present. Never an editor or write target; the nested block's contents stay
+ * in the row view.
+ */
+export interface ParameterNestedCell {
+  elementId: string;
+  text?: string;
+  cell: ParameterGridCell;
+  /** The parent grid block; the server always sends it. */
+  group: ParameterGroup;
+  /** As `ParameterField.blockAccess`. */
+  blockAccess: string | null;
 }
 
 /**

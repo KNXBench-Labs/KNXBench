@@ -6932,6 +6932,8 @@ fn assemble_parameter_panel_for_project(
         separators: Vec<&'a knx_productdb::dynamic::ActiveSeparator>,
         /// button-literal-passive-v1: reached Buttons with an admitted literal.
         buttons: Vec<&'a knx_productdb::dynamic::ActiveButton>,
+        /// nested-block-cell-passive-v1: reached nested blocks with an admitted cell.
+        nested_blocks: Vec<&'a knx_productdb::dynamic::ActiveButton>,
     }
     let layout =
         knx_productdb::parameter_layout::load(products, &program_id).map_err(|e| e.to_string())?;
@@ -6953,6 +6955,7 @@ fn assemble_parameter_panel_for_project(
                 activated: Vec::new(),
                 separators: Vec::new(),
                 buttons: Vec::new(),
+                nested_blocks: Vec::new(),
             }
         });
         section.ref_ids.push(active.ref_id.clone());
@@ -6972,6 +6975,7 @@ fn assemble_parameter_panel_for_project(
                     activated: Vec::new(),
                     separators: Vec::new(),
                     buttons: Vec::new(),
+                    nested_blocks: Vec::new(),
                 }
             })
             .separators
@@ -6998,10 +7002,38 @@ fn assemble_parameter_panel_for_project(
                     activated: Vec::new(),
                     separators: Vec::new(),
                     buttons: Vec::new(),
+                    nested_blocks: Vec::new(),
                 }
             })
             .buttons
             .push(button);
+    }
+    // nested-block-cell-passive-v1: an admitted nested cell seeds its section
+    // too, so a parent block holding only a nested block is still an area.
+    for nested in &activation.nested_blocks {
+        let definition = nested
+            .scope
+            .as_ref()
+            .map_or("", |scope| scope.module_def_id.as_str());
+        if layout.nested_cell(definition, nested.node_id).is_none() {
+            continue;
+        }
+        let key = nested.scope.as_ref().map(|s| s.node_chain());
+        sections_by_key
+            .entry(key.clone())
+            .or_insert_with(|| {
+                section_order.push(key.clone());
+                SectionBuild {
+                    scope: nested.scope.clone(),
+                    ref_ids: Vec::new(),
+                    activated: Vec::new(),
+                    separators: Vec::new(),
+                    buttons: Vec::new(),
+                    nested_blocks: Vec::new(),
+                }
+            })
+            .nested_blocks
+            .push(nested);
     }
     // ADR-0139: an activated separator's text is its label.
     let separator_texts: HashMap<(Option<Vec<i64>>, i64), &str> = activation
@@ -7339,6 +7371,31 @@ fn assemble_parameter_panel_for_project(
             section.scope.as_ref().map(|s| module_scope_dto(s)),
             refused,
         );
+        // nested-block-cell-passive-v1: placement and literal caption only,
+        // charged to the same copy budget; never a field, value or write target.
+        let nested_cells = section
+            .nested_blocks
+            .iter()
+            .filter_map(|nested| {
+                layout
+                    .nested_cell(definition, nested.node_id)
+                    .map(|cell| (nested, cell))
+            })
+            .map(|(nested, cell)| {
+                Ok(crate::routes::ParameterNestedCellDto {
+                    element_id: cell.element_id.clone(),
+                    text: cell
+                        .text
+                        .as_ref()
+                        .map(|text| caption_fills.copy_text(Some(text)))
+                        .transpose()?
+                        .flatten(),
+                    cell: crate::parameter_grid::cell_dto(cell.cell),
+                    group: group_dto(cell.group.clone(), &mut caption_fills)?,
+                    block_access: nested.block_access.clone(),
+                })
+            })
+            .collect::<Result<Vec<_>, String>>()?;
         let group_layouts = grid_groups
             .into_iter()
             .map(|(key, block_node)| {
@@ -7364,6 +7421,7 @@ fn assemble_parameter_panel_for_project(
             separators,
             group_layouts,
             passive_labels,
+            nested_cells,
         });
     }
 

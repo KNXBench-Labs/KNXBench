@@ -131,3 +131,46 @@ fn a_module_scoped_nested_block_is_never_a_candidate() {
     assert_eq!(bound.len(), 1);
     assert_eq!(layout.nested_cell("", bound[0]).unwrap().element_id, "N");
 }
+
+// `nested-block-cell-deep-v2`: a block nested two levels deep with its own
+// `@Cell` binds in the outermost renderable ancestor grid.
+const DEEP: &str = r#"<ParameterBlock Id="B" Layout="Grid"><Rows><Row Id="R"/></Rows><Columns><Column Id="C" Width="100%"/></Columns><ParameterRefRef RefId="P-1_R-1" Cell="1,1"/><ParameterBlock Id="N1" Cell="1,1" Text="Level one"><ParameterBlock Id="N2" Cell="1,1" Text="Level two"/></ParameterBlock></ParameterBlock>"#;
+
+#[test]
+fn a_two_level_nested_block_cell_binds_in_the_outer_grid() {
+    let (_dir, conn) = ingest(&source(DEEP));
+    let layout = load(&conn, "A-N").unwrap();
+    assert_eq!(layout.nested_binding(), NestedBinding::Bound);
+    let ids = blocks(&conn);
+    // N1 binds in B's grid as before.
+    let n1 = layout.nested_cell("", ids[1]).expect("N1 binds");
+    assert_eq!(n1.element_id, "N1");
+    assert_eq!(n1.group.element_id.as_deref(), Some("B"));
+    // N2 binds too, also in the outer grid B (its nearest ancestor N1 is not
+    // a grid), showing its own literal caption.
+    let n2 = layout
+        .nested_cell("", ids[2])
+        .expect("N2 binds in the outer grid");
+    assert_eq!(n2.element_id, "N2");
+    assert_eq!(n2.text.as_deref(), Some("Level two"));
+    assert_eq!(n2.group.element_id.as_deref(), Some("B"));
+    assert_eq!((n2.cell.row, n2.cell.column), (1, 1));
+}
+
+#[test]
+fn a_deep_block_binds_in_the_nearest_grid_ancestor() {
+    // Outer block is a List, the middle block is a Grid: N2's cell belongs to
+    // the middle grid, not the outer list.
+    let dynamic = r#"<ParameterBlock Id="B" Layout="List"><ParameterBlock Id="N1" Layout="Grid"><Rows><Row Id="R"/></Rows><Columns><Column Id="C" Width="100%"/></Columns><ParameterBlock Id="N2" Cell="1,1" Text="Deep caption"/></ParameterBlock></ParameterBlock>"#;
+    let (_dir, conn) = ingest(&source(dynamic));
+    let layout = load(&conn, "A-N").unwrap();
+    assert_eq!(layout.nested_binding(), NestedBinding::Bound);
+    let ids = blocks(&conn);
+    let n2 = layout
+        .nested_cell("", ids[2])
+        .expect("N2 binds in the middle grid");
+    assert_eq!(n2.element_id, "N2");
+    assert_eq!(n2.group.element_id.as_deref(), Some("N1"));
+    // N1 has no Cell of its own: no candidate.
+    assert!(layout.nested_cell("", ids[1]).is_none());
+}

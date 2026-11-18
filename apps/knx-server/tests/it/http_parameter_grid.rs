@@ -1,5 +1,6 @@
 //! Declared parameter grids reach the HTTP parameter panel as versioned geometry.
 
+mod nested_cells;
 mod passive_labels;
 
 use std::sync::Arc;

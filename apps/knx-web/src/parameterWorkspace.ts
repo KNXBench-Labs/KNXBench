@@ -1,5 +1,5 @@
 /** Read-only parameter navigation derived exclusively from declared scopes and groups. */
-import type { ModuleScope, ParameterContainer, ParameterField, ParameterPassiveLabel, ParameterSection, ParameterSeparator } from "./api";
+import type { ModuleScope, ParameterContainer, ParameterField, ParameterNestedCell, ParameterPassiveLabel, ParameterSection, ParameterSeparator } from "./api";
 import type { TextFill } from "./bindings/TextFill";
 import { classifyGroupLayout, type GroupLayoutView } from "./parameterMatrix";
 import { moduleScopeIdentity } from "./moduleScope";
@@ -39,6 +39,13 @@ export interface ParameterWorkspacePassiveLabel {
   label: ParameterPassiveLabel;
   scope: ModuleScope | null;
 }
+/** `nested-block-cell-passive-v1`: a nested block's cell caption in its parent grid. */
+export interface ParameterWorkspaceNestedCell {
+  key: string;
+  groupKey: string;
+  cell: ParameterNestedCell;
+  scope: ModuleScope | null;
+}
 /** Fields and separators in source order, the order the workspace renders. */
 export type ParameterWorkspaceItem =
   | { kind: "field"; row: ParameterWorkspaceRow }
@@ -63,6 +70,7 @@ export function indexParameterWorkspace(sections: readonly ParameterSection[]) {
   const groups: ParameterWorkspaceGroup[] = [];
   const items: ParameterWorkspaceItem[] = [];
   const passiveLabels: ParameterWorkspacePassiveLabel[] = [];
+  const nestedCells: ParameterWorkspaceNestedCell[] = [];
   const sectionKeys = parameterSectionKeys(sections);
   for (const [sectionIndex, section] of sections.entries()) {
     const scope = section.scope;
@@ -111,8 +119,13 @@ export function indexParameterWorkspace(sections: readonly ParameterSection[]) {
     (section.passiveLabels ?? []).forEach((label, index) => {
       passiveLabels.push({ key: JSON.stringify([sectionKey, "passive", index]), groupKey: groupFor(label.group).key, label, scope });
     });
+    // Nested-block cells follow the passive labels, so field, separator and
+    // label groups keep their order and numbers.
+    (section.nestedCells ?? []).forEach((cell, index) => {
+      nestedCells.push({ key: JSON.stringify([sectionKey, "nested", index]), groupKey: groupFor(cell.group).key, cell, scope });
+    });
   }
-  return { rows, groups, items, passiveLabels };
+  return { rows, groups, items, passiveLabels, nestedCells };
 }
 
 /**

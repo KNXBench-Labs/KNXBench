@@ -175,3 +175,41 @@ describe("Row/@CollapseIfEmpty (WP-05, preserved attribute now applied)", () => 
     expect(plan.fields.get("f1")!.row).toBe(1);
   });
 });
+
+describe("nested block cells (nested-block-cell-passive-v1)", () => {
+  const nestedGrid = layout({ groupKey: "PB-NEST",
+    rows: [{ id: "N-R1", text: null, textParameterRefId: null, collapseIfEmpty: null }],
+    columns: [{ id: "N-C1", text: null, textParameterRefId: null, width: "46%" },
+      { id: "N-C2", text: null, textParameterRefId: null, width: "53%" }],
+    labels: [] });
+
+  it("places a nested block caption at its own cell like a passive label, after separator captions", () => {
+    const withSeparator = layout({ groupKey: "PB-NEST",
+      rows: [{ id: "N-R1", text: null, textParameterRefId: null, collapseIfEmpty: null }],
+      columns: [{ id: "N-C1", text: null, textParameterRefId: null, width: "46%" },
+        { id: "N-C2", text: null, textParameterRefId: null, width: "53%" }],
+      labels: [{ row: 1, column: 2, text: "Fictional separator" }] });
+    const plan = planParameterMatrix(withSeparator, [{ key: "PR-1", cell: { row: 1, column: 1 } }],
+      [{ key: "nested:N-1", text: "Nested caption", cell: { row: 1, column: 2 } }]);
+    expect(plan.labels.map(label => [label.key, label.text, label.passive ?? false, matrixStyle(label.area)])).toEqual([
+      ["label:0", "Fictional separator", false, { gridRow: "1 / span 1", gridColumn: "2 / span 1" }],
+      ["nested:N-1", "Nested caption", true, { gridRow: "2 / span 1", gridColumn: "2 / span 1" }],
+    ]);
+    expect(matrixStyle(plan.fields.get("PR-1")!)).toEqual({ gridRow: "1 / span 1", gridColumn: "1 / span 1" });
+  });
+
+  it("hides a nested caption in a CollapseIfEmpty-hidden row with the row itself", () => {
+    const collapsing = layout({ groupKey: "PB-NEST",
+      rows: [{ id: "N-R1", text: null, textParameterRefId: null, collapseIfEmpty: "1" }],
+      columns: [{ id: "N-C1", text: null, textParameterRefId: null, width: "100%" }],
+      labels: [] });
+    // The nested caption itself counts as declared label content, so the row
+    // stays; with only a field elsewhere the row collapses and the caption
+    // is not shown either.
+    const plan = planParameterMatrix(collapsing, [], [{ key: "nested:N-1", text: "Nested caption", cell: { row: 1, column: 1 } }]);
+    expect(plan.labels.map(label => label.key)).toEqual(["nested:N-1"]);
+    const collapsed = planParameterMatrix(collapsing, [], []);
+    expect(collapsed.labels).toEqual([]);
+    expect(collapsed.rowHeaders).toEqual([]);
+  });
+});

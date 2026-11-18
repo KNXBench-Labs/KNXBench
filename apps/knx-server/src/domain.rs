@@ -7049,12 +7049,7 @@ fn assemble_parameter_panel_for_project(
             continue;
         }
         // The layout walk assigns an inline block's children to the outer
-        // group; the label's own group is found the same way.
-        let definition = label
-            .scope
-            .as_ref()
-            .map_or("", |scope| scope.module_def_id.as_str());
-        let _group = layout.inline_label_group(definition, label.node_id);
+        // group; the label's outer group is looked up again at emission time.
         let key = label.scope.as_ref().map(|s| s.node_chain());
         let section = sections_by_key.entry(key.clone()).or_insert_with(|| {
             section_order.push(key.clone());

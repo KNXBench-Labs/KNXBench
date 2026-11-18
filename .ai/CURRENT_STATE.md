@@ -1,7 +1,7 @@
 # Restart snapshot — WP-05 TextParameterRefId grid axis captions (PR !63 ready to merge) on `work/wp05-textref-captions-20261117` in `<sources>/KNXBench-wp05-textref-20261117` (2026-11-18, owner WebUI open-work)
 
 # Restart snapshot — WP-05 TextParameterRefId grid axis captions on `work/wp05-textref-captions-20261117` in `<sources>/KNXBench-wp05-textref-20261117` (2026-11-17, owner WebUI open-work)
-## WP-05 TextParameterRefId grid axis captions (GATE GREEN + REVIEW APPROVE; PR !63 open, merge next; observed 2026-11-17/18)
+## WP-05 TextParameterRefId grid axis captions (RUNNING — gate green + review APPROVE, PR !63 open; observed 2026-11-17/18)
 - Recovered stranded feature commit dc9f9666c (ADR-0177) from old worktree <sources>/KNXBench-wp05-20261117, merged origin/main fb0f9b766 (CollapseIfEmpty PR !59 delivered); conflicts in routes.rs/parameterMatrix.ts resolved keeping both features; cargo fmt applied. Final gate success=True (web-gate 34 stages/1456 browser, clippy clean after dead_code allow on cfg(test) accessor, rust 6140/0, corpus ok); review deleg_cec2a166 APPROVE (1 LOW + 2 INFO, none blocking).
 - WP-37-Rest module-scoped parameters in the image builder: branch `work/wp37-modules-fix-20261118` (candidate 1696ea830 + review fix 726385a85, refusal string keeps the "a module instance" suffix); package gate green on main-first integration merge 5aa24b1cd (receipt 1794975344416204325, rust-tests 6137/0, corpus 97/97); merged as PR !60. No bus/hardware/release/deploy; other tracks preserved.
 ## WP-37-Rest docs closeout (RUNNING; owner WebUI; observed 2026-11-18)

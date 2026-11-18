@@ -307,9 +307,9 @@ impl Parser<'_> {
                 }
                 (ModuleScope::Union, "Memory" | "Property") => {
                     // The union's own placement; its members are read above.
-                    // A `Memory/@BaseOffset` here is promoted per member in
-                    // `parameter_placement` via the member's own reading, so
-                    // just skip it here.
+                    // A `Memory/@BaseOffset` on the union element itself is
+                    // not promoted to members — each member's placement comes
+                    // from its own children only, so this one is skipped.
                     self.skip(&child)?;
                     None
                 }

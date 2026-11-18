@@ -23,7 +23,10 @@ feature at a time, never inferred manufacturer behaviour.
   module-scoped, cross-target and text-parameter renames remain open (see below).
 - Translated row/column captions outside the bounded literal program-owned
   implementation; module/Repeat, template and text-reference semantics remain open.
-- Inline sections. `Row/@CollapseIfEmpty` is applied since
+- Inline sections: an `Inline` block's fields/separators now join the outer
+  block's group and its label renders as a row-view heading in the parent page
+  (`inline-section-flatten-v1`, product DB v34, contract section added
+  18 November 2026). `Row/@CollapseIfEmpty` is applied since
   17 November 2026 (truthy value + row holds no field/label hides the row in
   the matrix; see [contract](../contracts/parameter-workspace.md)).
 - Nested blocks: a program-owned nested `ParameterBlock`'s own `@Cell` now

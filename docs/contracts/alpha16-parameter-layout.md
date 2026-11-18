@@ -318,3 +318,39 @@ or Table/Grid visual equivalence.
   block's own fields render in the row view under their own group, unchanged.
 - **Limits.** Bounded by the same event/depth budgets as the Button pass;
   programs without stored nested blocks skip the read.
+
+## Inline sections (`inline-section-flatten-v1`)
+
+Since 18 November 2026 (WP-05 increment; census P3 of 17 October 2026: 891
+`Inline` blocks in 58 programs). Structural + name-level evidence only: an
+`Inline` block renders inside its parent page instead of becoming its own
+register entry. This is KNXBench presentation policy, not observed ETS
+behaviour.
+
+- **Parse.** `ParameterBlock/@Inline` is modelled since product DB v34 as
+  `dynamic_node.inline` (INTEGER, `1` only for the literal `true` or `1`).
+  Any other value stays in `extra` and is reported unknown, like `default`.
+  Databases below v34 read `NULL` and treat every block as non-inline.
+- **Activation.** An `Inline` block is a transparent container exactly like a
+  normal block: its label is recorded, its children are walked and its
+  `Access` narrows below it. But it does **not** become the innermost block
+  owner: `PathContext.block` stays the nearest non-inline block, so rename
+  targeting and group ownership point at the outer page.
+- **Layout.** `parameter_layout::load` skips `Inline` blocks when choosing a
+  field's or separator's group; the inline block's `ParameterRefRef`s and
+  separators therefore carry the outer block's group. The inline block itself
+  is never a group and never an area. Its own grid, when declared, is not
+  rendered as an area; its references keep their placement through the outer
+  group's grid only.
+- **Wire shape.** The inline block's evaluated `@Text` arrives as a
+  `ParameterPassiveLabel` of kind `inlineHeading` with `cell: null`, charged
+  to the same copy budget, in the outer group — never a field, value, write
+  target or grid cell.
+- **Browser.** In the row view of the outer page, an `inlineHeading` renders
+  as a heading row (`h5` in the separator style), also while a matrix is
+  shown and hidden while searching, exactly like a separator of the same
+  group. It never enters the matrix label list.
+- **Limits.** Inline blocks inside modules/Repeat follow the existing scope
+  rules unchanged. `Table`-vs-`Grid` visuals are untouched. A nested
+  `@Cell` block inside an inline block still binds to its direct parent block
+  (the inline one) per `nested-block-cell-passive-v1`.

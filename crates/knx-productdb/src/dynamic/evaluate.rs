@@ -341,6 +341,10 @@ pub struct DynamicNode {
     /// `Channel`'s `@Number`, verbatim: text, since not every corpus value
     /// is a number (ADR-0052).
     pub number: Option<String>,
+    /// `ParameterBlock/@Inline = true/1` (WP-05 `inline-section-flatten-v1`),
+    /// stored since product DB v34. `None` on older databases and for every
+    /// other kind.
+    pub inline: bool,
     /// Only meaningful when `kind == "choose"`. `load_tree` resolves this
     /// from `parameter_ref`/`parameter`/`parameter_type`; hand-built trees
     /// (unit tests) set it directly.
@@ -532,7 +536,8 @@ pub fn load_tree(
 ) -> Result<DynamicTree, ProductDbError> {
     let mut stmt = conn.prepare(
         "SELECT node_id, parent_id, kind, element_id, ref_id, test, is_default,
-                text, value, name, number, access, extra IS NOT NULL
+                text, value, name, number, access, extra IS NOT NULL,
+                COALESCE(inline, 0)
          FROM dynamic_node
          WHERE program_id = ?1 AND module_def_id = ?2
          ORDER BY node_id",
@@ -555,6 +560,7 @@ pub fn load_tree(
                     value: r.get(8)?,
                     name: r.get(9)?,
                     number: r.get(10)?,
+                    inline: r.get::<_, i64>(13)? == 1,
                     control_kind: None,
                 },
                 r.get(11)?,
@@ -2266,7 +2272,9 @@ fn walk(
         let path = PathContext {
             channel: opened.as_ref().or(path.channel),
             block_access: narrowed.as_ref().or(path.block_access),
-            block: if node.kind == "ParameterBlock" {
+            // inline-section-flatten-v1: an `Inline` block renders inside its
+            // parent page, so it does not become the group owner below it.
+            block: if node.kind == "ParameterBlock" && !node.inline {
                 Some(node_id)
             } else {
                 path.block

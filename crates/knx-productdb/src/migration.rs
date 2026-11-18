@@ -15,7 +15,7 @@ use crate::parse::translation::{ingest_translations, TranslationScope};
 use crate::report::{insert_unknown, UnknownKind};
 
 /// The product-database schema version this build writes.
-pub const CURRENT_PRODUCTDB_VERSION: i64 = 33;
+pub const CURRENT_PRODUCTDB_VERSION: i64 = 34;
 
 #[derive(Debug)]
 pub enum ProductDbError {
@@ -340,7 +340,18 @@ fn migrations() -> Vec<Migration> {
         crate::master_provenance::migrate_v30_to_v31,
         crate::color_time_successor::repair,
         migrate_v32_to_v33,
+        migrate_v33_to_v34,
     ]
+}
+
+/// v33 -> v34 (WP-05 `inline-section-flatten-v1`): `dynamic_node` gains a
+/// typed `inline` column for `ParameterBlock/@Inline`. No retained source is
+/// re-parsed; the column starts NULL and only newly ingested packages carry
+/// it. Older parsers keep `@Inline` in `extra`, which is not re-parseable, so
+/// no promotion of historical blobs is attempted.
+fn migrate_v33_to_v34(conn: &Connection) -> Result<(), ProductDbError> {
+    conn.execute_batch("ALTER TABLE dynamic_node ADD COLUMN inline INTEGER;")?;
+    Ok(())
 }
 
 /// An isolated current-parser schema, never a recursive v28 open. No retained

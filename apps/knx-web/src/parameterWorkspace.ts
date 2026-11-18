@@ -49,7 +49,8 @@ export interface ParameterWorkspaceNestedCell {
 /** Fields and separators in source order, the order the workspace renders. */
 export type ParameterWorkspaceItem =
   | { kind: "field"; row: ParameterWorkspaceRow }
-  | { kind: "separator"; separator: ParameterWorkspaceSeparator };
+  | { kind: "separator"; separator: ParameterWorkspaceSeparator }
+  | { kind: "inlineHeading"; heading: ParameterWorkspacePassiveLabel };
 
 /**
  * One key per section: its scope identity (ADR-0063 chain, else the legacy
@@ -117,7 +118,13 @@ export function indexParameterWorkspace(sections: readonly ParameterSection[]) {
     // Passive labels come last, so field and separator groups keep their
     // order and numbers; a group holding only passive labels is appended.
     (section.passiveLabels ?? []).forEach((label, index) => {
-      passiveLabels.push({ key: JSON.stringify([sectionKey, "passive", index]), groupKey: groupFor(label.group).key, label, scope });
+      const entry = { key: JSON.stringify([sectionKey, "passive", index]), groupKey: groupFor(label.group).key, label, scope };
+      passiveLabels.push(entry);
+      // inline-section-flatten-v1: an `Inline` block's heading renders in the
+      // row view of its outer page, not as a grid cell.
+      if (label.kind === "inlineHeading") {
+        items.push({ kind: "inlineHeading", heading: entry });
+      }
     });
     // Nested-block cells follow the passive labels, so field, separator and
     // label groups keep their order and numbers.

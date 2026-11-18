@@ -457,6 +457,9 @@ pub(crate) struct ParameterSectionDto {
 #[serde(rename_all = "camelCase")]
 pub(crate) enum ParameterPassiveLabelKindDto {
     ButtonLiteral,
+    /// `inline-section-flatten-v1`: an activated `Inline` block's heading text
+    /// inside its parent page. Not an area, never a grid cell.
+    InlineHeading,
 }
 
 /// An activated `Button`'s XML-decoded `@Text` at its declared `@Cell`, display
@@ -465,10 +468,14 @@ pub(crate) enum ParameterPassiveLabelKindDto {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ParameterPassiveLabelDto {
     pub(crate) kind: ParameterPassiveLabelKindDto,
-    /// `Button/@Id`, verbatim.
+    /// `Button/@Id`, verbatim. Empty for `InlineHeading` (no element id is claimed).
     pub(crate) element_id: String,
     pub(crate) text: String,
-    pub(crate) cell: ParameterGridCellDto,
+    /// Inline headings carry their provenance fill like any caption.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) text_fill: Option<knx_projection::TextFill>,
+    /// `None` for `InlineHeading`, which has no grid cell.
+    pub(crate) cell: Option<ParameterGridCellDto>,
     /// The nearest enclosing grid block, keyed like the fields' `group`.
     pub(crate) group: ParameterGroupDto,
     /// As `ParameterFieldDto.blockAccess`.

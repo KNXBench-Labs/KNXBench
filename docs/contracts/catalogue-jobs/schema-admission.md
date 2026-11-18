@@ -212,6 +212,18 @@ update does not admit historical schema variants. The bounded repair has its
 own [independent review, mutation and selected-gate acceptance](../../status/2026-11-03-wp08-color-time-successor.md);
 that acceptance does not broaden this schema admission contract.
 
+## Amendment: product database v34 (18 November 2026)
+
+WP-05 `inline-section-flatten-v1` adds one DDL column,
+`dynamic_node.inline INTEGER` (v33 -> v34), and promotes no retained source:
+`extra` is not re-parseable, so historical blobs keep `@Inline` in their
+audit trail and read `NULL` (not inline). The pinned v28 fresh-chain shape is
+re-established: `schema28.rs` and the `schema28-fixture.json` oracle now expect
+the 19th column, its `CREATE TABLE` text and `ncol = 19`; `ADMITTED_VERSION =
+34`, still compile-time-bound to `CURRENT_PRODUCTDB_VERSION`; v33 and v35 are
+refused. Witnesses retain the observed version and no witness survives a
+migration.
+
 ## Amendment: data-only product database v33 (9 November 2026)
 
 The [conditional block rename](../conditional-parameter-block-rename.md) step re-parses retained

@@ -6934,6 +6934,9 @@ fn assemble_parameter_panel_for_project(
         buttons: Vec<&'a knx_productdb::dynamic::ActiveButton>,
         /// nested-block-cell-passive-v1: reached nested blocks with an admitted cell.
         nested_blocks: Vec<&'a knx_productdb::dynamic::ActiveButton>,
+        /// inline-section-flatten-v1: activated `Inline` block labels, in
+        /// document order, to render as headings inside the parent page.
+        inline_labels: Vec<&'a knx_productdb::dynamic::ActiveLabel>,
     }
     let layout =
         knx_productdb::parameter_layout::load(products, &program_id).map_err(|e| e.to_string())?;
@@ -6956,6 +6959,7 @@ fn assemble_parameter_panel_for_project(
                 separators: Vec::new(),
                 buttons: Vec::new(),
                 nested_blocks: Vec::new(),
+                inline_labels: Vec::new(),
             }
         });
         section.ref_ids.push(active.ref_id.clone());
@@ -6976,6 +6980,7 @@ fn assemble_parameter_panel_for_project(
                     separators: Vec::new(),
                     buttons: Vec::new(),
                     nested_blocks: Vec::new(),
+                    inline_labels: Vec::new(),
                 }
             })
             .separators
@@ -7003,6 +7008,7 @@ fn assemble_parameter_panel_for_project(
                     separators: Vec::new(),
                     buttons: Vec::new(),
                     nested_blocks: Vec::new(),
+                    inline_labels: Vec::new(),
                 }
             })
             .buttons
@@ -7030,10 +7036,34 @@ fn assemble_parameter_panel_for_project(
                     separators: Vec::new(),
                     buttons: Vec::new(),
                     nested_blocks: Vec::new(),
+                    inline_labels: Vec::new(),
                 }
             })
             .nested_blocks
             .push(nested);
+    }
+    // inline-section-flatten-v1: an activated `Inline` block's label seeds its
+    // section and is collected per section, in document order.
+    for label in &activation.labels {
+        if label.kind != "ParameterBlock" {
+            continue;
+        }
+        // The layout walk assigns an inline block's children to the outer
+        // group; the label's outer group is looked up again at emission time.
+        let key = label.scope.as_ref().map(|s| s.node_chain());
+        let section = sections_by_key.entry(key.clone()).or_insert_with(|| {
+            section_order.push(key.clone());
+            SectionBuild {
+                scope: label.scope.clone(),
+                ref_ids: Vec::new(),
+                activated: Vec::new(),
+                separators: Vec::new(),
+                buttons: Vec::new(),
+                nested_blocks: Vec::new(),
+                inline_labels: Vec::new(),
+            }
+        });
+        section.inline_labels.push(label);
     }
     // ADR-0139: an activated separator's text is its label.
     let separator_texts: HashMap<(Option<Vec<i64>>, i64), &str> = activation
@@ -7345,7 +7375,36 @@ fn assemble_parameter_panel_for_project(
             .collect::<Result<Vec<_>, String>>()?;
         // button-literal-passive-v1: literal text and cell only, charged to the
         // same copy budget; no handler data, field, value or write target.
-        let passive_labels = section
+        // inline-section-flatten-v1: an activated `Inline` block's label becomes
+        // a passive heading in its outer group; no cell, no write target.
+        let mut passive_labels = section
+            .inline_labels
+            .iter()
+            .filter_map(|label| {
+                layout
+                    .inline_label_group(definition, label.node_id)
+                    .map(|group| (label, group))
+            })
+            .map(|(label, group)| {
+                let (text, text_fill) = caption_fills.copy(
+                    (
+                        label.scope.as_ref().map(|s| s.node_chain()),
+                        label.node_id,
+                    ),
+                    Some(&label.text),
+                )?;
+                Ok(crate::routes::ParameterPassiveLabelDto {
+                    kind: crate::routes::ParameterPassiveLabelKindDto::InlineHeading,
+                    element_id: String::new(),
+                    text: text.unwrap_or_default(),
+                    text_fill,
+                    cell: None,
+                    group: group_dto(group.clone(), &mut caption_fills)?,
+                    block_access: None,
+                })
+            })
+            .collect::<Result<Vec<_>, String>>()?;
+        passive_labels.extend(section
             .buttons
             .iter()
             .filter_map(|button| {
@@ -7360,12 +7419,13 @@ fn assemble_parameter_panel_for_project(
                     text: caption_fills
                         .copy_text(Some(&literal.text))?
                         .expect("present literal"),
-                    cell: crate::parameter_grid::cell_dto(literal.cell),
+                    text_fill: None,
+                    cell: Some(crate::parameter_grid::cell_dto(literal.cell)),
                     group: group_dto(literal.group.clone(), &mut caption_fills)?,
                     block_access: button.block_access.clone(),
                 })
             })
-            .collect::<Result<Vec<_>, String>>()?;
+            .collect::<Result<Vec<_>, String>>()?);
         push_write_refusals(
             &mut diagnostics,
             section.scope.as_ref().map(|s| module_scope_dto(s)),

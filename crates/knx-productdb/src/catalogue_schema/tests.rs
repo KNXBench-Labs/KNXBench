@@ -230,7 +230,7 @@ fn assert_full_fixture(admitted: &Admitted<'_, '_>) {
         ],
     );
     let tables = d["tablesIncludingSchemaRelation"].as_array().unwrap();
-    assert_eq!(admitted.metadata_bytes, 93_143); // Independent fixture accounting, including repeats.
+    assert_eq!(admitted.metadata_bytes, 93_235); // Independent fixture accounting, including repeats.
     assert_eq!(admitted.relations.len(), tables.len());
     for (actual, expected) in admitted.relations.iter().zip(tables) {
         assert_records(
@@ -494,7 +494,7 @@ fn unsupported_rowid_strict_generated_pkless_and_alias_shapes_refuse() {
 
 #[test]
 fn old_and_future_versions_preserve_caller_state() {
-    for version in [1, 27, 28, 29, 30, 31, 32, 34, i32::MAX] {
+    for version in [1, 27, 28, 29, 30, 31, 32, 33, i32::MAX] {
         let (_dir, mut conn) = fresh();
         conn.pragma_update(None, "user_version", version).unwrap();
         let tx = conn.transaction().unwrap();

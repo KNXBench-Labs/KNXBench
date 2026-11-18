@@ -53,16 +53,16 @@ export default function ParameterWorkspace({ sections, renderField, differs = NE
   const matrix = layoutView?.kind === "matrix" ? planParameterMatrix(layoutView.layout,
     rows.filter(row => row.groupKey === current!.key).map(row => ({ key: row.key, cell: row.field.cell })),
     [
-      ...passiveLabels.filter(entry => entry.groupKey === current!.key)
-        .map(entry => ({ key: `passive:${entry.key}`, text: entry.label.text, cell: entry.label.cell })),
+      ...passiveLabels.filter(entry => entry.groupKey === current!.key && entry.label.cell !== null)
+        .map(entry => ({ key: `passive:${entry.key}`, text: entry.label.text, cell: entry.label.cell! })),
       // nested-block-cell-passive-v1: a nested block's literal caption sits in
       // its own declared cell like a passive label; no text means no caption.
       ...nestedCells.filter(entry => entry.groupKey === current!.key && entry.cell.text !== undefined)
         .map(entry => ({ key: `nested:${entry.key}`, text: entry.cell.text!, cell: entry.cell.cell })),
     ]) : null;
   const passiveIds = new Map(passiveLabels.map(entry => [`passive:${entry.key}`, entry.label.elementId]));
-  const passiveCells = new Map(passiveLabels.map(entry =>
-    [`passive:${entry.key}`, `${entry.label.cell.row},${entry.label.cell.column}`]));
+  const passiveCells = new Map(passiveLabels.filter(entry => entry.label.cell !== null).map(entry =>
+    [`passive:${entry.key}`, `${entry.label.cell!.row},${entry.label.cell!.column}`]));
   // Button id and source cell of every literal this grid actually shows: such an issue is no
   // unplaced declaration. The cell matters: the grid reader names an Id-less Button by its RefId.
   const shownButtons = new Set(matrix?.labels.flatMap(caption => caption.passive
@@ -150,6 +150,14 @@ export default function ParameterWorkspace({ sections, renderField, differs = NE
             // only, and a declared grid shows separators as its own captions.
             ? <SeparatorRow key={`separator:${item.separator.key}`} item={item.separator}
               hidden={searching || matrix !== null || item.separator.groupKey !== activeKey} />
+            : item.kind === "inlineHeading"
+            // inline-section-flatten-v1: an inline section's heading stays in
+            // the row view of its parent page, also while a grid is shown.
+            ? <div key={`inline:${item.heading.key}`} className="parameter-workspace-separator"
+              data-inline-heading={item.heading.label.elementId || undefined}
+              hidden={searching || item.heading.groupKey !== activeKey}>
+              <h5>{parameterCaption({ label: item.heading.label.text, labelFill: item.heading.label.textFill }, t("parameters.caption.text"), t).label}</h5>
+            </div>
             : (row => <div key={row.key} data-parameter-row={row.field.etsId}
             className="parameter-workspace-row" hidden={!visible.has(row.key)}
             data-indent={!searching && !matrix?.fields.has(row.key) && row.field.indentLevel ? row.field.indentLevel : undefined}

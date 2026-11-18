@@ -326,9 +326,10 @@ description after the name.
   answers `scopedDiffering` beside `differing` and the panel marks module-scoped
   rows by their section's `moduleId`; a module-scoped write drops only its own
   `(moduleId, refId)` pair, never the unscoped ref's mark. The image builder
-  still refuses module instances (`ImageError::Unsupported`), so module-scoped
-  baseline rows only ever come from a request whose values carried them; no
-  module download exists yet.
+  admits module-scoped parameters as of 18 November 2026 (PR !60,
+  `work/wp37-modules-fix-20261118`), so module-scoped baseline rows can now
+  also come from an offline image plan; no module download to a device exists
+  yet.
 - The caption beside an open checked editor is visible but not linked to the
   editor's controls as their description.
 - Devices imported, programmed by the System-2 path or marked by hand show only

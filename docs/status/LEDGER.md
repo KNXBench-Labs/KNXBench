@@ -401,6 +401,19 @@ download exists yet. ETS import is unchanged (module-qualified ids stay
 verbatim in `values`). Not claimed: module downloads, image arithmetic on the
 wire, bus behavior, device readback, bus/device writes.
 
+## WP-37-Rest: image builder admits module-scoped parameters (18 November 2026)
+
+On `work/wp37-modules-fix-20261118` (merged as PR !60, merge commit on main
+18 November 2026): the product-db image builder now admits module-scoped
+parameters — module instance objects contribute their scoped parameter values
+to the offline image plan instead of refusing. Independent review caught that
+the candidate's reworded ComObjectRef refusal string no longer ended with
+`a module instance`, which would have made knx-app `image_category` classify
+module-instance refusals as image-structure instead of modules; the fix commit
+keeps the original suffix. Package gate green on the main-first integration
+merge (receipt 1794975344416204325: rust-tests 6137 passed / 0 failed,
+corpus 97/97, all 14 stages exit=0).
+
 ## Reconciliation record (AR14D D2, 2026-10-04)
 
 The ledger was built from the routing table in `alpha-release-goal.md` §7–§8

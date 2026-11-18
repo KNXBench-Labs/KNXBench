@@ -46,7 +46,7 @@ pub struct GridAxis {
     pub text_parameter_ref_id: Option<String>,
     /// `Column/@Width` only.
     pub width: Option<String>,
-    /// `Row/@CollapseIfEmpty` only; preserved, not applied.
+    /// `Row/@CollapseIfEmpty` only; preserved verbatim, applied by clients.
     pub collapse_if_empty: Option<String>,
 }
 

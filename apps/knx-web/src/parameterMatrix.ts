@@ -72,6 +72,27 @@ export function planParameterMatrix(layout: ParameterGroupLayout,
   const valid = (cell: ParameterGridCell | null | undefined): cell is ParameterGridCell => !!cell
     && Number.isInteger(cell.row) && Number.isInteger(cell.column)
     && cell.row >= 1 && cell.row <= rowCount && cell.column >= 1 && cell.column <= columnCount;
+  // WP-05 `Row/@CollapseIfEmpty` (schema-20 attribute, value verbatim): a
+  // declared row whose truthy value names no other row hides when every
+  // declared cell in it holds nothing but captions (labels/passive) or is
+  // empty; a row that only names itself or holds a field stays. The value is
+  // never evaluated beyond truthiness — empty string means false.
+  const collapseIfEmpty = (index: number): string | null => {
+    const value = layout.rows[index]?.collapseIfEmpty;
+    return value != null && value !== "" ? value : null;
+  };
+  const rowHoldsField = new Array(layout.rows.length).fill(false);
+  for (const entry of rows) {
+    if (valid(entry.cell)) rowHoldsField[entry.cell.row - 1] = true;
+  }
+  const declaredLabelRows = new Set<number>();
+  layout.labels.forEach(label => { if (valid(label)) declaredLabelRows.add(label.row - 1); });
+  passive.forEach(label => { if (valid(label.cell)) declaredLabelRows.add(label.cell.row - 1); });
+  const collapsed = new Set<number>();
+  layout.rows.forEach((_row, index) => {
+    const rule = collapseIfEmpty(index);
+    if (rule !== null && !rowHoldsField[index] && !declaredLabelRows.has(index)) collapsed.add(index);
+  });
   const rowHeaderTrack = layout.rows.some(row => captioned(row.text));
   const columnHeaderTrack = layout.columns.some(column => captioned(column.text));
   const firstColumn = rowHeaderTrack ? 2 : 1;
@@ -81,17 +102,19 @@ export function planParameterMatrix(layout: ParameterGroupLayout,
   type Item = { kind: "label" | "passive" | "field"; key: string; order: number; text?: string; textFill?: TextFill | null };
   const cells = new Map<string, Item[]>();
   const push = (cell: ParameterGridCell, item: Item) => {
+    if (collapsed.has(cell.row - 1)) return; // hidden row: its captions/labels are not shown either
     const id = `${cell.row},${cell.column}`;
     cells.set(id, [...(cells.get(id) ?? []), item]);
   };
   layout.labels.forEach((label, index) => { if (valid(label)) push(label, { kind: "label", key: `label:${index}`, order: index, text: label.text, textFill: label.textFill }); });
   passive.forEach((label, index) => { if (valid(label.cell)) push(label.cell, { kind: "passive", key: label.key, order: layout.labels.length + index, text: label.text }); });
   const unplaced: string[] = [];
-  for (const row of rows) {
-    if (valid(row.cell)) push(row.cell, { kind: "field", key: row.key, order: 0 });
-    else unplaced.push(row.key);
+  for (const entry of rows) {
+    if (valid(entry.cell)) push(entry.cell, { kind: "field", key: entry.key, order: 0 });
+    else unplaced.push(entry.key);
   }
   const depth = layout.rows.map((_, index) => {
+    if (collapsed.has(index)) return 0; // hidden row takes no track
     let deepest = 1;
     for (let column = 1; column <= columnCount; column++) deepest = Math.max(deepest, cells.get(`${index + 1},${column}`)?.length ?? 0);
     return deepest;
@@ -120,8 +143,8 @@ export function planParameterMatrix(layout: ParameterGroupLayout,
       ...layout.columns.map(column => `minmax(${MIN_COLUMN}, ${weight(column.width)}fr)`)].join(" "),
     columnHeaders: layout.columns.flatMap((column, index) => captioned(column.text)
       ? [{ key: `column:${column.id}`, text: column.text!, area: area(1, firstColumn + index) }] : []),
-    rowHeaders: layout.rows.flatMap((row, index) => captioned(row.text)
-      ? [{ key: `row:${row.id}`, text: row.text!, area: area(starts[index], 1, depth[index]) }] : []),
+    rowHeaders: layout.rows.flatMap((row, index) => collapsed.has(index) || !captioned(row.text)
+      ? [] : [{ key: `row:${row.id}`, text: row.text!, area: area(starts[index], 1, depth[index]) }]),
     labels, fields, unplaced, unplacedHeading,
   };
 }

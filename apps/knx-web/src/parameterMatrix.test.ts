@@ -177,12 +177,6 @@ describe("Row/@CollapseIfEmpty (WP-05, preserved attribute now applied)", () => 
 });
 
 describe("nested block cells (nested-block-cell-passive-v1)", () => {
-  const nestedGrid = layout({ groupKey: "PB-NEST",
-    rows: [{ id: "N-R1", text: null, textParameterRefId: null, collapseIfEmpty: null }],
-    columns: [{ id: "N-C1", text: null, textParameterRefId: null, width: "46%" },
-      { id: "N-C2", text: null, textParameterRefId: null, width: "53%" }],
-    labels: [] });
-
   it("places a nested block caption at its own cell like a passive label, after separator captions", () => {
     const withSeparator = layout({ groupKey: "PB-NEST",
       rows: [{ id: "N-R1", text: null, textParameterRefId: null, collapseIfEmpty: null }],

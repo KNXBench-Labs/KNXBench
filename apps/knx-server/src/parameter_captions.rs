@@ -98,6 +98,7 @@ impl CaptionFills {
 
     /// ADR-0177: the resolved axis captions collected by `load_axis_texts`.
     #[cfg(test)]
+    #[allow(dead_code)]
     pub(crate) fn axis_texts(&self) -> HashMap<String, (String, TextFill)> {
         self.axis_texts
             .iter()

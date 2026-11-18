@@ -50,7 +50,11 @@ it("shows a user edit as the effective value with its own source and preselects 
   expect(v.host.querySelector(".saved-priority-source")?.textContent).toBe(en["inspector.effectivePriority.source.userEdit"]);
   expect(v.select.value).toBe("Alert");
   expect([...v.select.options].map((o) => o.value)).toEqual(["", "Low", "High", "Alert"]);
-  expect(v.host.textContent).toContain(en["inspector.priorityEdit.hint"]);
+  // WP-46.2: the long explanation moved behind the HelpTip ("?"); the button's
+  // own label carries the short form, the bubble text is not in the DOM until opened.
+  expect(v.host.querySelector(".com-object-priority-edit > .field-hint")).toBeNull();
+  const helpButton = v.host.querySelector<HTMLButtonElement>("button[aria-describedby]");
+  expect(helpButton?.textContent).toBe("?");
 });
 
 it("never presents a captured or product value as the user's edit", () => {
@@ -89,6 +93,9 @@ it("speaks German", () => {
   const v = render({ status: "resolved", value: "Low", source: { kind: "userEdit" } });
   expect(v.host.querySelector("label")?.textContent).toBe(de["inspector.priorityEdit.label"]);
   expect(v.select.options[0].textContent).toBe(de["inspector.priorityEdit.none"]);
-  expect(v.host.textContent).toContain(de["inspector.priorityEdit.hint"]);
+  // WP-46.1/46.2: the option reads "Standard"; the hint lives behind the "?".
+  expect(de["inspector.priorityEdit.none"]).toBe("Standard");
+  expect(v.host.querySelector(".com-object-priority-edit > .field-hint")).toBeNull();
+  expect(v.host.querySelector<HTMLButtonElement>("button[aria-describedby]")?.textContent).toBe("?");
   expect(v.host.querySelector(".saved-priority-source")?.textContent).toBe(de["inspector.effectivePriority.source.userEdit"]);
 });

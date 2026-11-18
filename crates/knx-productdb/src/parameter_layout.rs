@@ -109,7 +109,9 @@ impl ParameterLayout {
     /// `nested-block-cell-passive-v1`: the admitted cell of the program-owned
     /// nested block `node`, when its parent grid can render it.
     pub fn nested_cell(&self, definition: &str, node: i64) -> Option<&NestedBlockCell> {
-        let _ = definition;
+        if !definition.is_empty() {
+            return None;
+        }
         self.nested_cells.get(&node)
     }
 

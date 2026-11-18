@@ -345,7 +345,17 @@ fn semantic_com_object(project: &Project, c: &ComObjectInstance) -> SemanticComO
     let module_instance = c
         .module_instance
         .and_then(|id| project.devices.module_instance(id))
-        .map(|m| m.source.ets_id.clone());
+        .map(|m| {
+            // ADR-0177: the identity-keyed comparison keys a module-based
+            // object on its instance's `MI-` counter (the accepted WP-07
+            // witness's `k`), so two instances of one `Module` never merge
+            // into one row. A malformed suffix keeps the plain `ets_id` —
+            // never a guessed number.
+            match m.instance_counter() {
+                Some(k) => format!("{}#k={}", m.source.ets_id, k),
+                None => m.source.ets_id.clone(),
+            }
+        });
 
     SemanticComObject {
         number: c.number,
@@ -696,6 +706,37 @@ mod tests {
         assert_eq!(
             describe_difference(&semantic_view(&a), &semantic_view(&b)),
             None
+        );
+    }
+
+    /// ADR-0177: the identity key carries the instance counter, so a
+    /// changed `MI-` index is a different module object, not a field change
+    /// on the same one. The fixture's object number is 0 on both sides —
+    /// only the counter distinguishes them.
+    #[test]
+    fn a_changed_mi_counter_is_a_different_module_object_not_a_field_change() {
+        let a = project_with_module_instance("6x1");
+        let mut b = project_with_module_instance("6x1");
+        let module_id = b.devices.module_instances().next().unwrap().id;
+        let mut m = b.devices.module_instance(module_id).unwrap().clone();
+        m.instance_ets_id = "MD-2_M-1_MI-2".into();
+        b.devices.insert_module_instance(m);
+        // Re-point the com object at the re-numbered instance id.
+        let com_id = b
+            .devices
+            .get(a.devices.module_instances().next().unwrap().device)
+            .unwrap()
+            .com_objects[0];
+        let com = b.devices.com_object(com_id).unwrap().clone();
+        let mut com = com;
+        com.source.ets_id = "MD-2_M-1_MI-2_O-2-0_R-1".into();
+        b.devices.insert_com_object(com);
+
+        let diff = describe_difference(&semantic_view(&a), &semantic_view(&b))
+            .expect("a changed MI counter must be reported as a difference");
+        assert!(
+            diff.contains("MD-2_M-1#k=1") && diff.contains("MD-2_M-1#k=2"),
+            "diff should mention both identity keys, got: {diff}"
         );
     }
 }

@@ -53,7 +53,7 @@ const BACKUP: &str = "products.sqlite.backup-1700000000-0123456789ab.sqlite";
 /// with the given name and the stored language that answered it.
 fn item(name: &str, name_language: &str) -> String {
     format!(
-        r#"[{{"id":"M-1_CI-1","manufacturerId":"M-1","name":"{name}","number":"ACT-1","visibleDescription":null,"productRefId":"M-1_P-1","hardware2programRefId":"H-1_HP-1","nameLanguage":{name_language},"visibleDescriptionLanguage":null,"sourceLanguage":"de-DE","details":{{"applicationProgramId":null,"applicationName":null,"applicationVersion":null,"catalogSectionId":"M-1_CG-1","sourceNames":["Catalog.xml"]}}}}]"#
+        r#"[{{"id":"M-1_CI-1","manufacturerId":"M-1","name":"{name}","number":"ACT-1","visibleDescription":null,"productRefId":"M-1_P-1","hardware2programRefId":"H-1_HP-1","nameLanguage":{name_language},"visibleDescriptionLanguage":null,"sourceLanguage":"de-DE","details":{{"applicationProgramId":null,"applicationName":null,"applicationVersion":null,"catalogSectionId":"M-1_CG-1","catalogSectionName":"Actuators","maskVersion":null,"mediumTypes":"MT-0","sourceNames":["Catalog.xml"]}}}}]"#
     )
 }
 

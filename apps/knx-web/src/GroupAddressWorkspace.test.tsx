@@ -39,7 +39,7 @@ const installation: InstallationNode = {
     { id: 32, name: "Unassigned", address: "1/0/3", range: null, dpts: [], links: [] },
   ],
 };
-function Harness(props: { input?: InstallationNode; context?: string }) {
+function Harness(props: { input?: InstallationNode; context?: string; onSendToMonitor?: (address: string) => void }) {
   const input = props.input ?? installation;
   const [selection, setSelection] = useState<Selection | null>(null);
   const tree: ProjectTree = { schema_version: 1, errors: 0, warnings: 0, can_undo: false,
@@ -47,7 +47,7 @@ function Harness(props: { input?: InstallationNode; context?: string }) {
   const shared = useMultiSelection(tree, setSelection);
   return <><GroupAddressTable installation={input} tree={tree} selection={selection}
     multiSelection={shared.multiSelection} onItemClick={shared.onItemClick}
-    onTreeUpdate={() => {}} rangeScope={null} projectContextKey={props.context} />
+    onTreeUpdate={() => {}} rangeScope={null} projectContextKey={props.context} onSendToMonitor={props.onSendToMonitor} />
     <output data-selection>{selection?.id ?? "none"}</output>
     <output data-multi>{[...(shared.multiSelection?.ids ?? [])].join(",")}</output></>;
 }
@@ -217,4 +217,17 @@ tableColumnSmoke([["group-addresses", 6], ["group-address-matrix", 4], ["group-a
     await chooseView(id === "group-address-matrix" ? "matrix" : "tree");
   }
   return { host };
+});
+
+it("issue #51: a selected group address offers a send action that carries only its address", async () => {
+  const sent: string[] = [];
+  await act(async () => root.render(<Harness onSendToMonitor={address => sent.push(address)} />));
+  await expandAll();
+  // Nothing selected yet: no send button.
+  expect(host.querySelector(".ga-send-button")).toBeNull();
+  await click(host.querySelector<HTMLButtonElement>('[data-ga-select="30"]')!);
+  const button = host.querySelector<HTMLButtonElement>(".ga-send-button")!;
+  expect(button).not.toBeNull();
+  await click(button);
+  expect(sent).toEqual(["1/0/1"]);
 });

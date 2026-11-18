@@ -39,6 +39,8 @@ pub use assign::{AssignSource, Assignment};
 #[cfg(test)]
 mod rename_tests;
 #[cfg(test)]
+mod scoped_values_tests;
+#[cfg(test)]
 mod work_budget_tests;
 
 #[cfg(test)]
@@ -1000,6 +1002,33 @@ pub fn resolve_unscoped_values(
         .unscoped
         .into_iter()
         .collect())
+}
+
+/// The module-scoped half of a written request, decomposed: every supplied
+/// key that matches `^(.*)_M-(\d+)_MI-(\d+)_(.*)$` becomes
+/// `(module_id, declared ref id) -> raw`, where `module_id` is the
+/// reconstructed `Module/@Id` (`{prefix}_M-{module_digits}_MI-{mi_digits}`).
+/// Keys that do not decompose stay unscoped and are ignored here (they are
+/// reported by [`resolve_unscoped_values`]'s caller as today). A module id
+/// without a parseable `_MI-<k>` counter is skipped, never guessed
+/// (ADR-0177).
+pub fn resolve_scoped_values(
+    supplied: &std::collections::BTreeMap<String, String>,
+) -> std::collections::BTreeMap<(String, String), String> {
+    let mut scoped: std::collections::BTreeMap<(String, String), String> =
+        std::collections::BTreeMap::new();
+    for (ets_id, raw) in supplied {
+        let Some((prefix, module_digits, mi_digits, suffix)) =
+            crate::device_evaluation::decompose_module_qualified(ets_id)
+        else {
+            continue;
+        };
+        // The reconstructed key is injective in `ets_id` (rightmost marker),
+        // so two distinct supplied ids can never collide on one key.
+        let module_id = format!("{prefix}_M-{module_digits}_MI-{mi_digits}");
+        scoped.insert((module_id, suffix), raw.clone());
+    }
+    scoped
 }
 
 /// Everything `evaluate` could not decide. Returned, never logged, never

@@ -92,6 +92,10 @@ pub fn decompose_module_qualified(ets_id: &str) -> Option<(String, String, Strin
 /// D39 rules 2-3: whether one imported `ModuleInstance` can serve as the
 /// `MI-` authority for a program-side `module_id`, and if not, exactly
 /// why — never a guess, never a default (D40).
+///
+/// ADR-0177: with the accepted mapping, the `Module/@Id` itself carries the
+/// instance counter (`…_<RefId>_M-<m>_MI-<k>`), so a repeated module is
+/// resolved by that counter instead of being ambiguous by construction.
 pub enum MiAuthority {
     /// Exactly one imported `ModuleInstance` matches, and its
     /// `instance_ets_id` decomposes cleanly — these are the `MI-` digits
@@ -117,40 +121,64 @@ pub enum MiAuthority {
     },
 }
 
-/// D39 rules 2-3, verbatim: the instance-matching rule is
-/// `module_id.ends_with("_" + instance.source.ets_id)` — the leading
-/// underscore is what keeps `MD-1_M-2` from matching a `..._MD-11_M-2`
-/// module id. `digits` must be all-ASCII (`\d+`), matching
-/// `decompose_module_qualified`'s own definition of a valid `MI-`.
+/// D39 rules 2-3, with the accepted WP-07 mapping (ADR-0177): the
+/// instance-matching rule is that the `RefId` occurs in the program-side
+/// `Module/@Id` as an id component — the mapping appends `_M-<m>_MI-<k>`
+/// after it, so a plain `ends_with` never sees real export ids (whose prefix
+/// is the product's `A-…` form). The leading underscore keeps `MD-1_M-2`
+/// from matching `…_MD-11_M-2`. The `MI-` digits come from the shared
+/// authority [`knx_core::ModuleInstance::instance_counter`] (ADR-0177);
+/// `MiAuthority::Found` carries the counter as its decimal string so the
+/// existing callers keep their shape.
 pub fn resolve_mi_authority(
     instances: &[knx_core::ModuleInstance],
     module_id: &str,
 ) -> MiAuthority {
     let matches: Vec<&knx_core::ModuleInstance> = instances
         .iter()
-        .filter(|m| module_id.ends_with(&format!("_{}", m.source.ets_id)))
+        .filter(|m| module_id.contains(&format!("_{}", m.source.ets_id)))
         .collect();
     match matches.as_slice() {
         [] => MiAuthority::NoMatch,
-        [one] => {
-            let expected_prefix = format!("{}_MI-", one.source.ets_id);
-            match one
-                .instance_ets_id
-                .strip_prefix(expected_prefix.as_str())
-                .filter(|digits| !digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit()))
-            {
-                Some(digits) => MiAuthority::Found(digits.to_string()),
-                None => MiAuthority::Malformed {
-                    source_ets_id: one.source.ets_id.clone(),
-                    instance_ets_id: one.instance_ets_id.clone(),
+        [one] => match one.instance_counter() {
+            Some(k) => MiAuthority::Found(k.to_string()),
+            None => MiAuthority::Malformed {
+                source_ets_id: one.source.ets_id.clone(),
+                instance_ets_id: one.instance_ets_id.clone(),
+            },
+        },
+        many => {
+            // ADR-0177: the accepted mapping puts the instance counter in
+            // the program-side `Module/@Id` itself (`…_<RefId>_M-<m>_MI-<k>`),
+            // so a repeated module is no longer inherently ambiguous — the
+            // id's own `MI-` digits pick the one instance carrying that
+            // counter. Only a missing/malformed id counter or a counter no
+            // imported instance carries stays ambiguous/malformed.
+            let id_counter = mi_counter_of(module_id);
+            match id_counter.and_then(|k| {
+                many.iter()
+                    .find(|m| m.instance_counter() == Some(k))
+                    .map(|_| k)
+            }) {
+                Some(k) => MiAuthority::Found(k.to_string()),
+                None => MiAuthority::Ambiguous {
+                    source_ets_id: many[0].source.ets_id.clone(),
+                    instance_ets_ids: many.iter().map(|m| m.instance_ets_id.clone()).collect(),
                 },
             }
         }
-        many => MiAuthority::Ambiguous {
-            source_ets_id: many[0].source.ets_id.clone(),
-            instance_ets_ids: many.iter().map(|m| m.instance_ets_id.clone()).collect(),
-        },
     }
+}
+
+/// The `MI-<k>` digits a program-side `Module/@Id` carries, when well-formed
+/// (ADR-0177): rightmost `_MI-` whose tail is all ASCII digits.
+fn mi_counter_of(module_id: &str) -> Option<u32> {
+    let marker = module_id.rfind("_MI-")?;
+    let digits = &module_id[marker + 4..];
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    digits.parse().ok()
 }
 
 /// One device's evaluated `Dynamic` tree, from its stored parameter values
@@ -252,12 +280,15 @@ pub fn evaluate_device(
         let module_id = format!("{prefix}_M-{module_digits}");
         let declared_id = format!("{prefix}_{suffix}");
         // Resolve stored identity even below a skipped Repeat. This does not
-        // walk its iterations or decide activation (ADR-0108).
+        // walk its iterations or decide activation (ADR-0108). The stored
+        // `MI-<k>` comparison now goes through the shared authority
+        // (ADR-0177): the instance's counter must equal the candidate's
+        // `mi_digits`, which is the same all-ASCII-digit check expressed once.
         let matches: Vec<_> = module_instances
             .iter()
             .filter(|m| {
-                module_id.ends_with(&format!("_{}", m.source.ets_id))
-                    && m.instance_ets_id == format!("{}_MI-{mi_digits}", m.source.ets_id)
+                module_id.contains(&format!("_{}", m.source.ets_id))
+                    && m.instance_counter().map(|k| k.to_string()) == Some(mi_digits.clone())
             })
             .collect();
         let declared: Vec<_> = declarations
@@ -271,7 +302,7 @@ pub fn evaluate_device(
         let has_matching_definition = has_unique_declaration && declared[0].1 == prefix;
         let has_imported_owner = module_instances
             .iter()
-            .any(|m| module_id.ends_with(&format!("_{}", m.source.ets_id)));
+            .any(|m| module_id.contains(&format!("_{}", m.source.ets_id)));
         if has_imported_owner && (matches.len() != 1 || !has_unique_declaration) {
             stale.push(StaleValue { ets_id, raw });
             continue;

@@ -342,6 +342,65 @@ limits](2026-11-14-wp07-unresolved-module-owner.md) preserve the initial RED,
 corrected M3 discrimination and historical broader-suite deviation. No source-ID
 row or count changes; KL-68/PDB-01 boundaries and module write stops remain.
 
+## WP-07 mapping witness counted (17 November 2026)
+
+The admitted module-mapping contract now has a real, independently counted
+witness on the owner-admitted clean-room route (8 November 2026): eight ETS
+exports of one fictional modular project plus the two modular corpus demo
+projects — 42 + 32 + 75 module instances, 292 counted numeric argument values
+all matching `Allocator/@Start + Argument/@Allocates·(k−1)`, RepeatIndex
+positions counted 149/149, and 23 697/23 697 corpus-wide `BaseOffset`/
+`BaseNumber` argument references resolving. The application-program XML is
+byte-identical across all eight exports and its `ModuleDefs` section is
+byte-identical to the signed manufacturer package. The KNX specification
+corpus (179 volumes) contains no definition of these names, so the contract
+rests on observed ETS exports, not on the specification. Details and limits —
+download-image arithmetic and bus behavior out of scope — are in the
+[witness](../research/2026-11-17-wp07-module-mapping-witness.md).
+
+## WP-07 unblocked by owner decision (17 November 2026)
+
+The owner accepted the counted witness above as the evidence for WP-07's first
+deliverable and lifted the "Blocked: evidence" gate
+([OWN-01](../open-work/OWN-01-owner-decisions.md#decision-recorded--17-november-2026)).
+WP-07 is open implementation work again: next step is reuse of the accepted
+mapping authority in evaluation, parameter writes and object reconciliation;
+WP-37's module-scoped-parameters item can now build on it. Not claimed:
+download-image arithmetic on the wire, bus behavior, device readback, and any
+bus/device write, release or deployment authority.
+
+## WP-07 authority wired into all consumers (17 November 2026)
+
+ADR-0177's single reader `knx_core::ModuleInstance::instance_counter()` is
+now used by evaluation (`resolve_mi_authority` + Pass-B), parameter writes
+(the scoped-owner check) and object reconciliation (`owning_instance`),
+plus identity-keyed module comparison (`<ets_id>#k=<n>`). When several
+instances share the `RefId`, the program-side `Module/@Id`'s own `MI-<k>`
+tail picks exactly that instance; missing/malformed/unmatched counters keep
+the refuse/undetermined semantics. Branch `work/wp07-evidence-witness-20261117`,
+pushed as `32c4b00d1`. Tests: knx-core 824, knx-productdb 941 lib + 1094 it,
+knx-server 1076 lib + 950 it, knx-etsproj 78, knx-diff 57+17, knx-app
+comparison 9/9; layering/headers/anchors/ledger/local-info all pass. Not
+claimed: download-image arithmetic on the wire, bus behavior, device
+readback, bus/device writes, release or deployment authority.
+
+## WP-37 module-scoped baseline values land (17 November 2026)
+
+First WP-07-authority consumer, on `work/wp37-module-scoped-20261117` off
+main: `ParameterBaseline` gains `scoped_values: BTreeMap<(Module/@Id,
+ParameterRef id), raw>` (native schema 22, pure addition
+`device_parameter_baseline_scoped_value`, migration v21→v22, snapshot
+admission extended). Settlement decomposes a written request's module-qualified
+ids once via `resolve_scoped_values` (rightmost `_M-<m>_MI-<k>_` marker, never
+guessed — ADR-0177), so a re-numbered instance is a new key. The
+last-download comparison answers `scopedDiffering` beside `differing`
+(`scoped_differences`, exact raw compare) and the web panel marks module-scoped
+rows by their section's `moduleId`; a module-scoped write drops only its own
+scoped pair. The image builder still refuses module instances, so no module
+download exists yet. ETS import is unchanged (module-qualified ids stay
+verbatim in `values`). Not claimed: module downloads, image arithmetic on the
+wire, bus behavior, device readback, bus/device writes.
+
 ## Reconciliation record (AR14D D2, 2026-10-04)
 
 The ledger was built from the routing table in `alpha-release-goal.md` §7–§8

@@ -27,7 +27,7 @@ import { parameterSectionKeys } from "./parameterWorkspace";
 import { isSourceEditorCandidate } from "./parameterSourceHost";
 import UnresolvedProgramNotice from "./UnresolvedProgramNotice";
 import { useComMutation } from "./ComMutationBoundary";
-import { differingByRef, differingElsewhere, downloadedValueText, withoutWrittenRefs, type DownloadedValue } from "./parameterLastDownload";
+import { differingByRef, differingByScopedRef, differingElsewhere, downloadedValueText, withoutWrittenRefs, type DownloadedValue } from "./parameterLastDownload";
 import { formatLogTime } from "./logRows";
 import { useUiLanguage } from "./uiLanguage";
 
@@ -140,7 +140,10 @@ function ParameterFieldRow(props: {
   // ADR-0173: the refs a write of this row touches, for the kept comparison.
   // A module-scoped row shares its etsId with the unscoped ref but never its value.
   const onRowUpdated = useCallback((written: ParameterPanelDto) => onUpdated(written,
-    moduleScoped ? []
+    moduleScoped
+      // WP-37: a module-scoped write touches its module-qualified id; the kept
+      // comparison drops the decomposed `(moduleId, refId)` pair via the id.
+      ? field.writeEtsId === null ? [] : [field.writeEtsId]
       : field.writeEtsId === null || field.writeEtsId === field.etsId ? [field.etsId] : [field.etsId, field.writeEtsId]),
   [onUpdated, moduleScoped, field.etsId, field.writeEtsId]);
   const [value, setValue] = useState(field.value ?? "");
@@ -465,10 +468,12 @@ function ParameterSectionView(props: {
   binding: SnapshotContext | null;
   onConflict: () => Promise<void>;
   checked: Omit<CheckedEditorContext, "scope"> | null;
-  /** ADR-0173: differing unscoped refs; module-scoped rows are never marked. */
+  /** ADR-0173: differing unscoped refs. */
   differing: ReadonlyMap<string, DownloadedValue>;
+  /** WP-37: differing module-scoped refs, keyed `"<moduleId>#<refId>"`. */
+  scopedDiffering: ReadonlyMap<string, DownloadedValue>;
 }) {
-  const { section, deviceId, language, sourceLanguage, onUpdated, onValueApplied, binding, onConflict, differing } = props;
+  const { section, deviceId, language, sourceLanguage, onUpdated, onValueApplied, binding, onConflict, differing, scopedDiffering } = props;
   const checked = props.checked === null ? null : { ...props.checked, scope: section.scope };
   const t = useTranslate();
   const fields = section.fields;
@@ -476,7 +481,13 @@ function ParameterSectionView(props: {
   const [expanded, setExpanded] = useState(new Set<string>());
   const groupOrder = [...new Set(fields.flatMap(field => field.group ? [field.group.key] : []))];
   // #48: the same rows the dots mark (unscoped value fields), carried up to their group and section.
-  const differs = (field: ParameterField) => section.scope === null && field.kind !== "None" && differing.has(field.etsId);
+  const differs = (field: ParameterField) => {
+    if (field.kind === "None") return false;
+    if (section.scope === null) return differing.has(field.etsId);
+    // WP-37: a module-scoped row is keyed by its section's Module/@Id plus the declared ref id.
+    const moduleId = section.scope.moduleId;
+    return moduleId !== null && scopedDiffering.has(`${moduleId}#${field.etsId}`);
+  };
   const markedGroups = new Set(fields.flatMap(field => field.group && differs(field) ? [field.group.key] : []));
   const sectionDiffers = fields.some(differs);
   const noteId = useId();
@@ -513,7 +524,11 @@ function ParameterSectionView(props: {
             binding={binding}
             onConflict={onConflict}
             checked={checked}
-            downloaded={section.scope === null ? differing.get(field.etsId) : undefined}
+            downloaded={section.scope === null
+              ? differing.get(field.etsId)
+              : section.scope.moduleId !== null
+                ? scopedDiffering.get(`${section.scope.moduleId}#${field.etsId}`)
+                : undefined}
           />
           </div>
         </Fragment>)}
@@ -594,14 +609,14 @@ function LastDownloadSummary(props: { lastDownload: LastDownload; sections: read
   let text: string;
   let elsewhere = { notShown: 0, manufacturer: 0 };
   if (lastDownload.state === "usable") {
-    const count = lastDownload.differing?.length ?? 0;
+    const count = (lastDownload.differing?.length ?? 0) + (lastDownload.scopedDiffering?.length ?? 0);
     elsewhere = differingElsewhere(lastDownload, sections);
     text = count === 0 ? t("parameters.lastDownload.noneDiffer", { time })
       : t(count === 1 ? "parameters.lastDownload.differs.one" : "parameters.lastDownload.differs.other", { count, time });
   } else {
     text = t(`parameters.lastDownload.${lastDownload.state}` as const);
   }
-  const differs = lastDownload.state === "usable" && (lastDownload.differing?.length ?? 0) > 0;
+  const differs = lastDownload.state === "usable" && ((lastDownload.differing?.length ?? 0) + (lastDownload.scopedDiffering?.length ?? 0)) > 0;
   // After a write only the server may say that nothing differs any more.
   if (refreshing && lastDownload.state === "usable" && !differs) return null;
   const { notShown, manufacturer } = elsewhere;
@@ -790,6 +805,7 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
   // WP-15: a section view keeps its own scope's state when a sibling vanishes.
   const sectionKeys = parameterSectionKeys(sections);
   const differing = differingByRef(panel.lastDownload);
+  const scopedDiffering = differingByScopedRef(panel.lastDownload);
 
   if (view === "functions" && sections.length === 0) return <p className="inspector-description">{t("parameters.functionsEmpty")}</p>;
 
@@ -829,6 +845,7 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
           onConflict={onConflict}
           checked={null}
           differing={differing}
+          scopedDiffering={scopedDiffering}
         />
       ))}
     </div>

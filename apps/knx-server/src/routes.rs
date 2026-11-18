@@ -510,7 +510,7 @@ pub(crate) struct ParameterGridRowDto {
     /// ADR-0177: provenance of a parameter-driven caption fill, if any.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) text_fill: Option<knx_projection::TextFill>,
-    /// Preserved, not applied by any client in this build.
+    /// `Row/@CollapseIfEmpty`, verbatim; the web matrix plan applies it when truthy and the row holds no field or label.
     pub(crate) collapse_if_empty: Option<String>,
 }
 

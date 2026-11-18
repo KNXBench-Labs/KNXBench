@@ -2,6 +2,21 @@
 
 **Status:** Decisions recorded; remaining evidence and owner review pending. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
+## Decision recorded — 17 November 2026
+
+- **WP-07 unblocked.** The owner accepts the independently counted
+  module-mapping witness
+  ([2026-11-17-wp07-module-mapping-witness](../research/2026-11-17-wp07-module-mapping-witness.md))
+  as the evidence for WP-07's first deliverable: 149 module instances across
+  eight ETS exports of one fictional project plus two modular corpus projects,
+  292/292 argument values matching `Start + Allocates·(k−1)`, RepeatIndex
+  149/149, 23 697/23 697 corpus-wide `BaseOffset`/`BaseNumber` argument
+  references resolving. The evidence block ("Blocked: evidence") is lifted;
+  WP-07 moves from evidence-gated to open implementation work. Still out of
+  scope and not claimed: download-image arithmetic on the wire, bus behavior,
+  device readback. This is not blanket authority for bus or device writes,
+  releases or deployments, and it does not close WP-07 as a whole.
+
 ## Decision recorded — 12 November 2026
 
 - **Release versions follow standard SemVer.** The beta keeps the release

@@ -18,6 +18,7 @@ pub mod comparison_adoption;
 pub mod contribution;
 pub mod contribution_bundle;
 mod contribution_structure;
+pub mod devconf_edit;
 pub mod device_backup;
 pub mod device_diagnostics;
 pub mod device_download;

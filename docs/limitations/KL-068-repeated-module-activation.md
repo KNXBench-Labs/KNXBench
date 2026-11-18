@@ -12,6 +12,23 @@ updates supersede them; they are not new work assignments.
 
 ## 68. Repeat activation stays unsupported; own instance values are readable
 
+**Update 2026-11-17 — accepted mapping resolves repeated instances by their
+MI- counter (WP-07, ADR-0177).** With the owner-accepted witness
+([2026-11-17 witness](../research/2026-11-17-wp07-module-mapping-witness.md),
+149/149 `RepeatIndex` positions, 292/292 argument strides), the program-side
+`Module/@Id` carries the instance counter itself (`…_<RefId>_M-<m>_MI-<k>`).
+`resolve_mi_authority`, the parameter-write scoped-owner check and
+com-object activation now read that counter through
+`knx_core::ModuleInstance::instance_counter()`: a well-formed `MI-<k>`
+picks exactly the imported instance with counter k, so evaluation,
+parameter writes and object reconciliation attribute each expansion to its
+own instance instead of refusing the whole group. A missing, malformed or
+unmatched counter keeps the previous refuse/undetermined semantics —
+nothing is guessed. Identity-keyed module comparison keys on
+`<ets_id>#k=<n>`, so two instances of one `Module` never merge into one
+compared row.
+
+
 **Update 2026-10-10 — read-only instance dimension delivered in code.**
 [ADR-0108](../adr/0108-read-only-module-instance-values.md) separates stored
 instance evidence from Dynamic evaluation. `ValueMap` now has a separate

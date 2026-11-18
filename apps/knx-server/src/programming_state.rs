@@ -354,22 +354,28 @@ fn after_download(
                                 .ok()
                             })
                             .flatten()
-                            .map(|values| WrittenParameters {
-                                values,
-                                object_flags: knx_productdb::image::resolve_effective_object_flags(
-                                    conn,
-                                    &written.program_id,
-                                    &written.values,
-                                    &written.flag_overrides,
-                                )
-                                .ok()
-                                .map(|flags| {
-                                    flags
-                                        .into_iter()
-                                        .map(|(number, flags)| (number, flags.into()))
-                                        .collect()
-                                }),
-                                at,
+                            .map(|values| {
+                                let scoped_values =
+                                    knx_productdb::dynamic::resolve_scoped_values(&written.values);
+                                WrittenParameters {
+                                    values,
+                                    scoped_values,
+                                    object_flags:
+                                        knx_productdb::image::resolve_effective_object_flags(
+                                            conn,
+                                            &written.program_id,
+                                            &written.values,
+                                            &written.flag_overrides,
+                                        )
+                                        .ok()
+                                        .map(|flags| {
+                                            flags
+                                                .into_iter()
+                                                .map(|(number, flags)| (number, flags.into()))
+                                                .collect()
+                                        }),
+                                    at,
+                                }
                             });
                         Ok::<_, std::convert::Infallible>((now, source, resolved))
                     })

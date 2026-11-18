@@ -782,6 +782,12 @@ export interface CatalogItemDetails {
   applicationName: string | null;
   applicationVersion: string | null;
   catalogSectionId: string | null;
+  /** Section display name; absent on servers older than this field. */
+  catalogSectionName?: string | null;
+  /** Declared mask version (e.g. `MV-0701`); absent on older servers. */
+  maskVersion?: string | null;
+  /** Comma-separated medium types (e.g. `TP1`); absent on older servers. */
+  mediumTypes?: string | null;
   sourceNames: string[];
 }
 
@@ -2746,7 +2752,7 @@ export interface ParameterGridAxis {
   textFill?: import("./bindings/TextFill").TextFill | null;
   /** Columns only, e.g. `40%`. */
   width?: string | null;
-  /** Rows only; preserved, not applied. */
+  /** Rows only; `Row/@CollapseIfEmpty`, applied by the matrix plan when truthy and the row holds no field or label. */
   collapseIfEmpty?: string | null;
 }
 
@@ -3014,6 +3020,9 @@ export interface LastDownload {
   /** Every `ParameterRef` whose effective value differs, by id; `null` for a
    * side without a value. */
   differing?: { refId: string; downloaded: string | null; current: string | null }[];
+  /** WP-37: every module-scoped ref whose value differs, ordered by
+   * `(moduleId, refId)`; `null` for a side without a value. */
+  scopedDiffering?: { moduleId: string; refId: string; downloaded: string | null; current: string | null }[];
 }
 
 /** A device's program reference no installed application program answers. */

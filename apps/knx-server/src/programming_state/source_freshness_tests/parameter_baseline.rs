@@ -22,6 +22,7 @@ fn seed(state: &SharedState) -> ParameterBaseline {
         object_flags: None,
         program_id: PROGRAM_ID.into(),
         values: [(TIME_ID.to_string(), "1".to_string())].into(),
+        scoped_values: Default::default(),
         at: chrono::DateTime::UNIX_EPOCH,
     };
     state
@@ -316,6 +317,7 @@ fn a_deleted_device_keeps_its_baseline_until_a_save_prunes_it() {
         object_flags: None,
         program_id: PROGRAM_ID.into(),
         values: Default::default(),
+        scoped_values: Default::default(),
         at: chrono::DateTime::UNIX_EPOCH,
     };
     f.state

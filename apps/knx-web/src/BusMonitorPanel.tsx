@@ -201,12 +201,15 @@ function responseContextLock(response: api.BusMonitorTelegramsResponse): Context
 /// this prop never establishes freshness or allows sending on its own.
 const MINUTE_MS = 60_000;
 
-export default function BusMonitorPanel({ projectOpen, project, projectScope, onFlowNavigate, active = true }: {
+export default function BusMonitorPanel({ projectOpen, project, projectScope, onFlowNavigate, active = true, composeHandoff = null, onComposeHandled }: {
   projectOpen: boolean;
   active?: boolean;
   project?: ProjectTree | null;
   projectScope?: string;
   onFlowNavigate?: (model: FlowModel, target: FlowTarget) => Promise<boolean>;
+  /** Issue #51: a group address from the workspace; seeds the compose form. */
+  composeHandoff?: { nonce: number; address: string } | null;
+  onComposeHandled?: () => void;
 }) {
   const t = useTranslate();
   const formatGa = useGroupAddressFormat();
@@ -364,6 +367,25 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
       resolution: resolutionFromRow(row),
     });
   }
+
+  // Issue #51: a "send value" from the group-address workspace. The seed
+  // remounts the form prefilled; the DPT comes from the project's own data
+  // for that address (a single unambiguous type), else "unknown" and the
+  // server resolves. Selecting an address never sends anything.
+  const seenComposeNonce = useRef<number | null>(null);
+  useEffect(() => {
+    if (composeHandoff === null || seenComposeNonce.current === composeHandoff.nonce) return;
+    seenComposeNonce.current = composeHandoff.nonce;
+    setMonitorView("table");
+    const ga = project?.installations.flatMap(i => i.group_addresses)
+      .find(candidate => candidate.address === composeHandoff.address);
+    setComposeSeed({
+      key: nextComposeSeedKey++,
+      destination: formatGa(composeHandoff.address),
+      resolution: ga && ga.dpts.length === 1 ? { kind: "single", dpt: ga.dpts[0] } : { kind: "unknown" },
+    });
+    onComposeHandled?.();
+  }, [composeHandoff, project, formatGa, onComposeHandled]);
 
   // Advanced by every poll response's `nextSince`. A `ref`, not state: the
   // next tick's poll must read the cursor synchronously as it fires, not
@@ -1105,6 +1127,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           key={composeSeed.key}
           destination={composeSeed.destination}
           resolution={composeSeed.resolution}
+          groupAddresses={project?.installations.flatMap(i => i.group_addresses)}
           projectOpen={serverProjectOpen ?? projectOpen}
           // Task 5 review, fix 2: `status` already covers both ways a
           // session can be closed while this panel shows it — the gateway

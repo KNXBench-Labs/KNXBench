@@ -2,6 +2,7 @@
 
 mod command_persistence;
 mod completion_vocabulary;
+mod devconf_profile;
 mod functions;
 mod group_address_description;
 mod history_compare_and_save;

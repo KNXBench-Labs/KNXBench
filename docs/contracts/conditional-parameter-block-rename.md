@@ -8,9 +8,10 @@ the shape stays what it was: `UnrecognizedNode`, base caption kept.
 
 A `ParameterBlockRename` (or its schema-23 spelling `Rename`) is applied only when all hold:
 
-1. It sits in the application's own `Dynamic` tree, never inside a `Module` expansion or a
-   `ModuleDef`. It need not be a direct child of `Dynamic`; it is reached through the existing
-   `choose`/`when` engine, so an inactive branch contributes nothing.
+1. It sits in a walked `Dynamic` tree: the application's own tree, or a `Module` expansion's
+   tree (module-scoped renames, delivered 19 November 2026). It need not be a direct child
+   of `Dynamic`; it is reached through the existing `choose`/`when` engine, so an inactive
+   branch contributes nothing. A leaf inside an unexpanded `ModuleDef` is not consulted.
 2. Its nearest enclosing `ParameterBlock` carries an `@Id`, that `@Id` is declared by no other
    block in the tree, and the leaf's `@RefId` equals it. Naming any other block or anything
    else is a cross-target rename and is refused.
@@ -33,7 +34,8 @@ A `ParameterBlockRename` (or its schema-23 spelling `Rename`) is applied only wh
    only that block. A leaf without `@RefId` could name any block, and an evaluation that
    ran out of work or activation budget is incomplete: either blocks every rename of that
    evaluation. Rename leaves in an unexpanded `ModuleDef` are not consulted; a reached
-   module-scope leaf blocks the `@RefId` it names.
+   module-scope leaf blocks the `@RefId` it names **within its own module tree** — a
+   module-scope leaf naming a program-tree block is a cross-target refusal.
 
 Refusal changes nothing else: the leaf is reported by the existing `UnrecognizedNode`
 diagnostic (and `RefBelowSkippedNode` for references below it), the block keeps its base
@@ -41,7 +43,11 @@ caption, activations, identifiers and access are untouched.
 
 ## Policy
 
-- The evaluator reports `Activation::renames` (leaf, target block, leaf identity, source text).
+- The evaluator reports `Activation::renames` (leaf, target block, leaf identity, source text,
+  and the leaf's module scope chain — `None` for the program tree). Settlement is per tree:
+  competing candidates, intents and blocked targets count within the candidate's own tree
+  (`module_def_id`), so a module-scope leaf never competes with or blocks a program-tree
+  block, and vice versa.
   The block's `ActiveLabel` keeps the base caption; nothing mutates a label or stored source.
   Every evaluation recomputes the result, so no active leaf means the base caption again.
 - The server overlay (`parameter_captions::apply`) picks the displayed caption once per
@@ -99,12 +105,13 @@ Catalogue schema admission moves with the version (`ADMITTED_VERSION` 33; data-o
 
 ## Not implemented
 
-Module-scoped renames, renames of anything but the enclosing block, template
-replacements, competing or undecided leaves, renames of channels or separators, a rename of a
-block without a base caption, a placeholder in a selected translation (still never filled),
-and any claim about ETS behaviour beyond the one observation. Text-parameter replacements via
-the leaf's own `@TextParameterRefId` are implemented as of 19 November 2026
-(`rename-text-parameter-ref-v1`).
+Renames of anything but the enclosing block (a module-scope leaf may only rename a block of
+its own module tree), template replacements, competing or undecided leaves, renames of
+channels or separators, a rename of a block without a base caption, a placeholder in a
+selected translation (still never filled), and any claim about ETS behaviour beyond the one
+observation. Text-parameter replacements via the leaf's own `@TextParameterRefId` and
+module-scoped renames are implemented as of 19 November 2026 (`rename-text-parameter-ref-v1`,
+module-scoped rename admission).
 
 ## Verification
 

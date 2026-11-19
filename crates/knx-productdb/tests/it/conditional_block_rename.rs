@@ -344,14 +344,23 @@ fn every_refused_shape_keeps_the_base_caption_and_stays_reported() {
 }
 
 #[test]
-fn a_leaf_inside_a_module_expansion_is_refused() {
+fn a_leaf_inside_a_module_expansion_is_admitted_with_its_scope() {
     let (_dir, path) = installed();
     let conn = open_and_migrate(&path).unwrap();
     let activation = evaluate(&trees(&conn), &with_in(&conn, "A-1", &[("P-4_R-4", "1")]));
-    assert!(activation.renames.is_empty());
-    assert!(activation.diagnostics.iter().any(|d| d.scope.is_some()
+    // The module-scope leaf is now admitted: one rename, carrying the module scope chain.
+    assert_eq!(activation.renames.len(), 1);
+    let rename = &activation.renames[0];
+    assert_eq!(rename.rename_id, "MD-1_PR-1");
+    assert_eq!(rename.target_id, "MD-1_PB-1");
+    let chain = rename.scope.as_ref().expect("module scope recorded");
+    assert_eq!(chain.len(), 1);
+    assert_eq!(chain[0].module_def_id, "MD-1");
+    assert_eq!(chain[0].module_id.as_deref(), Some("MI-1"));
+    // No UnrecognizedNode for the module leaf anymore.
+    assert!(!activation.diagnostics.iter().any(|d| d.scope.is_some()
         && matches!(&d.diagnostic, Diagnostic::UnrecognizedNode { kind, .. } if kind == "ParameterBlockRename")));
-    // The source leaf is still stored with its identity, for the day it is modelled.
+    // The source leaf is still stored with its identity.
     let stored: Option<String> = conn
         .query_row(
             "SELECT ref_id FROM dynamic_node WHERE element_id = 'MD-1_PR-1'",
@@ -360,6 +369,24 @@ fn a_leaf_inside_a_module_expansion_is_refused() {
         )
         .unwrap();
     assert_eq!(stored, some("MD-1_PB-1"));
+}
+
+#[test]
+fn a_module_scope_leaf_naming_a_foreign_block_is_refused() {
+    // MD-1_PR-FOREIGN names PB-1 (a program-tree block) from inside the module: cross-scope
+    // target, refused even though the leaf itself is module-scoped.
+    let program = std::str::from_utf8(PROGRAM).unwrap().replace(
+        r#"<ParameterBlockRename Id="MD-1_PR-1" RefId="MD-1_PB-1" Text="Module renamed"/>"#,
+        r#"<ParameterBlockRename Id="MD-1_PR-1" RefId="PB-1" Text="Foreign"/>"#,
+    );
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let conn = open_and_migrate(&path).unwrap();
+    install_package(&conn, "synthetic.knxprod", &package(program.as_bytes())).unwrap();
+    let activation = evaluate(&trees(&conn), &with_in(&conn, "A-1", &[("P-4_R-4", "1")]));
+    assert!(activation.renames.is_empty());
+    assert!(activation.diagnostics.iter().any(|d| d.scope.is_some()
+        && matches!(&d.diagnostic, Diagnostic::UnrecognizedNode { kind, .. } if kind == "ParameterBlockRename")));
 }
 
 /// Rewinds a v33 database to the state the v32 parser left: the three attributes folded back

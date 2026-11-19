@@ -15,8 +15,11 @@ A `ParameterBlockRename` (or its schema-23 spelling `Rename`) is applied only wh
    block in the tree, and the leaf's `@RefId` equals it. Naming any other block or anything
    else is a cross-target rename and is refused.
 3. The leaf has its own `@Id`, declared by no other rename leaf in the tree, a non-empty
-   `@Text` without `{{` placeholders, no children, and no attribute besides `Id`, `RefId` and
-   `Text` (any other attribute stays in `extra` and refuses the leaf).
+   `@Text`, no children, and no attribute besides `Id`, `RefId`, `Text` and the optional
+   `TextParameterRefId` (any other attribute stays in `extra` and refuses the leaf). A `@Text`
+   containing `{{` placeholders is admitted only when the leaf also carries
+   `@TextParameterRefId`; the placeholder then resolves from that text parameter (see Policy).
+   Without the attribute, a placeholder refuses the leaf as before.
 4. The block has a base caption (an empty base caption leaves nothing to replace).
 5. Exactly one such leaf is active for that block in the evaluation. Two or more are all
    refused: there is no first-wins or last-wins.
@@ -53,6 +56,16 @@ caption, activations, identifiers and access are untouched.
   missing translation falls back silently; an explicitly empty one is used as it is, so the
   group has no caption. The block's positional-text fill does not apply to a replaced
   caption.
+- Exception to the rule above: a leaf whose **source** `@Text` contains `{{` and that carries
+  `@TextParameterRefId` is admitted (item 3), and the displayed replacement's placeholder
+  fills from the text parameter the attribute names, resolved in the leaf's own scope —
+  program scope for a program-tree leaf, the module expansion's scope otherwise. The fill
+  runs through the shared text-projection budget exactly like every other positional fill;
+  an unresolved reference behaves like any other unresolved placeholder (source text shown,
+  diagnostic named). A **selected translation** with a placeholder is still never filled,
+  even when the leaf names a text parameter: the source text is shown and the diagnostic is
+  named, because the translation's positional values belong to the leaf's own text, not to
+  the block's.
 - Display only: no new command, no state write, no native schema change. Values change through
   the existing validated parameter command and undo/redo move the caption with the value.
 - Restricted and hidden blocks are renamed like any other block; their access rules are
@@ -86,9 +99,12 @@ Catalogue schema admission moves with the version (`ADMITTED_VERSION` 33; data-o
 
 ## Not implemented
 
-Module-scoped renames, renames of anything but the enclosing block, text-parameter or
-template replacements, competing or undecided leaves, renames of channels or separators, a rename of a
-block without a base caption, and any claim about ETS behaviour beyond the one observation.
+Module-scoped renames, renames of anything but the enclosing block, template
+replacements, competing or undecided leaves, renames of channels or separators, a rename of a
+block without a base caption, a placeholder in a selected translation (still never filled),
+and any claim about ETS behaviour beyond the one observation. Text-parameter replacements via
+the leaf's own `@TextParameterRefId` are implemented as of 19 November 2026
+(`rename-text-parameter-ref-v1`).
 
 ## Verification
 

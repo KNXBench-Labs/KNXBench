@@ -1641,7 +1641,7 @@ pub struct Activation {
     /// The `@RefId` (`None`: none declared) of every other rename leaf this pass reached or
     /// skipped past structurally: an intent it cannot interpret, still naming a target.
     /// Internal; drained by `resolve_renames`.
-    rename_intents: Vec<Option<String>>,
+    rename_intents: Vec<(Option<String>, Option<Vec<ModuleScope>>)>,
     /// How many [`Diagnostic::RefBelowSkippedNode`]s were emitted. Counted
     /// against [`MAX_MODULE_ACTIVATIONS`] like a ref or a label (ADR-0041):
     /// a `ModuleDef` wrapping its refs in an unrecognized node multiplies
@@ -2673,11 +2673,14 @@ fn collect_rename(
     if !activation.admit_work(scope, node.node_id, text.len()) {
         return true;
     }
+    // The target is the nearest enclosing block *in this tree* (program or module
+    // expansion): `path.block` already resolves per-tree, so a module-scope leaf naming
+    // its own module's block is admitted (WP-05 module-scoped renames); naming a block
+    // of another tree stays a cross-target refusal.
     let target = path.block.and_then(|id| tree.node(id));
     let rename_id = node.element_id.as_deref();
     let ref_names_parameter = node.text_parameter_ref.is_some();
-    let admitted = scope.is_none()
-        && !text.is_empty()
+    let admitted = !text.is_empty()
         && (!text.contains(PLACEHOLDER_OPEN) || ref_names_parameter)
         && node.ref_id.is_some()
         && target.is_some_and(|target| node.ref_id == target.element_id)
@@ -2726,7 +2729,9 @@ fn note_rename_intent(
     if !activation.admit_work(scope, node.node_id, units) {
         return false;
     }
-    activation.rename_intents.push(node.ref_id.clone());
+    activation
+        .rename_intents
+        .push((node.ref_id.clone(), scope.map(|s| vec![(**s).clone()])));
     true
 }
 
@@ -2740,16 +2745,24 @@ fn note_rename_intent(
 /// No first or last candidate wins, and nothing is decided on an unwalked path.
 fn resolve_renames(program: &DynamicTree, activation: &mut Activation) {
     let candidates = std::mem::take(&mut activation.rename_candidates);
-    let intents = std::mem::take(&mut activation.rename_intents);
+    let intents_scope = std::mem::take(&mut activation.rename_intents);
     if candidates.is_empty() {
         return;
     }
-    let mut blocked: HashSet<&str> = HashSet::new();
+    // Scope-aware blocking: an intent or candidate in a module expansion names targets in
+    // that module's own tree (`module_def_id`), not in the program tree. Key = (tree, target).
+    let key_of = |scope: &Option<Vec<ModuleScope>>| -> String {
+        scope
+            .as_ref()
+            .and_then(|c| c.last())
+            .map_or(String::new(), |s| s.module_def_id.clone())
+    };
+    let mut blocked: HashSet<(String, &str)> = HashSet::new();
     let mut block_all = activation.work_budget_exhausted || activation.activation_budget_diagnosed;
-    for intent in &intents {
+    for (intent, scope) in &intents_scope {
         match intent {
             Some(target) => {
-                blocked.insert(target.as_str());
+                blocked.insert((key_of(scope), target.as_str()));
             }
             None => block_all = true,
         }
@@ -2776,33 +2789,47 @@ fn resolve_renames(program: &DynamicTree, activation: &mut Activation) {
             }
             match program.node(leaf).and_then(|n| n.ref_id.as_deref()) {
                 Some(target) => {
-                    blocked.insert(target);
+                    blocked.insert((String::new(), target));
                 }
                 None => block_all = true,
             }
         }
     }
-    let mut per_target: HashMap<i64, usize> = HashMap::new();
+    let mut per_target: HashMap<(String, i64), usize> = HashMap::new();
     for candidate in &candidates {
-        *per_target.entry(candidate.target_node_id).or_default() += 1;
+        *per_target
+            .entry((key_of(&candidate.scope), candidate.target_node_id))
+            .or_default() += 1;
     }
-    let labelled: HashSet<i64> = activation
-        .labels
-        .iter()
-        .filter(|label| label.scope.is_none() && label.kind == "ParameterBlock")
-        .map(|label| label.node_id)
-        .collect();
+    // Labelled blocks per tree: a module-scope candidate needs its own module tree's label.
+    let mut labelled: HashSet<(String, i64)> = HashSet::new();
+    for label in &activation.labels {
+        if label.kind != "ParameterBlock" {
+            continue;
+        }
+        let tree = label
+            .scope
+            .as_ref()
+            .map_or(String::new(), |s| s.module_def_id.clone());
+        labelled.insert((tree, label.node_id));
+    }
     let mut accepted = Vec::new();
     for candidate in candidates {
+        let tree = key_of(&candidate.scope);
         if !block_all
-            && per_target[&candidate.target_node_id] == 1
-            && labelled.contains(&candidate.target_node_id)
-            && !blocked.contains(candidate.target_id.as_str())
+            && per_target[&(tree.clone(), candidate.target_node_id)] == 1
+            && labelled.contains(&(tree.clone(), candidate.target_node_id))
+            && !blocked.contains(&(tree.clone(), candidate.target_id.as_str()))
         {
             accepted.push(candidate);
         } else {
+            let scope = candidate
+                .scope
+                .as_ref()
+                .and_then(|c| c.last())
+                .map(|s| std::rc::Rc::new(s.clone()));
             activation.diagnose(
-                None,
+                scope.as_ref(),
                 Diagnostic::UnrecognizedNode {
                     node_id: candidate.node_id,
                     kind: candidate.kind,

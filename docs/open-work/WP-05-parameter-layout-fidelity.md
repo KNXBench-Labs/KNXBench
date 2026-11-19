@@ -19,9 +19,10 @@ feature at a time, never inferred manufacturer behaviour.
 
 - Parameter-driven row/column captions (`TextParameterRefId`): grid axis captions now resolve
   the referenced text parameter (delivered 17 November 2026, ADR-0177; contract updated).
-  `Rename` is implemented for the literal leaf that retitles its enclosing block, including
-  a `{{0}}` placeholder filled from the leaf's own `@TextParameterRefId` (delivered
-  19 November 2026); module-scoped and cross-target renames remain open (see below).
+  `Rename` is implemented for the literal leaf that retitles its enclosing block — in the
+  program tree and in a `Module` expansion (module-scoped, delivered 19 November 2026) —,
+  including a `{{0}}` placeholder filled from the leaf's own `@TextParameterRefId`; renames
+  of anything but the enclosing block (cross-target) remain open (see below).
 - Translated row/column captions outside the bounded literal program-owned
   implementation; module/Repeat, template and text-reference semantics remain open.
 - Inline sections: an `Inline` block's fields/separators now join the outer
@@ -75,7 +76,9 @@ that block's caption while its `when` is active, in navigation, heading, context
 with its own translation and the base caption restored when it is not. Contract:
 [conditional-parameter-block-rename](../contracts/conditional-parameter-block-rename.md).
 Evidence: one ETS6 observation (one product, German text, no claim about repaint timing).
-Still open: module-scoped renames, renames of anything but the enclosing block, competing
+Still open: renames of anything but the enclosing block (a module-scope leaf naming a
+program-tree block is refused as cross-target; module-scoped renames of the enclosing
+module block are delivered since 19 November 2026), competing
 or undecided leaves, template replacements, a placeholder in a selected translation (falls
 back to the leaf's source text and is named in the panel diagnostics; a placeholder in the
 leaf's source text is filled from its own `@TextParameterRefId` since 19 November 2026), other ETS versions, languages and products.

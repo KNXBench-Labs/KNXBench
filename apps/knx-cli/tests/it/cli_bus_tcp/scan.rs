@@ -72,7 +72,15 @@ fn tcp_scan_gateway(
 ) -> (SocketAddr, JoinHandle<()>, UdpSocket) {
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
     let address = listener.local_addr().unwrap();
-    let trap = UdpSocket::bind(address).unwrap();
+    let trap = (0..64)
+        .find_map(|_| UdpSocket::bind(address).ok())
+        .or_else(|| {
+            // Fall back to an ephemeral UDP port when the TCP port is still in
+            // TIME_WAIT from a parallel test binary: the trap only needs to keep
+            // the CLI from falling back to UDP, any free port works.
+            UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).ok()
+        })
+        .expect("a UDP trap socket");
     trap.set_read_timeout(Some(Duration::from_millis(150)))
         .unwrap();
     let worker = thread::spawn(move || {
@@ -360,7 +368,15 @@ fn tcp_scan_refusal_and_handshake_eof_never_fall_back() {
     for reject in [false, true] {
         let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
         let address = listener.local_addr().unwrap();
-        let trap = UdpSocket::bind(address).unwrap();
+        let trap = (0..64)
+            .find_map(|_| UdpSocket::bind(address).ok())
+            .or_else(|| {
+                // Fall back to an ephemeral UDP port when the TCP port is still in
+                // TIME_WAIT from a parallel test binary: the trap only needs to keep
+                // the CLI from falling back to UDP, any free port works.
+                UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).ok()
+            })
+            .expect("a UDP trap socket");
         trap.set_read_timeout(Some(Duration::from_millis(150)))
             .unwrap();
         let worker = thread::spawn(move || {
@@ -396,7 +412,15 @@ fn scan_invalid_transport_targets_and_dry_runs_open_neither_transport() {
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
     listener.set_nonblocking(true).unwrap();
     let address = listener.local_addr().unwrap();
-    let trap = UdpSocket::bind(address).unwrap();
+    let trap = (0..64)
+        .find_map(|_| UdpSocket::bind(address).ok())
+        .or_else(|| {
+            // Fall back to an ephemeral UDP port when the TCP port is still in
+            // TIME_WAIT from a parallel test binary: the trap only needs to keep
+            // the CLI from falling back to UDP, any free port works.
+            UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).ok()
+        })
+        .expect("a UDP trap socket");
     trap.set_read_timeout(Some(Duration::from_millis(150)))
         .unwrap();
     for (extra, expected) in [

@@ -731,3 +731,74 @@ fn a_rename_leaf_keeps_its_text_parameter_ref_for_the_projection() {
     let activation = run(vec![block(0, None, "PB-1", "Base"), plain]);
     assert_eq!(activation.renames[0].text_parameter_ref, None);
 }
+
+/// A `ParameterSeparator` with `@Id` and `@Text` (WP-05k rename target).
+fn separator(id: i64, parent: i64, element: &str, text: &str) -> DynamicNode {
+    DynamicNode {
+        element_id: Some(element.into()),
+        text: Some(text.into()),
+        ..node(id, Some(parent), "ParameterSeparator")
+    }
+}
+
+#[test]
+fn a_leaf_may_name_a_separator_of_its_tree_and_settles_on_its_label() {
+    // WP-05k: `ParameterSeparator` is a caption host like a block; the leaf
+    // names it cross-target and the base separator label is never rewritten.
+    let activation = run(vec![
+        block(0, None, "PB-1", "Base"),
+        separator(1, 0, "PS-1", "Ruler"),
+        rename(2, 0, "ParameterBlockRename", "PR-1", "PS-1", "Retitled"),
+    ]);
+    assert!(refused(&activation).is_empty());
+    assert_eq!(activation.renames.len(), 1);
+    assert_eq!(activation.renames[0].target_node_id, 1);
+    assert_eq!(activation.renames[0].target_id, "PS-1");
+    assert_eq!(base_labels(&activation), ["Base", "Ruler"]);
+}
+
+#[test]
+fn a_separator_target_needs_a_base_label_and_a_unique_id() {
+    // A separator without `@Text` has no base caption: nothing to replace.
+    let bare = run(vec![
+        block(0, None, "PB-1", "Base"),
+        node(1, Some(0), "ParameterSeparator"),
+        rename(2, 0, "ParameterBlockRename", "PR-1", "PS-1", "No base"),
+    ]);
+    // The separator has no `@Id` here, so `PS-1` names nothing: refused.
+    assert_eq!(refused(&bare), [2]);
+    assert!(bare.renames.is_empty());
+    // A separator whose `@Id` is declared twice is not a unique target.
+    let dup = run(vec![
+        block(0, None, "PB-1", "Base"),
+        separator(1, 0, "PS-1", "One"),
+        separator(2, 0, "PS-1", "Two"),
+        rename(3, 0, "ParameterBlockRename", "PR-1", "PS-1", "Ambiguous"),
+    ]);
+    assert_eq!(refused(&dup), [3]);
+    assert!(dup.renames.is_empty());
+    // An empty separator `@Text` leaves no base caption: refused as well.
+    let empty = run(vec![
+        block(0, None, "PB-1", "Base"),
+        DynamicNode {
+            element_id: Some("PS-1".into()),
+            text: Some(String::new()),
+            ..node(1, Some(0), "ParameterSeparator")
+        },
+        rename(2, 0, "ParameterBlockRename", "PR-1", "PS-1", "Empty base"),
+    ]);
+    assert_eq!(refused(&empty), [2]);
+    assert!(empty.renames.is_empty());
+}
+
+#[test]
+fn a_separator_target_of_another_tree_stays_refused() {
+    // Cross-scope, same as a foreign block: the module tree holds no `PS-9`.
+    let activation = run(vec![
+        block(0, None, "PB-1", "Base"),
+        separator(1, 0, "PS-1", "Ruler"),
+        rename(2, 0, "ParameterBlockRename", "PR-1", "PS-9", "Foreign"),
+    ]);
+    assert_eq!(refused(&activation), [2]);
+    assert!(activation.renames.is_empty());
+}

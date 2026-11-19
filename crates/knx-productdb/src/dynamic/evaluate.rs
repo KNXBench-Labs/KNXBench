@@ -378,8 +378,10 @@ pub struct DynamicTree {
     /// Nodes whose stored row keeps attributes outside the normalized model.
     opaque: HashSet<i64>,
     /// How often each addressable caption host's `@Id` is declared, for rename
-    /// target uniqueness: `ParameterBlock` plus the channel-owner kinds, which
-    /// carry a label of their own (`Channel`, `ChannelIndependentBlock`).
+    /// target uniqueness: `ParameterBlock`, the channel-owner kinds, which
+    /// carry a label of their own (`Channel`, `ChannelIndependentBlock`), and
+    /// `ParameterSeparator` (WP-05k separator targets), whose `@Text` is its
+    /// caption like a block's.
     block_ids: HashMap<String, usize>,
     /// Caption-host `@Id` to `node_id`, for rename target resolution without a
     /// per-label scan (WP-05 cross-target renames). Same population as
@@ -411,7 +413,7 @@ impl DynamicTree {
             let Some(id) = n.element_id.as_ref() else {
                 continue;
             };
-            if n.kind == "ParameterBlock" || is_channel(&n.kind) {
+            if n.kind == "ParameterBlock" || is_channel(&n.kind) || n.kind == "ParameterSeparator" {
                 *block_ids.entry(id.clone()).or_default() += 1;
                 host_ids.insert(id.clone(), n.node_id);
             } else if is_rename(&n.kind) {
@@ -494,7 +496,8 @@ impl DynamicTree {
     }
 
     /// The `node_id` of the caption host declaring `element_id`, if this tree
-    /// holds exactly one (WP-05 cross-target rename targets).
+    /// holds exactly one (WP-05 cross-target rename targets, incl. WP-05k
+    /// separators).
     fn node_id_of_element(&self, element_id: &str) -> Option<&DynamicNode> {
         let id = *self.host_ids.get(element_id)?;
         self.nodes.get(&id)
@@ -2724,9 +2727,10 @@ fn collect_rename(
         && (!text.contains(PLACEHOLDER_OPEN) || ref_names_parameter)
         && node.ref_id.is_some()
         // Same-tree addressing: `host_ids` holds only this tree's caption hosts
-        // (`ParameterBlock`, `Channel`, `ChannelIndependentBlock`), so an
-        // addressed host is enclosing or cross-target within this tree; a
-        // `@RefId` naming another tree's host finds no entry and refuses.
+        // (`ParameterBlock`, `Channel`, `ChannelIndependentBlock`, and since
+        // WP-05k `ParameterSeparator`), so an addressed host is enclosing or
+        // cross-target within this tree; a `@RefId` naming another tree's host
+        // finds no entry and refuses.
         && target.is_some()
         && tree.children_of(Some(node.node_id)).is_empty()
         && !tree.opaque.contains(&node.node_id)
@@ -2846,12 +2850,12 @@ fn resolve_renames(program: &DynamicTree, activation: &mut Activation) {
             .or_default() += 1;
     }
     // Labelled caption hosts per tree: a module-scope candidate needs its own
-    // module tree's label. Blocks and channel owners both carry labels.
+    // module tree's label. Blocks, channel owners and separators all carry labels.
     let mut labelled: HashSet<(String, i64)> = HashSet::new();
     for label in &activation.labels {
         if !matches!(
             label.kind.as_str(),
-            "ParameterBlock" | "Channel" | "ChannelIndependentBlock"
+            "ParameterBlock" | "Channel" | "ChannelIndependentBlock" | "ParameterSeparator"
         ) {
             continue;
         }

@@ -16,7 +16,7 @@ fn node(id: i64, parent: Option<i64>, kind: &str) -> DynamicNode {
         number: None,
         control_kind: None,
         inline: false,
-    text_parameter_ref: None,
+        text_parameter_ref: None,
     }
 }
 
@@ -60,11 +60,25 @@ fn rename_with_ref(
 #[test]
 fn a_placeholder_leaf_is_admitted_only_when_it_names_a_text_parameter() {
     // With @TextParameterRefId the {{0}} placeholder no longer refuses the leaf.
-    let with_ref = rename_with_ref(1, 0, "ParameterBlockRename", "PR-1", "PB-1", "New {{0}}", Some("P-9_R-9"));
+    let with_ref = rename_with_ref(
+        1,
+        0,
+        "ParameterBlockRename",
+        "PR-1",
+        "PB-1",
+        "New {{0}}",
+        Some("P-9_R-9"),
+    );
     let activation = run(vec![block(0, None, "PB-1", "Base"), with_ref]);
     assert_eq!(activation.renames.len(), 1);
-    assert_eq!(activation.renames[0].text_parameter_ref.as_deref(), Some("P-9_R-9"));
-    assert!(activation.renames[0].scope.is_none(), "program scope records no chain");
+    assert_eq!(
+        activation.renames[0].text_parameter_ref.as_deref(),
+        Some("P-9_R-9")
+    );
+    assert!(
+        activation.renames[0].scope.is_none(),
+        "program scope records no chain"
+    );
     // Without the attribute the placeholder still refuses.
     let plain = rename(2, 0, "ParameterBlockRename", "PR-2", "PB-1", "New {{0}}");
     let activation = run(vec![block(0, None, "PB-1", "Base"), plain]);
@@ -645,7 +659,15 @@ fn a_lone_candidate_on_an_exhausted_settling_budget_is_not_applied() {
 
 #[test]
 fn a_rename_leaf_keeps_its_text_parameter_ref_for_the_projection() {
-    let leaf = rename_with_ref(1, 0, "ParameterBlockRename", "PR-1", "PB-1", "New", Some("P-9_R-9"));
+    let leaf = rename_with_ref(
+        1,
+        0,
+        "ParameterBlockRename",
+        "PR-1",
+        "PB-1",
+        "New",
+        Some("P-9_R-9"),
+    );
     let mut nodes = vec![block(0, None, "PB-1", "Base")];
     nodes.push(leaf);
     let activation = run(nodes);

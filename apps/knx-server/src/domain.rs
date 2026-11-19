@@ -7431,7 +7431,9 @@ fn assemble_parameter_panel_for_project(
                                 products, &program_id,
                             )
                             .map_err(|e| e.to_string())?;
-                        parameters.extend_facts(products, &program_id, &[reference.as_str()]);
+                        parameters
+                            .extend_facts(products, &program_id, &[reference.as_str()])
+                            .map_err(|e| e.to_string())?;
                         let place = match button.scope.as_ref() {
                             None => knx_productdb::text_parameters::TextParameterScope::Program,
                             Some(s) => knx_productdb::text_parameters::TextParameterScope::Module(
@@ -7443,16 +7445,18 @@ fn assemble_parameter_panel_for_project(
                             evaluation: &productdb_evaluation,
                             module_instances: &module_instances,
                         };
-                        let mut budget = caption_fills.budget_mut();
-                        let value = texts
-                            .fill_rename_scoped(
-                                &literal.text,
-                                place,
-                                button.node_id,
-                                Some(reference),
-                                &mut budget,
-                            )
-                            .map_err(|e| e.to_string())?;
+                        let value = {
+                            let mut budget = caption_fills.budget_mut();
+                            texts
+                                .fill_rename_scoped(
+                                    &literal.text,
+                                    place,
+                                    button.node_id,
+                                    Some(reference),
+                                    &mut budget,
+                                )
+                                .map_err(|e| e.to_string())?
+                        };
                         caption_fills
                             .admit_copy(&value.text)
                             .map_err(|e| e.to_string())?;

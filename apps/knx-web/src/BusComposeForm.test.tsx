@@ -8,6 +8,7 @@
 // that needs re-mocking here, this file only ever renders
 // `<BusComposeForm>` directly with a fixed `destination`/`resolution`.
 import { act } from "react";
+import { readFileSync } from "node:fs";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BusWriteResponse, GroupActionSession } from "./api";
@@ -547,6 +548,23 @@ describe("issue #51 destination combobox", () => {
       // the second entry and Enter chooses it.
       expect(input.value).toBe("2/3/4");
       expect(apiMock.writeBusValue).not.toHaveBeenCalled();
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("WP-47.1 renders single-line rows with the full label in the title and a hidden measure span", async () => {
+    const root = await renderForm("", { kind: "unknown" }, true, false, false, false, undefined, addresses);
+    try {
+      const input = host!.querySelector<HTMLInputElement>(".bus-compose-destination")!;
+      await act(async () => input.focus());
+      const options = [...host!.querySelectorAll<HTMLElement>(".ga-picker-option")];
+      expect(options.length).toBe(2);
+      for (const option of options) {
+        expect(option.getAttribute("title")).toMatch(/^\d+\/\d+\/\d+ .+/);
+        expect(option.querySelector(".ga-picker-measure")?.getAttribute("aria-hidden")).toBe("true");
+      }
+      // The field itself stays capped at the shared scalar slot, not 14rem.
+      const css = readFileSync("src/styles.css", "utf8");
+      expect(css).toMatch(/\.bus-compose-destination-picker \{[^}]*width:\s*min\(100%, var\(--workspace-scalar-width\)\)/s);
     } finally { await act(async () => root.unmount()); }
   });
 });

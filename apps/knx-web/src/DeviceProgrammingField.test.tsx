@@ -74,5 +74,7 @@ it("keeps the state and says why when the server refuses", async () => {
 it("does not guess a state the server did not report", async () => {
   await render(tree(undefined));
   expect(host.textContent).toContain("does not report the programming state");
-  expect(host.querySelectorAll("button")).toHaveLength(0);
+  // WP-46.2: only the "?" help tip remains as a button; no mark buttons without a state.
+  expect(host.querySelectorAll("button")).toHaveLength(1);
+  expect(host.querySelector("button")?.classList.contains("help-tip-trigger")).toBe(true);
 });

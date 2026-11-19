@@ -84,7 +84,7 @@ export function EffectivePriorityRow(props: { priority: EffectivePriorityView })
     {value !== null && <code className="saved-priority-raw">{value}</code>}
     <span className="saved-priority-state">{text}</span>
     {source !== null && <span className="field-hint saved-priority-source">{source}</span>}
-    <span className="field-hint">{t("inspector.effectivePriority.hint")}</span>
+    <HelpTip labelKey="help.tip.effectivePriority.label" textKey="help.tip.effectivePriority.text" />
   </div>;
 }
 

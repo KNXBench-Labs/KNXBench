@@ -39,7 +39,10 @@ it("shows a known declaration verbatim, with its captured source and the not-eff
   expect(row.querySelector(".saved-priority-raw")?.textContent).toBe("High");
   expect(row.querySelector(".saved-priority-state")?.textContent).toBe(en["inspector.savedPriority.declared.known"]);
   expect(row.querySelector(".saved-priority-source")?.textContent).toBe("Captured from project schema 23, object O-7_R-9");
-  expect(row.textContent).toContain(en["inspector.savedPriority.hint"]);
+  // WP-46.2: the explanation moved behind the HelpTip; no always-visible .field-hint.
+  expect(row.querySelector(".com-object-saved-priority > .field-hint:not(.saved-priority-source)")).toBeNull();
+  expect(row.querySelector("button.help-tip-trigger")?.getAttribute("aria-label")).toBe(en["help.tip.savedPriority.label"]);
+  expect(row.querySelector('[role="tooltip"]')?.textContent).toBe(en["help.tip.savedPriority.text"]);
 });
 
 it("keeps empty, whitespace, case-different and unknown literals exact and quoted", () => {
@@ -101,12 +104,13 @@ it("reports a newer server's state or reason as unknown instead of a default", (
   }
 });
 
-it("speaks German, including the hint", () => {
+it("speaks German, including the hint behind ?", () => {
   setUiLanguage("de");
   const row = render({ status: "unavailable", reason: "NotCaptured" });
   expect(row.querySelector(".saved-priority-label")?.textContent).toBe(de["inspector.savedPriority.label"]);
   expect(row.querySelector(".saved-priority-state")?.textContent).toBe(de["inspector.savedPriority.unavailable.NotCaptured"]);
-  expect(row.textContent).toContain(de["inspector.savedPriority.hint"]);
+  expect(row.querySelector("button.help-tip-trigger")?.getAttribute("aria-label")).toBe(de["help.tip.savedPriority.label"]);
+  expect(row.querySelector('[role="tooltip"]')?.textContent).toBe(de["help.tip.savedPriority.text"]);
 });
 
 it("does not crash on a reason named like an object prototype member", () => {

@@ -34,7 +34,10 @@ it("shows a resolved instance value verbatim with its source and the not-wire hi
     expect(row.querySelector(".saved-priority-raw")?.textContent).toBe(value);
     expect(row.querySelector(".saved-priority-state")?.textContent).toBe(en["inspector.effectivePriority.resolved"]);
     expect(row.querySelector(".saved-priority-source")?.textContent).toBe(en["inspector.effectivePriority.source.instance"]);
-    expect(row.textContent).toContain(en["inspector.effectivePriority.hint"]);
+    // WP-46.2: the explanation moved behind the HelpTip; no always-visible .field-hint.
+    expect(row.querySelector(".com-object-effective-priority > .field-hint:not(.saved-priority-source)")).toBeNull();
+    expect(row.querySelector("button.help-tip-trigger")?.getAttribute("aria-label")).toBe(en["help.tip.effectivePriority.label"]);
+    expect(row.querySelector('[role="tooltip"]')?.textContent).toBe(en["help.tip.effectivePriority.text"]);
     next();
   }
 });
@@ -101,10 +104,11 @@ it("does not crash on a reason named like an object prototype member", () => {
   expect(row.querySelector(".saved-priority-state")?.textContent).toBe(en["inspector.effectivePriority.unrecognisedState"]);
 });
 
-it("speaks German, including the hint", () => {
+it("speaks German, including the hint behind ?", () => {
   setUiLanguage("de");
   const row = render({ status: "unresolved", reason: "NoProductDatabase", source: null, raw: null });
   expect(row.querySelector(".saved-priority-label")?.textContent).toBe(de["inspector.effectivePriority.label"]);
   expect(row.querySelector(".saved-priority-state")?.textContent).toBe(de["inspector.effectivePriority.unresolved.NoProductDatabase"]);
-  expect(row.textContent).toContain(de["inspector.effectivePriority.hint"]);
+  expect(row.querySelector("button.help-tip-trigger")?.getAttribute("aria-label")).toBe(de["help.tip.effectivePriority.label"]);
+  expect(row.querySelector('[role="tooltip"]')?.textContent).toBe(de["help.tip.effectivePriority.text"]);
 });

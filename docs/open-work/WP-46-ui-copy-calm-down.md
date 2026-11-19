@@ -45,9 +45,9 @@ GitHub issue.
 
 | Package | Outcome | Status |
 | --- | --- | --- |
-| 46.1 | Rename priority option to "Standard"/"Default" in de+en, update tests | Not started |
-| 46.2 | Move the listed long explanations behind HelpTip (`?`) or delete redundant ones; keep one-line essentials visible | Not started |
-| 46.3 | Manufacturer-field hints (access None/hidden, untranslated) once per section, compact per-value marker | Not started |
+| 46.1 | Rename priority option to "Standard"/"Default" in de+en, update tests | Delivered 18 Nov 2026 on main (`73e66a63f`, PR !70) |
+| 46.2 | Move the listed long explanations behind HelpTip (`?`) or delete redundant ones; keep one-line essentials visible | 46.1/46.2 priority part delivered 18 Nov (`73e66a63f`, PR !70); remaining long texts (saved/effective priority row hints, recorded-device explanation block, programming explanation, object-functions empty note) delivered 19 Nov on work/wp46-copy-calm-rest-20261119 behind `help.tip.*` keys |
+| 46.3 | Manufacturer-field hints (access None/hidden, untranslated) once per section, compact per-value marker | Delivered 18 Nov 2026 on main (`9ca6b127c`+`ad8ce17df`, PR !71) |
 
 ## Boundaries
 

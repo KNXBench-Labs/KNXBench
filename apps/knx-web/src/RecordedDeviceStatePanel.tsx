@@ -4,6 +4,7 @@ import type {ProjectTree} from "./bindings/ProjectTree";
 import type {RecordedDeviceStateView} from "./recordedDeviceState";
 import {useTranslate} from "./i18n";
 import * as api from "./api";
+import HelpTip from "./HelpTip";
 import "./RecordedDeviceStatePanel.css";
 export default function RecordedDeviceStatePanel(props:{tree:ProjectTree;deviceId:number}) {
  const t=useTranslate();const [view,setView]=useState<RecordedDeviceStateView|null>(null);const [error,setError]=useState<string|null>(null);const [busy,setBusy]=useState(false);
@@ -21,7 +22,7 @@ export default function RecordedDeviceStatePanel(props:{tree:ProjectTree;deviceI
  return <section className="recorded-device-state-panel">
   <button type="button" disabled={busy} onClick={()=>void read()}>{t("recordedDevice.show")}</button>
   {error&&<p role="alert">{error}</p>}
-  {state&&<div><h3>{t("recordedDevice.title")}</h3><p>{t("recordedDevice.explanation")}</p><p>{t("recordedDevice.dates")}</p><p>{t("recordedDevice.privacy")}</p>
+  {state&&<div><h3>{t("recordedDevice.title")} <HelpTip labelKey="help.tip.recordedDevice.label" textKey="help.tip.recordedDevice.text" /></h3>
    <dl><div><dt>{t("recordedDevice.name")}</dt><dd><bdi dir="auto">{state.name}</bdi></dd></div>
     <div><dt>{t("recordedDevice.completion")}</dt><dd>{t(`projectMetadata.completion.${state.completion}`)}</dd></div>
     <div><dt>{t("recordedDevice.broken")}</dt><dd>{t(state.broken?"recordedDevice.yes":"recordedDevice.no")}</dd></div>

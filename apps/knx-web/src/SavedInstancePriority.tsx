@@ -2,6 +2,7 @@
 import type { CapturedSavedInstanceSource } from "./bindings/CapturedSavedInstanceSource";
 import type { SavedInstancePriorityView } from "./bindings/SavedInstancePriorityView";
 import type { SavedPriorityUnavailableView } from "./bindings/SavedPriorityUnavailableView";
+import HelpTip from "./HelpTip";
 import { useTranslate, type MessageKey, type Translate } from "./i18n";
 
 const UNAVAILABLE_KEYS: Record<SavedPriorityUnavailableView, MessageKey> = {
@@ -67,6 +68,6 @@ export function SavedInstancePriorityRow(props: { priority: SavedInstancePriorit
     {value !== null && <code className="saved-priority-raw">{value}</code>}
     <span className="saved-priority-state">{text}</span>
     {source !== null && <span className="field-hint saved-priority-source">{source}</span>}
-    <span className="field-hint">{t("inspector.savedPriority.hint")}</span>
+    <HelpTip labelKey="help.tip.savedPriority.label" textKey="help.tip.savedPriority.text" />
   </div>;
 }

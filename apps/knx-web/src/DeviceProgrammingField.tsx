@@ -3,6 +3,7 @@ import { useState } from "react";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useTranslate } from "./i18n";
+import HelpTip from "./HelpTip";
 import { PART_LABELS, PROGRAMMING_PARTS } from "./programmingState";
 import { collectDevices } from "./treeUtils";
 
@@ -24,7 +25,7 @@ export default function DeviceProgrammingField({ deviceId, tree, onApplied }: {
     }
   }
   return <section className="device-programming" aria-labelledby={`device-programming-${deviceId}`}>
-    <h3 id={`device-programming-${deviceId}`}>{t("programming.title")}</h3>
+    <h3 id={`device-programming-${deviceId}`}>{t("programming.title")} <HelpTip labelKey="help.tip.programming.label" textKey="help.tip.programming.text" /></h3>
     {state ? <>
       <dl className="device-programming-parts">
         {PROGRAMMING_PARTS.map((part) => <div key={part} data-part={part} data-pending={state[part] ? "true" : "false"}>
@@ -32,7 +33,6 @@ export default function DeviceProgrammingField({ deviceId, tree, onApplied }: {
           <dd>{t(state[part] ? "programming.pending" : "programming.programmed")}</dd>
         </div>)}
       </dl>
-      <p className="inspector-description">{t("programming.explanation")}</p>
       <div className="device-programming-actions">
         <button type="button" disabled={busy || PROGRAMMING_PARTS.every((part) => !state[part])}
           onClick={() => void mark(true)}>{t("programming.markProgrammed")}</button>

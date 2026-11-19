@@ -25,7 +25,11 @@ for(const language of ["en","de"] as const)for(const width of [400,1440]){
   if(await properties.getAttribute("aria-expanded")!=="true")await properties.click();
   const panel=page.locator(".recorded-device-state-panel");await expect(panel).toBeVisible();expect(reads).toBe(0);
   await panel.getByRole("button",{name:m["recordedDevice.show"],exact:true}).click();
-  await expect(panel).toContainText(m["recordedDevice.explanation"]);await expect(panel).toContainText(m["recordedDevice.dates"]);
+  // WP-46.2: the long explanation moved behind the "?"; the data rows stay visible.
+  await expect(panel.locator("h3 .help-tip-trigger")).toBeVisible();
+  await expect(panel.getByRole("button",{name:m["help.tip.recordedDevice.label"],exact:true})).toBeVisible();
+  await expect(panel.locator('[role="tooltip"]')).toContainText(m["help.tip.recordedDevice.text"].slice(0,80));
+  expect(await panel.locator("p").count()).toBe(0);
   await expect(panel).toContainText(m["recordedDevice.belief"]);await expect(panel).toContainText(m["recordedDevice.report"]);
   expect(await panel.locator("dd").first().textContent()).toBe(before.state.name);expect(await panel.locator("li").count()).toBe(5);
   await expect(panel).toContainText(m["recordedDevice.absent"]);expect(reads).toBe(1);expect(await panel.locator("script,input,textarea").count()).toBe(0);

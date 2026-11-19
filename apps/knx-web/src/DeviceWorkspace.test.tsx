@@ -69,14 +69,19 @@ it("shows each object's own captured saved priority read-only in its editor, bes
   expect(row(1).querySelector(".saved-priority-raw")?.textContent).toBe("Alert");
   expect(row(2).querySelector(".saved-priority-raw")).toBeNull();
   expect(row(2).textContent).toContain(englishMessages["inspector.savedPriority.absent.AttributeOmitted"]);
-  expect(row(1).querySelector("input, select, button")).toBeNull();
+  // WP-46.2: read-only rows carry only the "?" help tip as a button, no input/select.
+  expect(row(1).querySelector("input, select")).toBeNull();
+  expect(row(1).querySelectorAll("button")).toHaveLength(1);
+  expect(row(1).querySelector("button")?.classList.contains("help-tip-trigger")).toBe(true);
   // The effective row follows the saved row in the same editor, read-only.
   const effective = (id: number) => host.querySelector<HTMLElement>(`[data-editor-id="${id}"] .com-object-effective-priority`)!;
   expect(effective(1).previousElementSibling).toBe(row(1));
   expect(effective(1).querySelector(".saved-priority-raw")?.textContent).toBe("Alert");
   expect(effective(1).querySelector(".saved-priority-source")?.textContent).toBe(englishMessages["inspector.effectivePriority.source.instance"]);
   expect(effective(2).textContent).toContain(englishMessages["inspector.effectivePriority.unresolved.ProductNotConsulted"]);
-  expect(effective(1).querySelector("input, select, button")).toBeNull();
+  expect(effective(1).querySelector("input, select")).toBeNull();
+  expect(effective(1).querySelectorAll("button")).toHaveLength(1);
+  expect(effective(1).querySelector("button")?.classList.contains("help-tip-trigger")).toBe(true);
   await cleanup();
 });
 

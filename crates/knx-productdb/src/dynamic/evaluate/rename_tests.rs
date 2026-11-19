@@ -16,7 +16,7 @@ fn node(id: i64, parent: Option<i64>, kind: &str) -> DynamicNode {
         number: None,
         control_kind: None,
         inline: false,
-    text_parameter_ref: None,
+        text_parameter_ref: None,
     }
 }
 
@@ -628,7 +628,15 @@ fn a_lone_candidate_on_an_exhausted_settling_budget_is_not_applied() {
 
 #[test]
 fn a_rename_leaf_keeps_its_text_parameter_ref_for_the_projection() {
-    let leaf = rename_with_ref(1, 0, "ParameterBlockRename", "PR-1", "PB-1", "New", Some("P-9_R-9"));
+    let leaf = rename_with_ref(
+        1,
+        0,
+        "ParameterBlockRename",
+        "PR-1",
+        "PB-1",
+        "New",
+        Some("P-9_R-9"),
+    );
     let mut nodes = vec![block(0, None, "PB-1", "Base")];
     nodes.push(leaf);
     let activation = run(nodes);

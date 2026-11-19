@@ -146,10 +146,7 @@ fn the_four_hosts_store_their_reference_and_report_nothing() {
         );
     }
     assert_eq!(
-        reference(
-            &conn,
-            "dynamic_node WHERE element_id = 'PR-1'"
-        ),
+        reference(&conn, "dynamic_node WHERE element_id = 'PR-1'"),
         Some("P-1_R-1".to_string()),
     );
     // Every other node, and an object ref without one, stays NULL.

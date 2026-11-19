@@ -1335,6 +1335,14 @@ impl Diagnostic {
 /// verbatim by every instantiating `Module` (RESEARCH.md §4.4) — an
 /// unqualified result is ambiguous in both ways at once, which is why this
 /// type exists and why every `ActiveRef`/`ScopedDiagnostic` carries one.
+impl ModuleScope {
+    /// The chain from the program root down to and including this scope, for
+    /// `ActiveRename::scope` (WP-05 `rename-text-parameter-ref-v1`).
+    pub fn into_chain(self) -> Vec<ModuleScope> {
+        vec![self]
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ModuleScope {
     /// `dynamic_node.node_id` of the `Module` element that produced this
@@ -1578,6 +1586,9 @@ pub struct ActiveRename {
     /// The leaf's `@TextParameterRefId`, when it has one: the replacement text
     /// fills from this text parameter (WP-05 `rename-text-parameter-ref-v1`).
     pub text_parameter_ref: Option<String>,
+    /// The module expansion chain the leaf sits in (`None` = program scope).
+    /// Only set for admitted candidates; refusal diagnostics do not need it.
+    pub scope: Option<Vec<ModuleScope>>,
 }
 
 /// One `Diagnostic`, qualified by where it was found (design D14).
@@ -2664,9 +2675,10 @@ fn collect_rename(
     }
     let target = path.block.and_then(|id| tree.node(id));
     let rename_id = node.element_id.as_deref();
+    let ref_names_parameter = node.text_parameter_ref.is_some();
     let admitted = scope.is_none()
         && !text.is_empty()
-        && !text.contains(PLACEHOLDER_OPEN)
+        && (!text.contains(PLACEHOLDER_OPEN) || ref_names_parameter)
         && node.ref_id.is_some()
         && target.is_some_and(|target| node.ref_id == target.element_id)
         && tree.children_of(Some(node.node_id)).is_empty()
@@ -2698,6 +2710,7 @@ fn collect_rename(
         target_id: target_id.to_string(),
         text: text.to_string(),
         text_parameter_ref: node.text_parameter_ref.clone(),
+        scope: scope.map(|s| (**s).clone().into_chain()),
     });
     true
 }

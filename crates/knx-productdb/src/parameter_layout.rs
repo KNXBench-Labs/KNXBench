@@ -462,7 +462,7 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
         }
         if scope.is_empty() {
             if let Some(source_grids) = &grids {
-                let bound = grid::axis_caption_ids(source_grids, &nodes);
+                let bound = grid::axis_caption_ids(source_grids, nodes);
                 result.literal_grid_axes = scope_grids
                     .values()
                     .filter(|grid| grid.status == GridStatus::Grid)

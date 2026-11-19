@@ -7446,14 +7446,14 @@ fn assemble_parameter_panel_for_project(
                             module_instances: &module_instances,
                         };
                         let value = {
-                            let mut budget = caption_fills.budget_mut();
+                            let budget = caption_fills.budget_mut();
                             texts
                                 .fill_rename_scoped(
                                     &literal.text,
                                     place,
                                     button.node_id,
                                     Some(reference),
-                                    &mut budget,
+                                    budget,
                                 )
                                 .map_err(|e| e.to_string())?
                         };

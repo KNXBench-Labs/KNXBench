@@ -265,6 +265,23 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                 let inherited = parent.and_then(|p| p.owner);
                 let mut role = Role::Other;
                 let mut owner = inherited;
+                if kind == "ParameterBlock" {
+                    eprintln!(
+                        "PB id={:?} dynamic={} active={} path={:?}",
+                        attr.evidence_value("Id"),
+                        dynamic,
+                        active,
+                        path
+                    );
+                }
+                if kind == "ParameterBlock" {
+                    eprintln!(
+                        "PB id={:?} dynamic={} active={}",
+                        attr.evidence_value("Id"),
+                        dynamic,
+                        active
+                    );
+                }
                 if dynamic && kind == "ParameterBlock" {
                     // A nested block's own `@Cell` places it in its parent's grid.
                     if let (Some(frame), Some(cell)) = (inherited, attr.evidence_value("Cell")) {

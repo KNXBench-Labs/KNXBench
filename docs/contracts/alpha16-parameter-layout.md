@@ -167,9 +167,11 @@ release, publication or hardware acceptance.
 Since Alpha 19 (31 October 2026 source). This is KNXBench presentation policy, not ETS
 Button behaviour, handler support or Table/Grid visual equivalence.
 
-- **Admission.** Only a program-owned (not `ModuleDef`) exact-namespace
-  `Dynamic` `Button` leaf below traversable containers, whose nearest
-  `ParameterBlock` has an `@Id` and a valid `Table`/`Grid`. It declares exactly
+- **Admission.** Only an exact-namespace `Dynamic` `Button` leaf below
+  traversable containers, whose nearest `ParameterBlock` has an `@Id` and a
+  valid `Table`/`Grid`. Since 19 November 2026 (`module-scoped-buttons-v1`)
+  a `ModuleDef`'s own tree binds too, keyed by the module def id; the
+  program-owned rule above is unchanged. It declares exactly
   unqualified `Id`, `Text` and `Cell`, plus optionally `EventHandler`,
   `EventHandlerOnline` and `EventHandlerParameters` as inert source data that
   is never parsed or reported, plus optionally `TextParameterRefId`. `Text` must be

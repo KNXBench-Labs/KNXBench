@@ -443,7 +443,7 @@ fn nearest_block_ownership_is_structural() {
 }
 
 #[test]
-fn module_definitions_and_repeat_scopes_are_outside_this_form() {
+fn module_definitions_bind_their_own_buttons_and_repeat_scopes_stay_outside() {
     let module = ONLY.replace(
         "<Dynamic>",
         r#"<ModuleDefs><ModuleDef Id="MD-1" Name="Fictional module"><Static/><Dynamic><ParameterBlock Id="MD-1_PB" Layout="Grid"><Rows><Row Id="MD-R"/></Rows><Columns><Column Id="MD-C1" Width="50%"/><Column Id="MD-C2" Width="50%"/></Columns><Button Id="MD-1_B" Text="Module label" Cell="1,2"/></ParameterBlock></Dynamic></ModuleDef></ModuleDefs><Dynamic><Module Id="MOD-1_M-1" RefId="MD-1"/>"#,
@@ -459,7 +459,12 @@ fn module_definitions_and_repeat_scopes_are_outside_this_form() {
         .collect::<Result<_, _>>()
         .unwrap();
     assert_eq!(module_buttons.len(), 1);
-    assert!(layout.button("MD-1", module_buttons[0]).is_none());
+    // WP-05h: module trees bind too, keyed by the module def id.
+    let module_literal = layout
+        .button("MD-1", module_buttons[0])
+        .expect("module literal");
+    assert_eq!(module_literal.text, "Module label");
+    assert!(layout.button("", module_buttons[0]).is_none());
     assert_eq!(labels(&layout, &buttons(&fixture.conn, "A-FIX")).len(), 1);
     // The walk reaches the module's Button scoped, never as a program Button.
     let active = activation(&fixture.conn, &[]);
@@ -637,4 +642,88 @@ fn a_button_text_parameter_ref_is_admitted_and_a_placeholder_without_it_is_not()
         vec![],
         "placeholder without ref is refused"
     );
+}
+
+#[test]
+fn a_module_def_button_binds_with_its_module_scope_key() {
+    // module-scoped-buttons-v1 (WP-05h): a `Button` inside a `ModuleDef`'s
+    // own `Dynamic` tree binds under the module def id, not the program tree.
+    let module_xml = r#"<KNX xmlns="http://knx.org/xml/project/20">
+<ManufacturerData><Manufacturer RefId="M-FIX"><ApplicationPrograms>
+<ApplicationProgram Id="A-FIX" Name="Fable module button" ApplicationVersion="1" MaskVersion="MV-091A">
+<Static><ModuleDefs><ModuleDef Id="MD-1" Name="Fable module"><Dynamic>
+<ParameterBlock Id="MD-PB" Layout="Grid"><Rows><Row Id="MD-R"/></Rows><Columns><Column Id="MD-C" Width="100%"/></Columns>
+<Button Id="MD-B" Text="Fictional module label" Cell="1,1"/>
+</ParameterBlock>
+</Dynamic></ModuleDef></ModuleDefs></Static>
+<Dynamic><Channel Id="CH-1" Text="Fable channel"><Module Id="M-1" RefId="MD-1"/></Channel></Dynamic>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+    let fixture = ingest(module_xml);
+    let mut stmt = fixture
+        .conn
+        .prepare("SELECT module_def_id,node_id FROM dynamic_node WHERE program_id='A-FIX' AND kind='Button'")
+        .unwrap();
+    let rows: Vec<(String, i64)> = stmt
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(rows, vec![("MD-1".to_string(), rows[0].1)]);
+    let layout = load(&fixture.conn, "A-FIX").unwrap();
+    assert_eq!(layout.button_binding(), ButtonBinding::Bound);
+    // WP-05h: layout keys are per-scope renumbered ids (document order from 0),
+    // not the raw dynamic_node ids.
+    let module_buttons: Vec<i64> = fixture
+        .conn
+        .prepare("SELECT node_id FROM dynamic_node WHERE program_id='A-FIX' AND module_def_id='MD-1' AND kind='Button' ORDER BY node_id")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    let raw = module_buttons[0];
+    let rank: i64 = fixture
+        .conn
+        .query_row(
+            "SELECT COUNT(*) FROM dynamic_node WHERE program_id='A-FIX' AND module_def_id='MD-1' AND node_id < ?1",
+            [raw],
+            |r| r.get(0),
+        )
+        .unwrap();
+    let node = rank;
+    // Program key misses, module key hits.
+    assert!(layout.button("", node).is_none());
+    let literal = layout.button("MD-1", node).expect("module-scoped literal");
+    assert_eq!(literal.element_id, "MD-B");
+    assert_eq!(literal.text, "Fictional module label");
+    assert_eq!(literal.cell, Cell { row: 1, column: 1 });
+    assert_eq!(literal.group.element_id.as_deref(), Some("MD-PB"));
+}
+
+#[test]
+fn a_module_def_button_without_cell_refuses_the_binding() {
+    // Same refusal rule as program buttons, keyed per module tree.
+    let module_xml = r#"<KNX xmlns="http://knx.org/xml/project/20">
+<ManufacturerData><Manufacturer RefId="M-FIX"><ApplicationPrograms>
+<ApplicationProgram Id="A-FIX" Name="Fable module button" ApplicationVersion="1" MaskVersion="MV-091A">
+<Static><ModuleDefs><ModuleDef Id="MD-1" Name="Fable module"><Dynamic>
+<ParameterBlock Id="MD-PB" Layout="Grid"><Rows><Row Id="MD-R"/></Rows><Columns><Column Id="MD-C" Width="100%"/></Columns>
+<Button Id="MD-B" Text="No cell"/>
+</ParameterBlock>
+</Dynamic></ModuleDef></ModuleDefs></Static>
+<Dynamic><Channel Id="CH-1" Text="Fable channel"><Module Id="M-1" RefId="MD-1"/></Channel></Dynamic>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+    let fixture = ingest(module_xml);
+    let node: i64 = fixture
+        .conn
+        .query_row(
+            "SELECT node_id FROM dynamic_node WHERE program_id='A-FIX' AND module_def_id='MD-1' AND kind='Button'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    let layout = load(&fixture.conn, "A-FIX").unwrap();
+    // A missing Cell is no structural refusal, just no admitted literal.
+    assert_eq!(layout.button_binding(), ButtonBinding::Bound);
+    assert!(layout.button("MD-1", node).is_none());
 }

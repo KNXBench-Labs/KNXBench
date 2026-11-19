@@ -172,10 +172,15 @@ Button behaviour, handler support or Table/Grid visual equivalence.
   `ParameterBlock` has an `@Id` and a valid `Table`/`Grid`. It declares exactly
   unqualified `Id`, `Text` and `Cell`, plus optionally `EventHandler`,
   `EventHandlerOnline` and `EventHandlerParameters` as inert source data that
-  is never parsed or reported. `Text` must be non-blank, not `#` and free of
-  `{{`/`}}`; it stays XML-decoded and otherwise verbatim (no trim, translation,
-  substitution or `Name`/`Id` fallback). `Cell` is the existing 1-based
-  `row,column` parser. Anything else (local `Access`, `TextParameterRefId`,
+  is never parsed or reported, plus optionally `TextParameterRefId`. `Text` must be
+  non-blank and not `#`; it stays XML-decoded and otherwise verbatim (no trim,
+  translation, substitution or `Name`/`Id` fallback). A `Text` containing
+  `{{`/`}}` is admitted only when the Button also carries `TextParameterRefId`;
+  the placeholder then fills from that text parameter in the button's own scope
+  at display time (`button-text-parameter-ref-v1`, 19 November 2026), through the
+  shared text budget. Without the attribute a placeholder delimiter refuses the
+  label as before. `Cell` is the existing 1-based
+  `row,column` parser. Anything else (local `Access`,
   other or qualified attributes, child elements, non-whitespace text, CDATA or
   entity content, malformed or out-of-range cells, list/invalid/nested-list
   blocks) shows no label. The grid's existing `unshownContent` issue for a

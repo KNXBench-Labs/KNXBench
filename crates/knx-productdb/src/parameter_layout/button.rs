@@ -24,6 +24,10 @@ pub struct ButtonLiteral {
     pub element_id: String,
     /// `Button/@Text`, XML-decoded, otherwise verbatim (never trimmed).
     pub text: String,
+    /// `Button/@TextParameterRefId`, verbatim when present: a `@Text` containing a
+    /// placeholder is admitted only with this attribute, and the placeholder then
+    /// fills from the named text parameter (WP-05 `button-text-parameter-ref-v1`).
+    pub text_parameter_ref: Option<String>,
 }
 
 /// Whether the retained source could be bound to the stored `Dynamic` nodes.
@@ -48,6 +52,9 @@ const INERT: [&str; 3] = [
     "EventHandlerOnline",
     "EventHandlerParameters",
 ];
+/// The optional reference attribute: admits a placeholder `@Text` and names the text
+/// parameter whose value fills it (WP-05 `button-text-parameter-ref-v1`).
+const TEXT_PARAMETER_REF: &str = "TextParameterRefId";
 
 /// One admitted source candidate, before it is bound to stored nodes.
 struct Candidate {
@@ -57,6 +64,7 @@ struct Candidate {
     cell: String,
     block_node: i64,
     block_id: String,
+    text_parameter_ref: Option<String>,
     /// Cleared when a child element or character data shows that it is no leaf.
     leaf: bool,
 }
@@ -196,15 +204,19 @@ fn bind_source(
                 cell,
                 element_id: candidate.element_id,
                 text: candidate.text,
+                text_parameter_ref: candidate.text_parameter_ref,
             },
         );
     }
     Ok(literals)
 }
 
-/// Text this literal form shows: present, not blank, not `#`, no placeholder delimiter.
-fn literal_text(text: &str) -> bool {
-    !text.trim().is_empty() && text.trim() != "#" && !text.contains("{{") && !text.contains("}}")
+/// Text this literal form shows: present, not blank, not `#`. A placeholder delimiter is
+/// allowed only when the leaf names a text parameter to fill it from.
+fn literal_text(text: &str, text_parameter_ref: Option<&str>) -> bool {
+    !text.trim().is_empty()
+        && text.trim() != "#"
+        && (!text.contains("{{") && !text.contains("}}") || text_parameter_ref.is_some())
 }
 
 /// Exactly the admitted unqualified attributes; namespace declarations are not behaviour.
@@ -214,6 +226,7 @@ fn admitted_attributes(attr: &crate::xml::Attrs) -> bool {
             || name.starts_with("xmlns:")
             || REQUIRED.contains(&name)
             || INERT.contains(&name)
+            || name == TEXT_PARAMETER_REF
     }) && REQUIRED
         .iter()
         .all(|name| attr.evidence_value(name).is_some())
@@ -325,10 +338,12 @@ fn read(bytes: &[u8], program: &str, budget: usize) -> Result<SourceTree, Button
                     }
                     let text = attr.evidence_value("Text").unwrap_or_default();
                     let ancestry = parent.is_some_and(|p| p.dynamic);
+                    let text_parameter_ref =
+                        attr.evidence_value(TEXT_PARAMETER_REF).map(str::to_owned);
                     if let (true, true, true, Some((block_node, Some(block_id)))) = (
                         ancestry,
                         admitted_attributes(&attr),
-                        literal_text(text),
+                        literal_text(text, text_parameter_ref.as_deref()),
                         block.clone(),
                     ) {
                         candidates.push(Candidate {
@@ -338,6 +353,7 @@ fn read(bytes: &[u8], program: &str, budget: usize) -> Result<SourceTree, Button
                             cell: attr.evidence_value("Cell").unwrap_or_default().to_owned(),
                             block_node,
                             block_id,
+                            text_parameter_ref,
                             leaf: true,
                         });
                         candidate = Some(candidates.len() - 1);

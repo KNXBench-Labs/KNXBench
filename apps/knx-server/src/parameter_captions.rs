@@ -206,12 +206,25 @@ pub(crate) fn apply(
     };
     let mut filled = Vec::new();
     let mut refused = Vec::new();
-    // At most one active replacement per block (the evaluator refuses competing ones).
-    let renames: HashMap<i64, &knx_productdb::dynamic::ActiveRename> = evaluation
+    // At most one active replacement per (tree, block) — the evaluator refuses competing
+    // ones. The tree key is the rename's own module scope chain, matching the label's scope.
+    let tree_key = |scope: &Option<std::rc::Rc<knx_productdb::dynamic::ModuleScope>>| {
+        scope
+            .as_ref()
+            .map_or(String::new(), |s| s.module_def_id.clone())
+    };
+    let renames: HashMap<(String, i64), &knx_productdb::dynamic::ActiveRename> = evaluation
         .activation
         .renames
         .iter()
-        .map(|rename| (rename.target_node_id, rename))
+        .map(|rename| {
+            let tree = rename
+                .scope
+                .as_ref()
+                .and_then(|c| c.last())
+                .map_or(String::new(), |s| s.module_def_id.clone());
+            ((tree, rename.target_node_id), rename)
+        })
         .collect();
     for (index, label) in evaluation.activation.labels.iter().enumerate() {
         if !matches!(
@@ -223,15 +236,20 @@ pub(crate) fn apply(
         // The replacement is translated by its own identity, never by the block's: the base
         // block translation and its positional fill are not consulted while one is active.
         if let Some(rename) = renames
-            .get(&label.node_id)
-            .filter(|_| label.kind == "ParameterBlock" && label.scope.is_none())
+            .get(&(tree_key(&label.scope), label.node_id))
+            .filter(|_| label.kind == "ParameterBlock")
         {
             // A selected translation with a placeholder is not filled: positional values
             // belong to the base caption's own text parameters. The source text is shown
             // instead and the refusal is named against the replacement's own node — unless
             // the leaf itself names a text parameter (WP-05 `rename-text-parameter-ref-v1`),
             // whose value fills the replacement's placeholder.
-            let selected = translated.get(&(String::new(), rename.node_id));
+            let rename_tree = rename
+                .scope
+                .as_ref()
+                .and_then(|c| c.last())
+                .map_or(String::new(), |s| s.module_def_id.clone());
+            let selected = translated.get(&(rename_tree, rename.node_id));
             let unsupported = selected.and_then(|text| placeholder_name(text));
             let text = match (selected, unsupported) {
                 (Some(text), None) => budget.copy_text(text),

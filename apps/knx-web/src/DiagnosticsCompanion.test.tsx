@@ -498,6 +498,7 @@ describe("one editing workspace", () => {
       "treeUtils.ts",
       "uiLanguage.ts",
       "useActiveOptionScroll.ts", // Issue #51: pure scroll-into-view hook; no API.
+      "useOptionMarquee.ts", // WP-47.1: pure measurement hook; no API, no project writes.
       "useTableColumnWidths.ts", // Validated localStorage preferences, no project writes.
     ]);
 

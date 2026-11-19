@@ -12,7 +12,7 @@
 //! when the parent hands it a new row to prefill from) and does not need
 //! to know anything about sessions, polling or filters to do its job.
 
-import { useEffect, useId, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useState, type CSSProperties, type KeyboardEvent, type MutableRefObject, type Ref } from "react";
 import * as api from "./api";
 import { gatewayRefusalMessage } from "./gatewayRefusal";
 import type { BusWriteResponse, DptInputFormat } from "./api";
@@ -24,6 +24,7 @@ import { DPT_OPTIONS, dptDisplay, retainedDptOptions } from "./dptLabels";
 import { dptText } from "./groupAddressView";
 import { filterPickerAddresses, PICKER_WINDOW } from "./groupAddressPicker";
 import { useActiveOptionScroll } from "./useActiveOptionScroll";
+import { useOptionMarquee } from "./useOptionMarquee";
 
 /// What the parent (`BusMonitorPanel.tsx`) knows about this destination's
 /// DPT resolution *at the moment it was prefilled* — mirrors
@@ -104,6 +105,35 @@ interface BusComposeFormProps {
 // these never even called `t()` at all. All three are now built inside the
 // component from `messages/en.ts`/`messages/de.ts` via `t()`, resolved
 // fresh on every render.
+
+/** WP-47.1: one picker row on a single line; overflowing names marquee on hover. */
+function PickerRow({ ga, selected, activeRef, optionId, onChoose, formatGa, dptLine }: {
+  ga: GroupAddressNode;
+  selected: boolean;
+  activeRef: Ref<HTMLLIElement> | undefined;
+  optionId: string;
+  onChoose: () => void;
+  formatGa: (a: string) => string;
+  dptLine: string;
+}) {
+  const label = `${formatGa(ga.address)} ${ga.name}`;
+  const { rowRef, meterRef, distance, marquee } = useOptionMarquee<HTMLLIElement>(label, true);
+  return (
+    <li key={ga.id} id={optionId}
+      ref={(node) => { rowRef.current = node; if (activeRef && node) (activeRef as MutableRefObject<HTMLLIElement | null>).current = node; }}
+      role="option" aria-selected={selected}
+      title={label}
+      className={selected ? "ga-picker-option selected" : "ga-picker-option"}
+      style={marquee ? { "--option-marquee-distance": `${distance}px` } as CSSProperties : undefined}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onChoose}>
+      <span className="ga-address">{formatGa(ga.address)}</span>
+      <span className="ga-picker-name">{ga.name}</span>
+      <small className="ga-picker-dpt">{dptLine}</small>
+      <span ref={meterRef} className="ga-picker-measure" aria-hidden="true" />
+    </li>
+  );
+}
 
 export default function BusComposeForm({
   destination: initialDestination,
@@ -349,16 +379,16 @@ export default function BusComposeForm({
             <ul className="ga-picker-list" id={pickerListId} role="listbox"
               aria-label={t("busCompose.destinationLabel")} hidden={!pickerOpen}>
               {pickerOpen && pickerShown.map((ga, index) => (
-                <li key={ga.id} id={pickerOptionId(index)}
-                  ref={index === pickerActive ? pickerActiveRef : undefined}
-                  role="option" aria-selected={index === pickerActive}
-                  className={index === pickerActive ? "ga-picker-option selected" : "ga-picker-option"}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => chooseAddress(ga)}>
-                  <span className="ga-address">{formatGa(ga.address)}</span>
-                  <span className="ga-picker-name">{ga.name}</span>
-                  <small className="ga-picker-dpt">{dptText(t, ga, language)}</small>
-                </li>
+                <PickerRow
+                  key={ga.id}
+                  ga={ga}
+                  selected={index === pickerActive}
+                  activeRef={index === pickerActive ? pickerActiveRef : undefined}
+                  optionId={pickerOptionId(index)}
+                  onChoose={() => chooseAddress(ga)}
+                  formatGa={formatGa}
+                  dptLine={dptText(t, ga, language)}
+                />
               ))}
             </ul>
             {pickerOpen && pickerMatches.length === 0 && (

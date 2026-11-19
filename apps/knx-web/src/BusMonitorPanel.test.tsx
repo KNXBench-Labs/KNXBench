@@ -1837,3 +1837,43 @@ describe("WP-26 shared controller join", () => {
     expect([...host!.querySelectorAll("button")].some((b) => b.textContent === "Disconnect")).toBe(true);
   });
 });
+
+describe("WP-47.2 monitor table header and sorting", () => {
+  it("renders a sticky bold header with sort buttons and sorts rows by the clicked column", async () => {
+    apiMock.pollBusTelegrams.mockResolvedValue(telegramsResponse({ telegrams: [
+      row({ seq: 2, source: "1.1.9", destination: "3/0/1" }),
+      row({ seq: 1, source: "1.1.2", destination: "1/2/3" }),
+      row({ seq: 3, source: "1.1.5", destination: "2/0/7" }),
+    ] }));
+    const root = await renderPanel();
+    await flushReattach();
+    try {
+      // Header cells carry aria-sort and a sort button each.
+      const headers = [...host!.querySelectorAll<HTMLElement>("thead th")];
+      expect(headers).toHaveLength(8);
+      for (const th of headers) {
+        expect(th.querySelector("button.monitor-sort")).not.toBeNull();
+        expect(th.getAttribute("aria-sort")).toBe("none");
+      }
+      // Sticky + bold + padded header is a CSS contract.
+      const css = readFileSync("src/styles.css", "utf8");
+      expect(css).toMatch(/\.bus-monitor-table thead th \{\s*position:\s*sticky;[^}]*font-weight:\s*600;[^}]*padding:\s*6px 10px;/s);
+      // Click the Source header: ascending by source address.
+      const sourceHeader = headers.find((h) => h.textContent?.includes("Source"))!;
+      await act(async () => sourceHeader.querySelector("button")!.click());
+      expect(sourceHeader.getAttribute("aria-sort")).toBe("ascending");
+      let cells = [...host!.querySelectorAll("tbody tr")];
+      expect(cells.map((r) => r.querySelector("td:nth-child(3)")?.textContent)).toEqual(["1.1.2", "1.1.5", "1.1.9"]);
+      // Click again: descending.
+      await act(async () => sourceHeader.querySelector("button")!.click());
+      expect(sourceHeader.getAttribute("aria-sort")).toBe("descending");
+      cells = [...host!.querySelectorAll("tbody tr")];
+      expect(cells.map((r) => r.querySelector("td:nth-child(3)")?.textContent)).toEqual(["1.1.9", "1.1.5", "1.1.2"]);
+      // Seq column sorts numerically, not lexically.
+      const seqHeader = headers[0];
+      await act(async () => seqHeader.querySelector("button")!.click());
+      cells = [...host!.querySelectorAll("tbody tr")];
+      expect(cells.map((r) => r.querySelector("td:first-child")?.textContent)).toEqual(["1", "2", "3"]);
+    } finally { await act(async () => root.unmount()); }
+  });
+});

@@ -49,7 +49,23 @@ const BUS_MONITOR_COLUMNS = [
   { id: "control", width: 160, min: 120 },
   { id: "payload", width: 120, min: 100 },
   { id: "decoded", width: 140, min: 48 }
-];
+] as const;
+
+type MonitorColumnId = (typeof BUS_MONITOR_COLUMNS)[number]["id"];
+
+/** WP-47.2: sortable cell value per column; numeric where the data is numeric. */
+function monitorCellValue(column: MonitorColumnId, row: BusTelegramRow, language: string): string | number {
+  switch (column) {
+    case "sequence": return row.seq;
+    case "time": return row.timestamp;
+    case "source": return row.source;
+    case "destination": return row.destinationName ?? row.destination;
+    case "service": return row.service;
+    case "control": return row.control ? `${row.control.priority}/${row.control.hopCount}` : "";
+    case "payload": return row.rawPayload ?? "";
+    case "decoded": return decodedSummary(row, language);
+  }
+}
 
 // The identity of the one session this panel can ever be attached to
 // (`AppState.bus_session` holds at most one — D3/D6). Deliberately not
@@ -340,6 +356,8 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
 
   const [textFilter, setTextFilter] = useState("");
   const [serviceFilters, setServiceFilters] = useState<ServiceFilters>(defaultServiceFilters);
+  // WP-47.2: free column sorting on the monitor table. `null` keeps arrival order.
+  const [columnSort, setColumnSort] = useState<{ column: MonitorColumnId; descending: boolean } | null>(null);
 
   // What `BusComposeForm` is seeded with — `key` changes every time a row
   // is clicked so the form (a child component, task 5) fully remounts and
@@ -819,7 +837,7 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
   // held, not a permanently narrowed view.
   const visibleRows = useMemo(() => {
     const query = textFilter.trim().toLowerCase();
-    return rows.filter((row) => {
+    const filtered = rows.filter((row) => {
       if (isKnownService(row.service) && !serviceFilters[row.service]) return false;
       if (!query) return true;
       const name = (row.destinationName ?? "").toLowerCase();
@@ -827,7 +845,17 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
       // group-address table's filter follows (`gaNotation.ts`).
       return groupAddressMatches(row.destination, query) || name.includes(query);
     });
-  }, [rows, textFilter, serviceFilters]);
+    if (!columnSort) return filtered;
+    // WP-47.2: stable sort keeps arrival order inside equal cells.
+    return [...filtered].sort((a, b) => {
+      const av = monitorCellValue(columnSort.column, a, language);
+      const bv = monitorCellValue(columnSort.column, b, language);
+      const cmp = typeof av === "number" && typeof bv === "number"
+        ? av - bv
+        : String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" });
+      return columnSort.descending ? -cmp : cmp;
+    });
+  }, [rows, textFilter, serviceFilters, columnSort, language]);
 
   // T25. One sentence for whichever state the search is in, for both the
   // live region and — by being `null` in the `"idle"` phase — the decision
@@ -1254,14 +1282,22 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
           >
             <thead>
               <tr>
-                <th>{t("busMonitor.column.seq")}</th>
-                <th>{t("busMonitor.column.time")}</th>
-                <th>{t("busMonitor.column.source")}</th>
-                <th>{t("busMonitor.column.destination")}</th>
-                <th>{t("busMonitor.column.service")}</th>
-                <th>{t("busMonitor.column.control")}</th>
-                <th>{t("busMonitor.column.payload")}</th>
-                <th>{t("busMonitor.column.decoded")}</th>
+                {BUS_MONITOR_COLUMNS.map(({ id }) => {
+                  const active = columnSort?.column === id;
+                  return (
+                    <th key={id} scope="col" aria-sort={active ? (columnSort!.descending ? "descending" : "ascending") : "none"}>
+                      <button type="button" className="monitor-sort"
+                        onClick={() => setColumnSort(current =>
+                          current?.column === id
+                            ? { column: id, descending: !current.descending }
+                            : { column: id, descending: false })}
+                        aria-label={t("busMonitor.sortBy", { column: t(`busMonitor.column.${id === "sequence" ? "seq" : id}`) })}>
+                        <span>{t(`busMonitor.column.${id === "sequence" ? "seq" : id}`)}</span>
+                        <span className="monitor-sort-indicator" aria-hidden="true">{active ? (columnSort!.descending ? "↓" : "↑") : ""}</span>
+                      </button>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>

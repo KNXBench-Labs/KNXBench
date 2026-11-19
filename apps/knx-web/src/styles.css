@@ -3018,6 +3018,20 @@ main {
   border-bottom: 1px solid var(--knx-border);
   text-align: left;
 }
+/* WP-47.2: sticky, bold header row with visible padding; the sort button
+   fills the cell so the whole header is clickable. */
+.bus-monitor-table thead th {
+  position: sticky; top: 0; z-index: 1; background: var(--knx-surface);
+  font-weight: 600; padding: 6px 10px;
+}
+.bus-monitor-table thead th .monitor-sort {
+  display: inline-flex; align-items: baseline; gap: 4px; width: 100%;
+  background: transparent; color: inherit; border: 0; box-shadow: none;
+  padding: 0; font: inherit; font-weight: inherit; text-align: left; cursor: pointer;
+}
+.bus-monitor-table thead th .monitor-sort-indicator { min-width: 1ch; color: var(--knx-accent); }
+.bus-monitor-table thead th[aria-sort="ascending"] .monitor-sort,
+.bus-monitor-table thead th[aria-sort="descending"] .monitor-sort { color: var(--knx-accent); }
 
 .bus-monitor-dest-name {
   color: var(--knx-muted);

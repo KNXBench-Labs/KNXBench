@@ -117,6 +117,19 @@ fn labels(layout: &ParameterLayout, nodes: &[i64]) -> Vec<(String, String, Cell,
         .collect()
 }
 
+fn refs(layout: &ParameterLayout, nodes: &[i64]) -> Vec<(String, Option<String>)> {
+    nodes
+        .iter()
+        .filter_map(|node| layout.button("", *node))
+        .map(|literal| {
+            (
+                literal.element_id.clone(),
+                literal.text_parameter_ref.clone(),
+            )
+        })
+        .collect()
+}
+
 fn bound(xml: &str) -> Vec<(String, String, Cell, String)> {
     let fixture = ingest(xml);
     let layout = load(&fixture.conn, "A-FIX").unwrap();
@@ -387,7 +400,6 @@ fn only_the_exact_literal_form_is_admitted() {
         r##"<Button Id="B-ONLY" Text="#" Cell="1,2"/>"##,
         r#"<Button Id="B-ONLY" Text="Value {{0}}" Cell="1,2"/>"#,
         r#"<Button Id="B-ONLY" Text="Half }} open" Cell="1,2"/>"#,
-        r#"<Button Id="B-ONLY" Text="Param" TextParameterRefId="PR-EDIT" Cell="1,2"/>"#,
         r#"<Button Id="B-ONLY" Text="Local" Access="ReadWrite" Cell="1,2"/>"#,
         r#"<Button Id="B-ONLY" Text="Odd" Flavor="x" Cell="1,2"/>"#,
         r#"<Button xmlns:x="urn:x" Id="B-ONLY" x:Text="Qualified" Cell="1,2"/>"#,
@@ -590,5 +602,34 @@ fn a_grid_button_below_a_choice_still_reads_and_binds() {
     assert_eq!(
         binding_after(&nested, DRIFT),
         ButtonBinding::StructuralDrift
+    );
+}
+
+#[test]
+fn a_button_text_parameter_ref_is_admitted_and_a_placeholder_without_it_is_not() {
+    let with_ref = ONLY.replace(
+        B_ONLY,
+        r#"<Button Id="B-REF" Text="Go {{0}}" Cell="1,2" TextParameterRefId="PR-EDIT"/>"#,
+    );
+    let with_placeholder_only = ONLY.replace(
+        B_ONLY,
+        r#"<Button Id="B-PLAIN-PH" Text="No ref {{0}}" Cell="1,2"/>"#,
+    );
+    // The ref makes the placeholder admissible and is retained on the literal.
+    let fixture = ingest(&with_ref);
+    let nodes = buttons(&fixture.conn, "A-FIX");
+    let layout = load(&fixture.conn, "A-FIX").unwrap();
+    assert_eq!(
+        refs(&layout, &nodes),
+        vec![("B-REF".to_string(), Some("PR-EDIT".to_string()))],
+    );
+    // Without the ref the placeholder refuses the whole label.
+    let fixture = ingest(&with_placeholder_only);
+    let nodes = buttons(&fixture.conn, "A-FIX");
+    let layout = load(&fixture.conn, "A-FIX").unwrap();
+    assert_eq!(
+        refs(&layout, &nodes),
+        vec![],
+        "placeholder without ref is refused"
     );
 }

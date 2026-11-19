@@ -6813,6 +6813,12 @@ fn assemble_parameter_panel_for_project(
                 ));
             };
 
+    let device_evaluation = evaluate_device(products, &program_id, stored, &module_instances, language)?;
+    let productdb_evaluation = knx_productdb::device_evaluation::DeviceEvaluation {
+        values: device_evaluation.values.clone(),
+        activation: device_evaluation.activation.clone(),
+        ..Default::default()
+    };
     let DeviceEvaluation {
         mut caption_fills,
         ref_ids,
@@ -6823,7 +6829,7 @@ fn assemble_parameter_panel_for_project(
         diagnostics: evaluation_diagnostics,
         values,
         activation,
-    } = evaluate_device(products, &program_id, stored, &module_instances, language)?;
+    } = device_evaluation;
     // ADR-0177: axis captions with a declared `TextParameterRefId` resolve the
     // named text parameter in the program scope, reusing the device's own
     // evaluated values via a borrowed view (no second evaluation).
@@ -7413,12 +7419,57 @@ fn assemble_parameter_panel_for_project(
                     .map(|literal| (button, literal))
             })
             .map(|(button, literal)| {
+                // WP-05 `button-text-parameter-ref-v1`: a placeholder in the button's
+                // `@Text` fills from the text parameter its `@TextParameterRefId` names,
+                // resolved in the button's own scope, through the shared budget.
+                let text = match &literal.text_parameter_ref {
+                    Some(reference) if literal.text.contains("{{") => {
+                        // WP-05 `button-text-parameter-ref-v1`: fill the placeholder
+                        // from the named text parameter through the shared budget.
+                        let mut parameters =
+                            knx_productdb::text_parameters::TextParameters::load(
+                                products, &program_id,
+                            )
+                            .map_err(|e| e.to_string())?;
+                        parameters
+                            .extend_facts(products, &program_id, &[reference.as_str()])
+                            .map_err(|e| e.to_string())?;
+                        let place = match button.scope.as_ref() {
+                            None => knx_productdb::text_parameters::TextParameterScope::Program,
+                            Some(s) => knx_productdb::text_parameters::TextParameterScope::Module(
+                                s.module_id.as_deref(),
+                            ),
+                        };
+                        let texts = knx_productdb::text_parameters::DeviceTexts {
+                            parameters: &parameters,
+                            evaluation: &productdb_evaluation,
+                            module_instances: &module_instances,
+                        };
+                        let value = {
+                            let budget = caption_fills.budget_mut();
+                            texts
+                                .fill_rename_scoped(
+                                    &literal.text,
+                                    place,
+                                    button.node_id,
+                                    Some(reference),
+                                    budget,
+                                )
+                                .map_err(|e| e.to_string())?
+                        };
+                        caption_fills
+                            .admit_copy(&value.text)
+                            .map_err(|e| e.to_string())?;
+                        value.text
+                    }
+                    _ => caption_fills
+                        .copy_text(Some(&literal.text))?
+                        .expect("present literal"),
+                };
                 Ok(crate::routes::ParameterPassiveLabelDto {
                     kind: crate::routes::ParameterPassiveLabelKindDto::ButtonLiteral,
                     element_id: literal.element_id.clone(),
-                    text: caption_fills
-                        .copy_text(Some(&literal.text))?
-                        .expect("present literal"),
+                    text,
                     text_fill: None,
                     cell: Some(crate::parameter_grid::cell_dto(literal.cell)),
                     group: group_dto(literal.group.clone(), &mut caption_fills)?,

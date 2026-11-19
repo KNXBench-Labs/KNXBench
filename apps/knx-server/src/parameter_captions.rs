@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use knx_productdb::device_evaluation::DeviceEvaluation;
-use knx_productdb::dynamic::TextProjectionBudget;
+use knx_productdb::dynamic::{TextProjectionBudget, TextProjectionError};
 use knx_productdb::text_parameters::{DeviceTexts, TextParameters};
 use knx_projection::TextFill;
 
@@ -18,6 +18,17 @@ pub(crate) struct CaptionFills {
 }
 
 impl CaptionFills {
+    /// The shared text-projection budget, for callers that fill one more
+    /// positional text through [`DeviceTexts`] (WP-05 button text refs).
+    pub(crate) fn budget_mut(&mut self) -> &mut TextProjectionBudget {
+        &mut self.budget
+    }
+
+    /// Charge one already-filled text against the shared budget.
+    pub(crate) fn admit_copy(&mut self, text: &str) -> Result<(), TextProjectionError> {
+        self.budget.admit_copy(text)
+    }
+
     pub(crate) fn load_grid_axes(
         &mut self,
         products: &knx_productdb::Connection,

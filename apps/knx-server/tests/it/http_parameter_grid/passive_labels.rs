@@ -223,6 +223,41 @@ async fn a_mixed_program_returns_literal_passive_labels_and_unchanged_fields() {
 }
 
 #[tokio::test]
+async fn a_button_text_parameter_ref_fills_the_passive_label() {
+    // PT-T text parameter with a default, plus a Button whose @Text placeholder names it.
+    let program = ONLY
+        .replace(
+            r#"<ParameterType Id="PT-NUMBER">"#,
+            r#"<ParameterType Id="PT-T"><TypeText SizeInBit="240"/></ParameterType><ParameterType Id="PT-NUMBER">"#,
+        )
+        .replace(
+            r#"<Parameter Id="P-OTHER" Text="Fictional second value" ParameterType="PT-NUMBER" Value="23" Access="ReadWrite"/>"#,
+            r#"<Parameter Id="P-OTHER" Text="Fictional second value" ParameterType="PT-NUMBER" Value="23" Access="ReadWrite"/><Parameter Id="P-TITLE" Text="Fictional title" ParameterType="PT-T" Value="Attic"/>"#,
+        )
+        .replace(
+            r#"<ParameterRef Id="PR-OTHER" RefId="P-OTHER"/>"#,
+            r#"<ParameterRef Id="PR-OTHER" RefId="P-OTHER"/><ParameterRef Id="PR-TITLE" RefId="P-TITLE"/>"#,
+        )
+        .replace(
+            r#"<Button Id="B-ONLY" Text="Fictional source label" EventHandlerOnline="ConnectionOriented" EventHandler="fictionalCallback" EventHandlerParameters="{ &quot;fixture&quot;: 7 }" Cell="1,2"/>"#,
+            r#"<Button Id="B-ONLY" Text="Open {{0}}" Cell="1,2" TextParameterRefId="PR-TITLE"/>"#,
+        );
+    let (_dir, state) = state(&program);
+    let dto = panel_at(&state, PARAMETERS).await;
+    let section = device_section(&dto);
+    let labels = section["passiveLabels"].as_array().unwrap();
+    let button = labels
+        .iter()
+        .find(|l| l["elementId"] == "B-ONLY")
+        .expect("button label present");
+    assert_eq!(
+        button["text"],
+        json!("Open Attic"),
+        "product default fills the placeholder"
+    );
+}
+
+#[tokio::test]
 async fn a_sole_button_program_keeps_a_passive_only_section_with_its_grid() {
     let dto = panel(ONLY).await;
     let section = device_section(&dto);

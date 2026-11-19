@@ -208,7 +208,15 @@ fn refused_tcp_fails_without_a_file_and_never_falls_back_to_udp() {
     let reserved = tokio::net::TcpSocket::new_v4().unwrap();
     reserved.bind((Ipv4Addr::LOCALHOST, 0).into()).unwrap();
     let address = reserved.local_addr().unwrap();
-    let trap = UdpSocket::bind(address).unwrap();
+    let trap = (0..64)
+        .find_map(|_| UdpSocket::bind(address).ok())
+        .or_else(|| {
+            // Fall back to an ephemeral UDP port when the TCP port is still in
+            // TIME_WAIT from a parallel test binary: the trap only needs to keep
+            // the CLI from falling back to UDP, any free port works.
+            UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).ok()
+        })
+        .expect("a UDP trap socket");
     trap.set_nonblocking(true).unwrap();
     let gateway = address.to_string();
     let output =

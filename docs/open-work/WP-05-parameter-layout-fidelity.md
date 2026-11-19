@@ -39,7 +39,10 @@ feature at a time, never inferred manufacturer behaviour.
   renderable grid (`nested-block-cell-deep-v2`). Nested-block actions remain
   open.
 - Button actions inside grid cells (`EventHandler*`, online callbacks, own
-  `Access`, translated or text-parameter Button text, module-scoped Buttons).
+  `Access`, translated Button text, module-scoped Buttons). A Button `@Text`
+  placeholder filled from the Button's own `@TextParameterRefId` is delivered
+  since 19 November 2026 (`button-text-parameter-ref-v1`); the action itself is
+  still never run.
   Admitted literal in-cell text alone is delivered as passive labels. The
   [WP05-B clarification](../contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1)
   (14 November 2026) records the unchanged reporting policy for a reached

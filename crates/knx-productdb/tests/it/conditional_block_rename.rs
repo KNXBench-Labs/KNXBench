@@ -28,7 +28,7 @@ const PROGRAM: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/20"><Manufactu
 <ParameterBlock Id="PB-1" Name="main" Text="Base one">
 <ParameterRefRef RefId="P-1_R-1"/>
 <choose ParamRefId="P-1_R-1">
-<when test="1"><ParameterBlockRename Id="PR-1" RefId="PB-1" Text="fixture_switch_py"/></when>
+<when test="1"><ParameterBlockRename Id="PR-1" RefId="PB-1" Text="fixture_switch_py" TextParameterRefId="P-1_R-1"/></when>
 <when test="2"><ParameterBlockRename Id="PR-2" RefId="PB-1" Text="fixture_switch_pz"/></when>
 </choose>
 </ParameterBlock>
@@ -334,6 +334,13 @@ fn every_refused_shape_keeps_the_base_caption_and_stays_reported() {
     let converted = evaluate(&trees, &with_in(&conn, "A-1", &[("P-3_R-3", "2")]));
     assert_eq!(replacement(&converted, block), Some("Converted"));
     assert_eq!(converted.renames[0].kind, "Rename");
+    // A leaf's own `@TextParameterRefId` is retained on the accepted rename.
+    let with_ref = evaluate(&trees, &with_in(&conn, "A-1", &[("P-1_R-1", "1")]));
+    assert_eq!(with_ref.renames.len(), 1);
+    assert_eq!(
+        with_ref.renames[0].text_parameter_ref.as_deref(),
+        Some("P-1_R-1")
+    );
 }
 
 #[test]

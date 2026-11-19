@@ -228,7 +228,9 @@ pub(crate) fn apply(
         {
             // A selected translation with a placeholder is not filled: positional values
             // belong to the base caption's own text parameters. The source text is shown
-            // instead and the refusal is named against the replacement's own node.
+            // instead and the refusal is named against the replacement's own node — unless
+            // the leaf itself names a text parameter (WP-05 `rename-text-parameter-ref-v1`),
+            // whose value fills the replacement's placeholder.
             let selected = translated.get(&(String::new(), rename.node_id));
             let unsupported = selected.and_then(|text| placeholder_name(text));
             let text = match (selected, unsupported) {
@@ -242,6 +244,23 @@ pub(crate) fn apply(
                     budget.copy_text(name).map_err(|e| e.to_string())?,
                 ));
             }
+            let text = if rename.text.contains("{{") && rename.text_parameter_ref.is_some() {
+                let value = texts
+                    .fill_rename(
+                        &text,
+                        None,
+                        rename.node_id,
+                        rename.text_parameter_ref.as_deref(),
+                        &mut budget,
+                    )
+                    .map_err(|e| e.to_string())?;
+                if value.source != knx_productdb::dynamic::PositionalSource::NoPlaceholder {
+                    budget.admit_copy(&text).map_err(|e| e.to_string())?;
+                }
+                value.text
+            } else {
+                text
+            };
             filled.push((index, text, None));
             continue;
         }

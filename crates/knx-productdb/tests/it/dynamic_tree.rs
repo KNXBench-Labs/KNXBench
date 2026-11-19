@@ -664,6 +664,7 @@ fn nd(node_id: i64, parent_id: Option<i64>, kind: &str) -> DynamicNode {
         number: None,
         inline: false,
         control_kind: None,
+        text_parameter_ref: None,
     }
 }
 

@@ -39,6 +39,7 @@ const PROGRAM: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/11"><Manufactu
 <ParameterSeparator Id="PS-1" Text="-- {{0}} --" TextParameterRefId="P-2_R-2"/>
 <ParameterRefRef RefId="P-1_R-1"/>
 <ComObjectRefRef RefId="O-1_R-1"/>
+<ParameterBlockRename Id="PR-1" RefId="PB-1" Text="Renamed {{0}}" TextParameterRefId="P-1_R-1"/>
 </ParameterBlock>
 </Channel>
 </Dynamic>
@@ -144,11 +145,19 @@ fn the_four_hosts_store_their_reference_and_report_nothing() {
             "{element}"
         );
     }
+    assert_eq!(
+        reference(
+            &conn,
+            "dynamic_node WHERE element_id = 'PR-1'"
+        ),
+        Some("P-1_R-1".to_string()),
+    );
     // Every other node, and an object ref without one, stays NULL.
     let others: i64 = conn
         .query_row(
             "SELECT count(*) FROM dynamic_node WHERE text_parameter_ref_id IS NOT NULL
-             AND kind NOT IN ('Channel', 'ParameterBlock', 'ParameterSeparator')",
+             AND kind NOT IN ('Channel', 'ParameterBlock', 'ParameterSeparator',
+                              'ParameterBlockRename', 'Rename')",
             [],
             |r| r.get(0),
         )
@@ -190,7 +199,8 @@ fn the_queries_answer_per_program_with_product_defaults() {
         )
         .unwrap()
     };
-    assert_eq!(refs.dynamic.len(), 4);
+    assert_eq!(refs.dynamic.len(), 5);
+    assert_eq!(refs.dynamic[&node("PR-1")], "P-1_R-1");
     assert_eq!(refs.dynamic[&node("CH-1")], "P-1_R-1");
     assert_eq!(refs.dynamic[&node("PS-1")], "P-2_R-2");
     assert_eq!(node("MD-1_CH-1").0, "MD-1");
@@ -236,6 +246,7 @@ fn v22_to_v23_reproduces_a_fresh_install() {
         let mut expected = vec![
             format!("{DYNAMIC}/Channel"),
             format!("{DYNAMIC}/ParameterBlock"),
+            format!("{DYNAMIC}/ParameterBlockRename"),
             format!("{DYNAMIC}/ParameterSeparator"),
             "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/ModuleDefs/ModuleDef/Dynamic/Channel".to_string(),
             "/KNX/ManufacturerData/Manufacturer/ApplicationPrograms/ApplicationProgram/Static/ComObjectRefs/ComObjectRef".to_string(),

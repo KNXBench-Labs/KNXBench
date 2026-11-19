@@ -152,10 +152,11 @@ fn spec_for(kind: &str) -> ElementSpec {
         // WP-05: a literal leaf retitling its enclosing block. Only these three attributes
         // are the modelled contract; anything else stays in `extra` and is reported.
         "ParameterBlockRename" | "Rename" => ElementSpec {
-            known: &["Id", "RefId", "Text"],
+            known: &["Id", "RefId", "Text", "TextParameterRefId"],
             id_attr: Some("Id"),
             ref_attrs: &["RefId"],
             text_attr: Some("Text"),
+            text_parameter_ref_attr: Some("TextParameterRefId"),
             ..UNMODELLED
         },
         "ParameterRefRef" | "ComObjectRefRef" => ElementSpec {

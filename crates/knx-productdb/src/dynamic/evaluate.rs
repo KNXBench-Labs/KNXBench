@@ -349,6 +349,11 @@ pub struct DynamicNode {
     /// from `parameter_ref`/`parameter`/`parameter_type`; hand-built trees
     /// (unit tests) set it directly.
     pub control_kind: Option<ControlKind>,
+    /// `TextParameterRefId` verbatim (WP-05 `rename-text-parameter-ref-v1`):
+    /// lets a rename leaf's replacement text fill from the named text
+    /// parameter. `None` on databases before product DB v35 and for every
+    /// node without the attribute.
+    pub text_parameter_ref: Option<String>,
 }
 
 /// A `Dynamic` tree (one `(program_id, module_def_id)` scope, design D2),
@@ -537,7 +542,7 @@ pub fn load_tree(
     let mut stmt = conn.prepare(
         "SELECT node_id, parent_id, kind, element_id, ref_id, test, is_default,
                 text, value, name, number, access, extra IS NOT NULL,
-                COALESCE(inline, 0)
+                COALESCE(inline, 0), text_parameter_ref_id
          FROM dynamic_node
          WHERE program_id = ?1 AND module_def_id = ?2
          ORDER BY node_id",
@@ -562,6 +567,7 @@ pub fn load_tree(
                     number: r.get(10)?,
                     inline: r.get::<_, i64>(13)? == 1,
                     control_kind: None,
+                    text_parameter_ref: r.get(14)?,
                 },
                 r.get(11)?,
                 r.get(12)?,
@@ -1569,6 +1575,9 @@ pub struct ActiveRename {
     pub target_id: String,
     /// The leaf's `@Text` as stored.
     pub text: String,
+    /// The leaf's `@TextParameterRefId`, when it has one: the replacement text
+    /// fills from this text parameter (WP-05 `rename-text-parameter-ref-v1`).
+    pub text_parameter_ref: Option<String>,
 }
 
 /// One `Diagnostic`, qualified by where it was found (design D14).
@@ -2688,6 +2697,7 @@ fn collect_rename(
         target_node_id: target.node_id,
         target_id: target_id.to_string(),
         text: text.to_string(),
+        text_parameter_ref: node.text_parameter_ref.clone(),
     });
     true
 }

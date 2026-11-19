@@ -16,6 +16,7 @@ fn node(id: i64, parent: Option<i64>, kind: &str) -> DynamicNode {
         number: None,
         control_kind: None,
         inline: false,
+    text_parameter_ref: None,
     }
 }
 
@@ -35,10 +36,23 @@ fn rename(
     target: &str,
     text: &str,
 ) -> DynamicNode {
+    rename_with_ref(id, parent, kind, element, target, text, None)
+}
+
+fn rename_with_ref(
+    id: i64,
+    parent: i64,
+    kind: &str,
+    element: &str,
+    target: &str,
+    text: &str,
+    text_parameter_ref: Option<&str>,
+) -> DynamicNode {
     DynamicNode {
         element_id: Some(element.into()),
         ref_id: Some(target.into()),
         text: Some(text.into()),
+        text_parameter_ref: text_parameter_ref.map(str::to_string),
         ..node(id, Some(parent), kind)
     }
 }
@@ -610,4 +624,22 @@ fn a_lone_candidate_on_an_exhausted_settling_budget_is_not_applied() {
     let short = settle_with_spare(lone(), MAX_EVALUATION_WORK - total + 1);
     assert!(short.work_budget_exhausted);
     assert!(short.renames.is_empty());
+}
+
+#[test]
+fn a_rename_leaf_keeps_its_text_parameter_ref_for_the_projection() {
+    let leaf = rename_with_ref(1, 0, "ParameterBlockRename", "PR-1", "PB-1", "New", Some("P-9_R-9"));
+    let mut nodes = vec![block(0, None, "PB-1", "Base")];
+    nodes.push(leaf);
+    let activation = run(nodes);
+    assert!(refused(&activation).is_empty());
+    assert_eq!(activation.renames.len(), 1);
+    assert_eq!(
+        activation.renames[0].text_parameter_ref.as_deref(),
+        Some("P-9_R-9")
+    );
+    // A leaf without the attribute reports none.
+    let plain = rename(2, 0, "Rename", "PR-2", "PB-1", "Plain");
+    let activation = run(vec![block(0, None, "PB-1", "Base"), plain]);
+    assert_eq!(activation.renames[0].text_parameter_ref, None);
 }

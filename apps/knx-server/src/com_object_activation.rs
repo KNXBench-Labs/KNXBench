@@ -385,6 +385,7 @@ mod tests {
             number: None,
             control_kind: None,
             inline: false,
+            text_parameter_ref: None,
         }
     }
 

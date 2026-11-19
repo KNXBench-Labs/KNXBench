@@ -29,17 +29,20 @@ const PROGRAM: &str = r##"<?xml version="1.0" encoding="utf-8"?>
 <ApplicationPrograms><ApplicationProgram Id="A-1" Name="Fictional" ApplicationVersion="1" MaskVersion="MV-0701">
 <Static><ParameterTypes>
 <ParameterType Id="PT-N" Name="Number"><TypeNumber SizeInBit="8" Type="unsignedInt" minInclusive="0" maxInclusive="255" /></ParameterType>
+<ParameterType Id="PT-T" Name="Text"><TypeText SizeInBit="240" /></ParameterType>
 </ParameterTypes><Parameters>
 <Parameter Id="P-S" Name="Selector" ParameterType="PT-N" Value="0" />
 <Parameter Id="P-R" Name="ReadOnlySelector" ParameterType="PT-N" Value="0" />
 <Parameter Id="P-C" Name="Competing" ParameterType="PT-N" Value="1" />
+<Parameter Id="P-T" Name="PageTitle" ParameterType="PT-T" Value="" />
 </Parameters><ParameterRefs>
 <ParameterRef Id="R-S" RefId="P-S" /><ParameterRef Id="R-R" RefId="P-R" /><ParameterRef Id="R-C" RefId="P-C" />
+<ParameterRef Id="R-T" RefId="P-T" />
 </ParameterRefs></Static><Dynamic>
-<ParameterBlock Id="PB-1" Text="Base page"><ParameterRefRef RefId="R-S" />
+<ParameterBlock Id="PB-1" Text="Base page"><ParameterRefRef RefId="R-S" /><ParameterRefRef RefId="R-T" />
 <choose ParamRefId="R-S">
 <when test="1"><ParameterBlockRename Id="PR-1" RefId="PB-1" Text="fixture_switch_py page" /></when>
-<when test="2"><ParameterBlockRename Id="PR-2" RefId="PB-1" Text="fixture_switch_pz page" /></when>
+<when test="2"><ParameterBlockRename Id="PR-2" RefId="PB-1" Text="fixture_switch_pz {{0}}" TextParameterRefId="R-T" /></when>
 </choose></ParameterBlock>
 <ParameterBlock Id="PB-2" Text="Base locked" Access="Read"><ParameterRefRef RefId="R-R" />
 <choose ParamRefId="R-R"><when test="1"><ParameterBlockRename Id="PR-3" RefId="PB-2" Text="Renamed locked" /></when></choose></ParameterBlock>
@@ -215,7 +218,7 @@ async fn edits_undo_and_redo_move_the_caption_with_the_value_under_a_stable_iden
     let mut seen = Vec::new();
     for (raw, english, german) in [
         ("1", "fixture_switch_py page", "probe_de_py"),
-        ("2", "fixture_switch_pz page", "probe_de_pz"),
+        ("2", "fixture_switch_pz ", "probe_de_pz"),
         ("0", "Base page", "Basisseite"),
     ] {
         assert_eq!(set(&app, "R-S", raw).await, StatusCode::OK);
@@ -230,16 +233,16 @@ async fn edits_undo_and_redo_move_the_caption_with_the_value_under_a_stable_iden
         seen,
         [
             "fixture_switch_py page",
-            "fixture_switch_pz page",
+            "fixture_switch_pz ",
             "Base page"
         ]
     );
 
     // 0 -> undo -> 2, undo -> 1, redo -> 2, redo -> 0, one caption per step.
     for (step, expected) in [
-        ("undo", "fixture_switch_pz page"),
+        ("undo", "fixture_switch_pz "),
         ("undo", "fixture_switch_py page"),
-        ("redo", "fixture_switch_pz page"),
+        ("redo", "fixture_switch_pz "),
         ("redo", "Base page"),
     ] {
         history(&app, step).await;
@@ -503,5 +506,30 @@ async fn a_large_selected_translation_is_charged_for_every_copy_it_takes() {
     assert_eq!(
         group_of(&panel(&app, None).await, "R-S").1,
         json!("Base page")
+    );
+}
+
+#[tokio::test]
+async fn a_rename_leaf_fills_its_placeholder_from_its_own_text_parameter() {
+    let (_dir, products_one) = products();
+    let state_one = Arc::new(state(products_one, &[]));
+    let app = knx_server::app(state_one.clone(), None);
+    assert_eq!(set(&app, "R-S", "2").await, StatusCode::OK);
+    // A text parameter has no numeric range; the stored value must be accepted as-is.
+    let status = set(&app, "R-T", "Attic").await;
+    assert_eq!(status, StatusCode::OK, "R-T write refused: {status}");
+    let dto = panel(&app, None).await;
+    assert_eq!(
+        group_of(&dto, "R-S"),
+        ("PB-1".into(), json!("fixture_switch_pz Attic"))
+    );
+    let (_dir2, products_two) = products();
+    let state_two = Arc::new(state(products_two, &[]));
+    let app = knx_server::app(state_two.clone(), None);
+    assert_eq!(set(&app, "R-S", "2").await, StatusCode::OK);
+    let dto = panel(&app, None).await;
+    assert_eq!(
+        group_of(&dto, "R-S"),
+        ("PB-1".into(), json!("fixture_switch_pz "))
     );
 }

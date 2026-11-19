@@ -131,12 +131,29 @@ impl<'a> DeviceTexts<'a> {
             None => TextParameterScope::Program,
             Some(s) => TextParameterScope::Module(s.module_id.as_deref()),
         };
+        self.fill_rename_scoped(text, place, node_id, reference, budget)
+    }
+
+    /// [`Self::fill_rename`] with an explicit text-parameter place, for callers
+    /// that already resolved the scope chain (WP-05 `rename-text-parameter-ref-v1`).
+    pub fn fill_rename_scoped(
+        &self,
+        text: &str,
+        place: TextParameterScope,
+        node_id: i64,
+        reference: Option<&str>,
+        budget: &mut TextProjectionBudget,
+    ) -> Result<PositionalText, TextProjectionError> {
         let reference = reference.or_else(|| {
-            let tree = scope.map_or("", |s| s.module_def_id.as_str());
+            let tree = match &place {
+                TextParameterScope::Program | TextParameterScope::Module(_) => "",
+                TextParameterScope::Instance(_) => "",
+            }
+            .to_string();
             self.parameters
                 .refs
                 .dynamic
-                .get(&(tree.to_string(), node_id))
+                .get(&(tree, node_id))
                 .map(String::as_str)
         });
         fill_positional(text, self.value(reference, place), budget)

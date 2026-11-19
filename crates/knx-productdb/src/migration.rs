@@ -1046,10 +1046,7 @@ fn backfill_text_parameter_refs(
             }
             continue;
         }
-        if name != "ComObjectRef"
-            && name != "ParameterBlockRename"
-            && name != "Rename"
-        {
+        if name != "ComObjectRef" && name != "ParameterBlockRename" && name != "Rename" {
             continue;
         }
         let Some(program_id) = program.as_deref().filter(|p| owned.contains(*p)) else {

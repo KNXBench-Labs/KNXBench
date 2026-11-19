@@ -231,11 +231,7 @@ async fn edits_undo_and_redo_move_the_caption_with_the_value_under_a_stable_iden
     }
     assert_eq!(
         seen,
-        [
-            "fixture_switch_py page",
-            "fixture_switch_pz ",
-            "Base page"
-        ]
+        ["fixture_switch_py page", "fixture_switch_pz ", "Base page"]
     );
 
     // 0 -> undo -> 2, undo -> 1, redo -> 2, redo -> 0, one caption per step.

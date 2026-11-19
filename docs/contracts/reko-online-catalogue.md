@@ -1,7 +1,7 @@
 # Reko online catalogue: provider and KNXBench API contract
 
-Status: branch WIP, 16 November 2026; owner-approved direction, **not accepted or
-released**. [ADR-0176](../adr/0176-manual-reko-catalogue-acquisition.md) owns the
+Status: delivered on main 16 November 2026 as `c079ec8d6` (not in Alpha 22,
+release/deployment separate). [ADR-0176](../adr/0176-manual-reko-catalogue-acquisition.md) owns the
 decision; [LS-02](../open-work/LS-02-online-catalogue.md) owns the work record.
 
 ## Evidence and trust boundary
@@ -146,7 +146,7 @@ calendar/reset semantics with a fixed 24-hour-after-download timer. Block expiry
 never schedules a login, sync or download. A process restart is not quota renewal;
 the provider may still reject the next explicitly requested action.
 
-## KNXBench-facing HTTP API (branch WIP)
+## KNXBench-facing HTTP API
 
 Base `/api/online-catalogue`; source placeholder `S` is currently `reko`.
 The existing server authentication covers this surface. It creates no new
@@ -219,7 +219,7 @@ Default key:
 `parent(default_remembered_password_path())/.knxbench-config/online-catalogue-reko.key`.
 Neither is derived solely from `KNX_DATA_DIR` or the current project. Exact XDG,
 Docker and backup/recovery guidance is in the
-[manual](../manual/user-guide/11-web-and-docker.md#reko-configuration-and-key-persistence-branch-wip).
+[manual](../manual/user-guide/11-web-and-docker.md#reko-configuration-and-key-persistence).
 Private acquisition/configuration directories are fenced from project-file and
 static-file routes; filesystem access by the host administrator remains outside
 that API protection.

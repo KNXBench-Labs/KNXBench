@@ -443,8 +443,12 @@ Secure/version/capacity attributes remain manufacturer source strings, not parse
 <a id="catalogue-updates-come-only-from-files-you-supply-2026-10-12"></a>
 ### Catalogue updates from supplied files
 
-**Ledger status:** `IN_PROGRESS` ([FUTURE-05](status/LEDGER.md#snapshot-ids)).
-The accepted/released workflow uses supplied files, not the KNX Online Catalog. An owner-authorized Reko source is branch WIP, pending final review/package acceptance and delivery; no released online-source claim. Full database backups and plain install remain separate from the reviewed update/restore workflow.
+**Ledger status:** `DONE` ([FUTURE-05](status/LEDGER.md#snapshot-ids)).
+The accepted/released workflow uses supplied files; the owner-authorized Reko
+online source shipped on main 16 November 2026 as `c079ec8d6` (manual sync,
+encrypted account, size/hash-verified downloads; not in Alpha 22, no
+real-provider authenticated run). Full database backups and plain install
+remain separate from the reviewed update/restore workflow.
 [Details and history](limitations/catalogue-updates-from-supplied-files.md)
 
 <a id="catalogue-checked-parameter-editors"></a>

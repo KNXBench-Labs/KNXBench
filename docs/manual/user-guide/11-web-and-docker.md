@@ -69,7 +69,7 @@ expecting a user interface.
 
 `KNX_DATA_DIR` alone does not relocate all application state. Installed products
 and the Reko branch cache follow `XDG_DATA_HOME`; its encryption key follows
-`XDG_CONFIG_HOME`. See [Reko persistence](#reko-configuration-and-key-persistence-branch-wip)
+`XDG_CONFIG_HOME`. See [Reko persistence](#reko-configuration-and-key-persistence)
 before configuring a Reko-enabled source build.
 
 ## The container
@@ -174,10 +174,10 @@ those devices' **Parameters** tab and choose **Restore from original .knxproj…
 project byte for byte are installed; save the project afterwards so its file carries
 them from then on.
 
-### Reko configuration and key persistence (branch WIP)
+### Reko configuration and key persistence
 
-**Availability:** this describes the owner-authorized Reko branch, not a feature
-accepted or shipped in Alpha 22. Its [workflow](05-devices-and-products.md#reko-online-catalogue-branch-wip)
+**Availability:** shipped on main since 16 November 2026 (`c079ec8d6`), not
+included in the Alpha 22 release. Its [workflow](05-devices-and-products.md#reko-online-catalogue)
 uses one account for everyone on this KNXBench installation. Account secrets
 are encrypted separately from ordinary settings. Keep both storage locations,
 but back them up independently:
@@ -473,7 +473,7 @@ Preserve your existing password, mount, host name, restart policy and TLS settin
 For a Reko-enabled build, back up `/config` separately and retain its exact named
 volume/bind as well; the source recipe below uses `knxbench-config`. If your
 existing key lives elsewhere, migrate/reattach it first rather than creating an
-empty substitute ([key persistence](#reko-configuration-and-key-persistence-branch-wip)).
+empty substitute ([key persistence](#reko-configuration-and-key-persistence)).
 Run this from your KNXBench checkout. It pulls the latest source, builds a new
 image with its commit stamped in, replaces the container, and waits for the
 health check — with host networking, so the bus monitor keeps working:

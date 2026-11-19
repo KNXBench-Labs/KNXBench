@@ -1,4 +1,5 @@
 /** Panel rendering and editing a device's application-program parameters, fetched per selection. */
+import CompactSelect from "./CompactSelect";
 import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactElement } from "react";
 import * as api from "./api";
 import type {
@@ -281,7 +282,7 @@ function ParameterFieldRow(props: {
     </>;
   }
   const control = field.kind === "Restriction" ? (
-    <select
+    <CompactSelect
       value={value}
       disabled={disabled}
       aria-describedby={downloadNote ? downloadNoteId : undefined}
@@ -300,7 +301,7 @@ function ParameterFieldRow(props: {
           {opt.text ?? opt.value}
         </option>
       ))}
-    </select>
+    </CompactSelect>
   ) : field.kind === "Number" || field.kind === "Time" ? (
     <input
       type="number"

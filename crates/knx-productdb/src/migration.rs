@@ -371,11 +371,13 @@ pub(crate) fn promotion_scratch() -> Result<Connection, ProductDbError> {
 /// The hosts ADR-0126 models `TextParameterRefId` on, by element name: the
 /// last step of an `ingest_unknown` xpath. `ParameterRef` is not one of them;
 /// its `TextParameterRefId` stays unmodelled and reported.
-const TEXT_PARAMETER_REF_HOSTS: [&str; 4] = [
+const TEXT_PARAMETER_REF_HOSTS: [&str; 6] = [
     "Channel",
     "ParameterBlock",
     "ParameterSeparator",
     "ComObjectRef",
+    "ParameterBlockRename",
+    "Rename",
 ];
 
 /// The hosts ADR-0139 models `Access` on. `Channel/@Access` and every other
@@ -1044,7 +1046,10 @@ fn backfill_text_parameter_refs(
             }
             continue;
         }
-        if name != "ComObjectRef" {
+        if name != "ComObjectRef"
+            && name != "ParameterBlockRename"
+            && name != "Rename"
+        {
             continue;
         }
         let Some(program_id) = program.as_deref().filter(|p| owned.contains(*p)) else {
@@ -1054,11 +1059,19 @@ fn backfill_text_parameter_refs(
         let (Some(id), Some(reference)) = (a.get("Id"), a.get("TextParameterRefId")) else {
             continue;
         };
-        conn.execute(
-            "UPDATE com_object_ref SET text_parameter_ref_id = ?3
-             WHERE program_id = ?1 AND id = ?2",
-            params![program_id, id, reference],
-        )?;
+        if name == "ComObjectRef" {
+            conn.execute(
+                "UPDATE com_object_ref SET text_parameter_ref_id = ?3
+                 WHERE program_id = ?1 AND id = ?2",
+                params![program_id, id, reference],
+            )?;
+        } else {
+            conn.execute(
+                "UPDATE dynamic_node SET text_parameter_ref_id = ?3
+                 WHERE program_id = ?1 AND element_id = ?2 AND kind = ?4",
+                params![program_id, id, reference, name],
+            )?;
+        }
     }
     Ok(())
 }

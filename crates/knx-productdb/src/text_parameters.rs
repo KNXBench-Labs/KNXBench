@@ -115,6 +115,33 @@ impl<'a> DeviceTexts<'a> {
         fill_positional(text, self.value(reference, place), budget)
     }
 
+    /// Fill a rename leaf's replacement text of the node `node_id` in `scope`'s
+    /// tree. Unlike [`Self::fill_channel`], the placeholder's reference comes from
+    /// the leaf's own `@TextParameterRefId` (WP-05 `rename-text-parameter-ref-v1`),
+    /// not from the host node's.
+    pub fn fill_rename(
+        &self,
+        text: &str,
+        scope: Option<&ModuleScope>,
+        node_id: i64,
+        reference: Option<&str>,
+        budget: &mut TextProjectionBudget,
+    ) -> Result<PositionalText, TextProjectionError> {
+        let place = match scope {
+            None => TextParameterScope::Program,
+            Some(s) => TextParameterScope::Module(s.module_id.as_deref()),
+        };
+        let reference = reference.or_else(|| {
+            let tree = scope.map_or("", |s| s.module_def_id.as_str());
+            self.parameters
+                .refs
+                .dynamic
+                .get(&(tree.to_string(), node_id))
+                .map(String::as_str)
+        });
+        fill_positional(text, self.value(reference, place), budget)
+    }
+
     /// Fill an object name (a product text) of the object whose `ComObjectRef`
     /// lookup id is `lookup_id`, in its own module `instance` if it has one.
     pub fn fill_object(
@@ -207,6 +234,7 @@ mod tests {
             .insert("O-2_R-1".into(), "R-count".into());
         let facts = HashMap::from([
             ("R-name".to_string(), fact(true, "")),
+            ("P-2_R-2".to_string(), fact(true, "Kitchen")),
             ("MD-1_R-name".to_string(), fact(true, "Button")),
             ("R-count".to_string(), fact(false, "1")),
         ]);
@@ -297,6 +325,20 @@ mod tests {
                 .fill_object("Switch {{0:Out}}", "O-1_R-1", None, &mut budget)
                 .unwrap(),
             filled("Switch Kitchen", PositionalSource::StoredValue)
+        );
+        // A rename leaf fills from its own `@TextParameterRefId`, not the host's.
+        assert_eq!(
+            texts
+                .fill_rename("Renamed {{0}}", None, 9, Some("P-2_R-2"), &mut budget)
+                .unwrap(),
+            filled("Renamed Kitchen", PositionalSource::ProductDefault)
+        );
+        // Without the leaf attribute it falls back to the host node's reference.
+        assert_eq!(
+            texts
+                .fill_rename("{{0:Channel A}}", None, 3, None, &mut budget)
+                .unwrap(),
+            filled("Kitchen", PositionalSource::StoredValue)
         );
         // Nothing stored: the (empty) product default, so the template's own text.
         let empty = DeviceEvaluation {

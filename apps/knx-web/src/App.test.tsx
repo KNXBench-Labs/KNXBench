@@ -1286,7 +1286,8 @@ describe("App — diagnostic panels survive a collapsed navigation pane", () => 
 });
 
 describe("App — settings workspace", () => {
-  function gear() { return host!.querySelector<HTMLButtonElement>('[aria-label="Settings"]')!; }
+  // WP-47.3: the header gear button is gone; the left-nav Settings entry opens settings.
+  function gear() { return host!.querySelector<HTMLButtonElement>(".settings-navigation button")!; }
   function settings() { return host!.querySelector<HTMLElement>(".workbench-center .settings-panel"); }
 
   for (const collapsed of [false, true]) it(`hides Properties temporarily and restores its ${collapsed ? "collapsed" : "open"} state`, async () => {
@@ -3026,15 +3027,19 @@ describe("App — in-application help (T23)", () => {
   it("opens help from settings without stacking settings modals", async () => {
     const root = await renderApp();
 
-    const gear = Array.from(host!.querySelectorAll("button")).find(
+    // WP-47.3: the header gear button is gone; the left-nav Settings entry remains.
+    const headerGear = Array.from(host!.querySelectorAll("header button")).find(
       (b) => b.getAttribute("aria-label") === enMessages["toolbar.settings"],
     );
-    const glyph = gear?.querySelector("svg");
+    expect(headerGear).toBeUndefined();
+    const navEntry = host!.querySelector<HTMLButtonElement>(".settings-navigation button")!;
+    expect(navEntry.getAttribute("aria-label") ?? navEntry.textContent).toContain(enMessages["toolbar.settings"]);
+    const glyph = navEntry.querySelector("svg");
     expect(glyph?.getAttribute("aria-hidden")).toBe("true");
     expect(glyph?.querySelector("path")).not.toBeNull();
     expect(glyph?.querySelectorAll("line")).toHaveLength(0); // not the old sun's rays
     await act(async () => {
-      gear!.click();
+      navEntry.click();
     });
     expect(host!.querySelector(".settings-panel")).not.toBeNull();
 
@@ -4654,7 +4659,7 @@ describe("App — WP-27 editor comparison", () => {
       const dialog = document.querySelector(".device-comparison-dialog")!;
       const input = await gateway("192.0.2.42:3671");
       await act(async () => input.focus());
-      await act(async () => host!.querySelector<HTMLButtonElement>('[aria-label="Settings"]')!.click());
+      await act(async () => host!.querySelector<HTMLButtonElement>('.settings-navigation button')!.click());
       expect(dialog.closest("[hidden]")).not.toBeNull();
       const back = findButton("Back to previous view");
       expect(back.closest("[inert]")).toBeNull();
@@ -4970,7 +4975,7 @@ describe("App — project notes workspace", () => {
     expect(titleValues()).toContain("Commissioning");
     await typeTitle("Commissioning, round two");
     const editor = host!.querySelector(".notes-workspace textarea");
-    await act(async () => host!.querySelector<HTMLButtonElement>('[aria-label="Settings"]')!.click());
+    await act(async () => host!.querySelector<HTMLButtonElement>('.settings-navigation button')!.click());
     expect(host!.querySelector<HTMLElement>(".notes-workspace")!.hidden).toBe(true);
     await act(async () => findButton("Back to previous view").click());
     expect(host!.querySelector(".notes-workspace textarea")).toBe(editor);
@@ -5131,10 +5136,10 @@ describe("App — unapplied installation-instructions draft", () => {
         Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(field, "Hint, revised");
         field.dispatchEvent(new Event("input", { bubbles: true }));
       });
-      await act(async () => host!.querySelector<HTMLButtonElement>('[aria-label="Settings"]')!.click());
+      await act(async () => host!.querySelector<HTMLButtonElement>('.settings-navigation button')!.click());
       expect(host!.querySelector(".device-instructions textarea")).toBe(field);
       expect(field.closest<HTMLElement>(".workbench-content")!.hidden).toBe(true);
-      await act(async () => host!.querySelector<HTMLButtonElement>('[aria-label="Settings"]')!.click());
+      await act(async () => host!.querySelector<HTMLButtonElement>('.settings-navigation button')!.click());
       await act(async () => findButton("Back to previous view").click());
       expect(host!.querySelector(".device-instructions textarea")).toBe(field);
       expect(field.value).toBe("Hint, revised");
@@ -5640,9 +5645,11 @@ describe("App — WP-26 status-bar bus connection", () => {
     await act(async () => root.unmount());
   });
 
-  it("keeps the toolbar Settings button on the page title", async () => {
+  it("keeps the page-title focus behavior when Settings opens from the left nav (WP-47.3: header gear removed)", async () => {
     const root = await renderApp();
-    await act(async () => host!.querySelector<HTMLButtonElement>(`button[aria-label="${enMessages["toolbar.settings"]}"]`)!.click());
+    // No header settings button anymore; the nav entry is the only opener.
+    expect(host!.querySelector(`header button[aria-label="${enMessages["toolbar.settings"]}"]`)).toBeNull();
+    await act(async () => host!.querySelector<HTMLButtonElement>(`.settings-navigation button`)!.click());
     expect(document.activeElement?.id).not.toBe("settings-bus");
     expect(document.activeElement?.tagName).toBe("H1");
     await act(async () => root.unmount());

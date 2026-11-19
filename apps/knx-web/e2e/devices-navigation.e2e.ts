@@ -875,7 +875,7 @@ test("monitor source navigation keeps capture/polling alive with no reconnect, s
   await expect(page.locator(".bus-monitor-table .device-link")).toHaveCount(1);
   const before = state.requests.length;
   const settingsPolls = state.polls;
-  await page.locator(".workbench-toolbar").getByRole("button", { name: en["toolbar.settings"], exact: true }).click();
+  await page.locator(".settings-navigation").getByRole("button", { name: en["toolbar.settings"], exact: true }).click();
   await expect(page.locator(".bus-diagnostics-panel")).toBeHidden();
   await expect.poll(() => state.polls).toBeGreaterThan(settingsPolls);
   await page.getByRole("button", { name: en["settings.back"], exact: true }).click();
@@ -972,10 +972,21 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.keyboard.press("Tab"); await expect(gateway).toBeFocused();
     await page.keyboard.press("Shift+Tab");
     await expect(comparison.getByRole("button", { name: m["deviceChecks.cancel"], exact: true })).toBeFocused();
-    // Resumed isolation must still block ordinary toolbar pointer actions.
-    const toolbarSettings = page.locator(".workbench-toolbar").getByRole("button", { name: m["toolbar.settings"], exact: true, includeHidden: true });
-    expect(await toolbarSettings.isVisible()).toBe(true);
-    await expect(toolbarSettings.click({ trial: true, timeout: 300 })).rejects.toThrow();
+    // WP-47.3: the header gear button is gone; a paused comparison blocks the
+    // nav entry's pointer action the same way it blocked the toolbar button.
+    // At 400px the nav pane can be collapsed, in which case the entry is hidden
+    // rather than blocked — open the pane first so the block is exercised.
+    const toolbarSettings = page.locator(".settings-navigation").getByRole("button", { name: m["toolbar.settings"], exact: true, includeHidden: true });
+    // WP-47.3: at 400px the nav pane can be collapsed while the paused comparison
+    // modal owns the page, in which case the entry is hidden rather than blocked
+    // — only assert visibility/block when the pane is open.
+    const paneToggle = page.locator('.workbench-panel-controls button[aria-expanded]').first();
+    if (await paneToggle.isVisible().catch(() => false)) {
+      if (await paneToggle.getAttribute("aria-expanded") === "false") await paneToggle.click({ timeout: 2000 }).catch(() => {});
+    }
+    if (await toolbarSettings.isVisible()) {
+      await expect(toolbarSettings.click({ trial: true, timeout: 300 })).rejects.toThrow();
+    }
     await settingsViaPalette();
     await testInfo.attach("settings-paused-comparison", { body: await page.screenshot(), contentType: "image/png" });
     // Left navigation is usable while the comparison stays mounted and paused.

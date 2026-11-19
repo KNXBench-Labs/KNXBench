@@ -97,6 +97,24 @@ struct Modelled {
 /// that spelling, so no kind below maps it.)
 fn spec_for(kind: &str) -> ElementSpec {
     match kind {
+        // button-literal-passive-v1 + button-text-parameter-ref-v1: the Button's
+        // identity and literal text are stored so the presentation reader can bind
+        // them; handler attributes stay inert source data.
+        "Button" => ElementSpec {
+            known: &[
+                "Id",
+                "Text",
+                "Cell",
+                "EventHandler",
+                "EventHandlerOnline",
+                "EventHandlerParameters",
+                "TextParameterRefId",
+            ],
+            id_attr: Some("Id"),
+            text_attr: Some("Text"),
+            text_parameter_ref_attr: Some("TextParameterRefId"),
+            ..UNMODELLED
+        },
         "choose" => ElementSpec {
             known: &["ParamRefId"],
             ref_attrs: &["ParamRefId"],

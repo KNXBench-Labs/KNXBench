@@ -163,6 +163,12 @@ impl CaptionFills {
         definition.is_empty() && self.axes.unsupported.contains(id)
     }
 
+    /// The requested language's own `Text` translation for a defining tree/node,
+    /// if one was admitted; the caller decides the fallback.
+    pub(crate) fn translated_text(&self, key: CaptionKey) -> Option<String> {
+        self.fills.get(&key).map(|fill| fill.template.clone())
+    }
+
     pub(crate) fn copy_text(&mut self, text: Option<&str>) -> Result<Option<String>, String> {
         text.map(|text| self.budget.copy_text(text))
             .transpose()
@@ -240,7 +246,11 @@ pub(crate) fn apply(
     for (index, label) in evaluation.activation.labels.iter().enumerate() {
         if !matches!(
             label.kind.as_str(),
-            "ParameterBlock" | "ParameterSeparator" | "Channel" | "ChannelIndependentBlock"
+            "ParameterBlock"
+                | "ParameterSeparator"
+                | "Channel"
+                | "ChannelIndependentBlock"
+                | "Button"
         ) {
             continue;
         }
@@ -316,8 +326,16 @@ pub(crate) fn apply(
             .map_err(|e| e.to_string())?;
         let text = translated_text.as_deref().unwrap_or(&label.text);
         if !text.contains("{{") {
+            // A plain (placeholder-free) translation is retained as the label's
+            // overlay fill, so other readers (e.g. button labels) can pick it up.
             if let Some(text) = translated_text {
-                filled.push((index, text, None));
+                // NoPlaceholder maps to None in text_fill, so build the fill
+                // directly: the template is the translated text itself.
+                let fill = knx_projection::TextFill {
+                    template: text.clone(),
+                    source: knx_projection::TextFillSource::StoredValue,
+                };
+                filled.push((index, text, Some(fill)));
             }
             continue;
         }

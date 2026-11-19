@@ -2519,6 +2519,21 @@ fn walk(
                     node_id,
                     block_access: path.block_access.map(|access| access.to_string()),
                 });
+                // WP-05g: the reached Button also gets a label entry so the
+                // requested-language `Text` overlay can key on its node.
+                // The label's own text is presentation-bound later from the
+                // source; here only the overlay key matters, so keep the raw
+                // text as-is and skip argument substitution (a Button's text
+                // is not a channel caption).
+                if let Some(raw) = node.text.clone() {
+                    activation.labels.push(ActiveLabel {
+                        scope: scope.cloned(),
+                        node_id,
+                        kind: node.kind.clone(),
+                        raw_text: raw.clone(),
+                        text: raw,
+                    });
+                }
             }
             activation.diagnose(
                 scope,

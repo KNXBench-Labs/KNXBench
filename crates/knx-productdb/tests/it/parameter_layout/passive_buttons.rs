@@ -46,7 +46,9 @@ fn rejected_button_owner_metadata_is_shared_across_fanout() {
             assert_eq!(shared.element_id.as_deref(), Some(id.as_str()));
             assert_eq!(shared.name.as_deref(), Some(name.as_str()));
             assert_eq!(shared.number.as_deref(), Some(number.as_str()));
-            assert_eq!(active.labels.len(), 1);
+            // WP-05g: the reached Button also contributes a label entry, so the
+            // requested-language overlay can key on its node.
+            assert_eq!(active.labels.len(), 1 + active.buttons.len());
             assert_eq!(active.labels[0].node_id, shared.node_id);
             assert_eq!(active.labels[0].text, "Fable channel");
             for button in active.buttons.iter().skip(1) {
@@ -179,7 +181,10 @@ fn stored_buttons_keep_null_identity_yet_bind_literal_text_cell_and_nearest_grid
                 |r| Ok((r.get(0)?, r.get(1)?)),
             )
             .unwrap();
-        assert_eq!((id, text), (None, None), "no migration or reimport needed");
+        // WP-05g: identity and literal text are now stored so the language
+        // overlay can key on the Button's node; no migration needed.
+        assert!(id.is_some(), "Button/@Id is stored since WP-05g");
+        assert!(text.is_some(), "Button/@Text is stored since WP-05g");
     }
     let layout = load(&fixture.conn, "A-FIX").unwrap();
     assert_eq!(layout.button_binding(), ButtonBinding::Bound);

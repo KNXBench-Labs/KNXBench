@@ -2786,6 +2786,7 @@ export const messages = {
   "busMonitor.control.notRepeated": "Not repeated",
   "busMonitor.column.payload": "Payload",
   "busMonitor.column.decoded": "Decoded",
+  "busMonitor.sortBy": "Sort by {column}",
   "busMonitor.decode.noProject": "No project in session",
   "busMonitor.decode.notInProject": "Address not in project",
   "busMonitor.decode.programDefaultCleared": "No DPT assigned – the project clears the program default (DPT {dpts})",

@@ -2747,6 +2747,7 @@ export const messages: Record<MessageKey, string> = {
   "busMonitor.control.notRepeated": "Nicht wiederholt",
   "busMonitor.column.payload": "Nutzdaten",
   "busMonitor.column.decoded": "Dekodiert",
+  "busMonitor.sortBy": "Nach {column} sortieren",
   "busMonitor.decode.noProject": "Kein Projekt im Sitzungskontext",
   "busMonitor.decode.notInProject": "Adresse nicht im Projekt",
   "busMonitor.decode.programDefaultCleared": "Kein DPT zugewiesen – das Projekt hebt den Programmstandard auf (DPT {dpts})",

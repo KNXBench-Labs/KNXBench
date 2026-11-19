@@ -245,10 +245,16 @@ pub(crate) fn apply(
                 ));
             }
             let text = if rename.text.contains("{{") && rename.text_parameter_ref.is_some() {
+                let place = match rename.scope.as_ref().and_then(|c| c.last()) {
+                    None => knx_productdb::text_parameters::TextParameterScope::Program,
+                    Some(s) => knx_productdb::text_parameters::TextParameterScope::Module(
+                        s.module_id.as_deref(),
+                    ),
+                };
                 let value = texts
-                    .fill_rename(
+                    .fill_rename_scoped(
                         &text,
-                        None,
+                        place,
                         rename.node_id,
                         rename.text_parameter_ref.as_deref(),
                         &mut budget,

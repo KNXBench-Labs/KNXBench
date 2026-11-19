@@ -20,6 +20,7 @@ import { filterParameterSection, groupParameterDiagnostics, isManufacturerRestri
 import { parameterMetadataLabel } from "./parameterMetadata";
 import { parameterCaption } from "./parameterCaption";
 import { useTranslate, type Translate, type TranslatableKey } from "./i18n";
+import HelpTip from "./HelpTip";
 import { snapshotContextFromTree, type SnapshotContext } from "./snapshotIdentity";
 import { isRevisionConflict } from "./revisionConflict";
 import ParameterSourceEditor from "./ParameterSourceEditor";
@@ -894,7 +895,7 @@ export function ComObjectFunctionControls(props: {
     .filter(field => field.kind === "Restriction" && !isManufacturerRestricted(field)
       && field.controlledComObjectIds?.includes(objectId)) ?? [];
   return <div className="com-object-functions">
-    {fields.length === 0 ? <p className="inspector-description">{t("parameters.objectFunctionsEmpty")}</p>
+    {fields.length === 0 ? <p className="inspector-description">{t("parameters.objectFunctionsEmpty")} <HelpTip labelKey="help.tip.objectFunctions.label" textKey="help.tip.objectFunctions.text" /></p>
       : fields.map(field => <ParameterFieldRow key={field.etsId} field={field} moduleScoped={false}
         deviceId={deviceId} language={language} sourceLanguage={panel!.sourceLanguage}
         onUpdated={onUpdated} onValueApplied={onValueApplied} binding={snapshot}

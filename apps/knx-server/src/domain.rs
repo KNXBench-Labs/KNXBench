@@ -7462,9 +7462,18 @@ fn assemble_parameter_panel_for_project(
                             .map_err(|e| e.to_string())?;
                         value.text
                     }
-                    _ => caption_fills
-                        .copy_text(Some(&literal.text))?
-                        .expect("present literal"),
+                    // button-text-overlay-v1 (WP-05g): a requested language's own
+                    // `Text` translation for the Button's identity overlays the
+                    // literal source text; no translation keeps the literal.
+                    _ => {
+                        let translated = caption_fills.translated_text((
+                            None,
+                            button.node_id,
+                        ));
+                        caption_fills
+                            .copy_text(Some(translated.as_deref().unwrap_or(&literal.text)))?
+                            .expect("present literal")
+                    }
                 };
                 Ok(crate::routes::ParameterPassiveLabelDto {
                     kind: crate::routes::ParameterPassiveLabelKindDto::ButtonLiteral,

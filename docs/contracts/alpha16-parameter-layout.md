@@ -179,7 +179,10 @@ Button behaviour, handler support or Table/Grid visual equivalence.
   the placeholder then fills from that text parameter in the button's own scope
   at display time (`button-text-parameter-ref-v1`, 19 November 2026), through the
   shared text budget. Without the attribute a placeholder delimiter refuses the
-  label as before. `Cell` is the existing 1-based
+  label as before. Since 19 November 2026 (`button-text-overlay-v1`) a
+  requested product language's own program-scoped `Text` translation for the
+  Button's `@Id` overlays the literal source text; without a matching
+  translation the literal stays. `Cell` is the existing 1-based
   `row,column` parser. Anything else (local `Access`,
   other or qualified attributes, child elements, non-whitespace text, CDATA or
   entity content, malformed or out-of-range cells, list/invalid/nested-list

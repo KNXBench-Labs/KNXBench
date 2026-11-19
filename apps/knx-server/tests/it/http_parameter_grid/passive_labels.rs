@@ -223,6 +223,39 @@ async fn a_mixed_program_returns_literal_passive_labels_and_unchanged_fields() {
 }
 
 #[tokio::test]
+async fn a_requested_language_overlays_the_button_text_translation() {
+    // button-text-overlay-v1 (WP-05g): the Button's own program-scoped `Text`
+    // translation for the requested language replaces the literal source text.
+    let (_dir, state) = state_with(
+        ONLY,
+        Some(
+            "INSERT INTO translation (scope,scope_id,language,ref_id,attribute_name,text) VALUES
+         ('Program','A-FIX','de-DE','B-ONLY','Text','Fiktives Quell-Label übersetzt')",
+        ),
+    );
+    let dto = panel_at(&state, &format!("{PARAMETERS}?language=de-DE")).await;
+    let section = device_section(&dto);
+    let button = section["passiveLabels"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|l| l["elementId"] == "B-ONLY")
+        .expect("button label present")
+        .clone();
+    assert_eq!(button["text"], json!("Fiktives Quell-Label übersetzt"));
+    // Without a requested language the literal source text stays.
+    let dto = panel_at(&state, PARAMETERS).await;
+    let section = device_section(&dto);
+    let button = section["passiveLabels"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|l| l["elementId"] == "B-ONLY")
+        .expect("button label present");
+    assert_eq!(button["text"], json!("Fictional source label"));
+}
+
+#[tokio::test]
 async fn a_button_text_parameter_ref_fills_the_passive_label() {
     // PT-T text parameter with a default, plus a Button whose @Text placeholder names it.
     let program = ONLY

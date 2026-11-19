@@ -44,6 +44,7 @@ const PROGRAM: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/20"><Manufactu
 <when test="7"><ParameterBlockRename Id="PR-9" RefId="PB-2" Text="Fill {{0}}"/></when>
 <when test="8"><ParameterBlockRename Id="PR-10" RefId="PB-NONE" Text="Missing target"/></when>
 <when test="9"><ParameterBlockRename Id="PR-11" RefId="PB-2" Text="Twice"/><ParameterBlockRename Id="PR-11" RefId="PB-2" Text="Twice"/></when>
+<when test="10"><ParameterBlockRename Id="PR-CH" RefId="CH-1" Text="Channel cross"/></when>
 </choose>
 </ParameterBlock>
 <choose ParamRefId="P-1_R-1"><when test="3"><ParameterBlockRename Id="PR-OUT" RefId="PB-1" Text="Outside"/></when></choose>
@@ -261,10 +262,12 @@ fn one_loaded_source_follows_the_selector_back_to_the_base_caption() {
             some("fixture_switch_py"),
             some("fixture_switch_pz"),
             None,
-            None,
+            // The third state's leaf sits outside the block but names it
+            // cross-target: it retitles PB-1 like an own leaf would.
+            some("Outside"),
             None
         ],
-        "the third state's leaf sits outside the block and is refused"
+        "the third state's leaf names PB-1 cross-target and is admitted"
     );
     // Inactive branches leave nothing behind: no renames, no diagnostic for the idle leaves.
     let idle = evaluate(&trees, &with_in(&conn, "A-1", &[]));
@@ -291,10 +294,16 @@ fn every_refused_shape_keeps_the_base_caption_and_stays_reported() {
         .unwrap()
     };
     let selector_one = evaluate(&trees, &with_in(&conn, "A-1", &[("P-1_R-1", "3")]));
-    assert_eq!(refused(&selector_one, outside), 1, "outside every block");
-    assert!(selector_one.renames.is_empty());
+    // PR-OUT sits outside every block but names PB-1 cross-target: admitted.
+    assert_eq!(refused(&selector_one, outside), 0, "cross-target, admitted");
+    assert_eq!(replacement(&selector_one, block), None);
+    assert_eq!(
+        replacement(&selector_one, node_of(&conn, "PB-1")),
+        Some("Outside")
+    );
     for (value, leaves) in [
-        ("1", vec![node_of(&conn, "PR-3")]),
+        // PR-3 names PB-1 from PB-2: a cross-target rename, admitted on PB-1.
+        ("1", vec![]),
         ("3", vec![node_of(&conn, "PR-5"), node_of(&conn, "PR-6")]),
         ("4", vec![node_of(&conn, "PR-7")]),
         ("5", vec![node_of(&conn, "PR-8")]),
@@ -334,6 +343,13 @@ fn every_refused_shape_keeps_the_base_caption_and_stays_reported() {
     let converted = evaluate(&trees, &with_in(&conn, "A-1", &[("P-3_R-3", "2")]));
     assert_eq!(replacement(&converted, block), Some("Converted"));
     assert_eq!(converted.renames[0].kind, "Rename");
+    // A leaf may also name the enclosing channel: a cross-target rename of a
+    // channel owner, settled on that channel's own label.
+    let channel = evaluate(&trees, &with_in(&conn, "A-1", &[("P-3_R-3", "10")]));
+    let channel_node = node_of(&conn, "CH-1");
+    assert_eq!(replacement(&channel, channel_node), Some("Channel cross"));
+    assert_eq!(refused(&channel, node_of(&conn, "PR-CH")), 0);
+    assert_eq!(replacement(&channel, block), None, "PB-2 keeps its base");
     // A leaf's own `@TextParameterRefId` is retained on the accepted rename.
     let with_ref = evaluate(&trees, &with_in(&conn, "A-1", &[("P-1_R-1", "1")]));
     assert_eq!(with_ref.renames.len(), 1);
@@ -787,7 +803,8 @@ fn a_cross_target_or_undecided_leaf_keeps_a_valid_leaf_from_winning_its_block() 
     // Positive control under real default resolution: the other selector sits at its default.
     let alone = evaluate(&trees, &with_in(&conn, "A-1", &[("P-1_R-1", "1")]));
     assert_eq!(replacement(&alone, block), Some("fixture_switch_py"));
-    // The other block's active leaf names this block: neither leaf wins it.
+    // The other block's active leaf names this block cross-target: two admitted
+    // candidates name PB-1, so neither wins it (no first- or last-wins).
     let crossed = evaluate(
         &trees,
         &with_in(&conn, "A-1", &[("P-1_R-1", "1"), ("P-3_R-3", "1")]),

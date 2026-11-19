@@ -254,11 +254,19 @@ pub(crate) fn apply(
         ) {
             continue;
         }
-        // The replacement is translated by its own identity, never by the block's: the base
-        // block translation and its positional fill are not consulted while one is active.
+        // The replacement is translated by its own identity, never by the host's: the base
+        // host translation and its positional fill are not consulted while one is active.
+        // A rename may address any labelled host of the same tree — a `ParameterBlock`
+        // (enclosing or cross-target) or a channel owner (`Channel`/
+        // `ChannelIndependentBlock`); WP-05 cross-target renames.
         if let Some(rename) = renames
             .get(&(tree_key(&label.scope), label.node_id))
-            .filter(|_| label.kind == "ParameterBlock")
+            .filter(|_| {
+                matches!(
+                    label.kind.as_str(),
+                    "ParameterBlock" | "Channel" | "ChannelIndependentBlock"
+                )
+            })
         {
             // A selected translation with a placeholder is not filled: positional values
             // belong to the base caption's own text parameters. The source text is shown

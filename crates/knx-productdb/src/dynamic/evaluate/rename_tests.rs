@@ -147,17 +147,24 @@ fn the_converted_rename_kind_is_the_same_contract() {
 }
 
 #[test]
-fn only_the_nearest_enclosing_block_can_be_renamed() {
-    // Naming an outer block from inside an inner one is a cross-target rename.
+fn a_leaf_may_name_any_unique_host_of_its_tree_not_only_the_enclosing_one() {
+    // WP-05 cross-target: naming the outer block from inside an inner one now
+    // retitles the outer block; the inner block's own leaf still wins the inner one.
     let activation = run(vec![
         block(0, None, "PB-OUT", "Outer"),
         block(1, Some(0), "PB-IN", "Inner"),
         rename(2, 1, "ParameterBlockRename", "PR-1", "PB-OUT", "Cross"),
         rename(3, 1, "ParameterBlockRename", "PR-2", "PB-IN", "Own"),
     ]);
-    assert_eq!(refused(&activation), [2]);
-    assert_eq!(activation.renames.len(), 1);
-    assert_eq!(activation.renames[0].target_node_id, 1);
+    assert!(refused(&activation).is_empty());
+    assert_eq!(activation.renames.len(), 2);
+    let mut by_target: Vec<(i64, &str)> = activation
+        .renames
+        .iter()
+        .map(|r| (r.target_node_id, r.text.as_str()))
+        .collect();
+    by_target.sort_unstable();
+    assert_eq!(by_target, [(0, "Cross"), (1, "Own")]);
 }
 
 #[test]
@@ -406,8 +413,9 @@ fn an_undecided_path_naming_another_block_does_not_block_this_one() {
 }
 
 #[test]
-fn a_cross_target_leaf_keeps_the_named_block_from_a_valid_own_leaf() {
-    // The inner leaf names the outer block; the outer block's own leaf must not win it.
+fn a_cross_target_leaf_still_keeps_the_named_block_from_a_valid_own_leaf() {
+    // The inner leaf names the outer block too; two candidates name one target,
+    // so neither wins it (no first- or last-wins).
     let activation = run(vec![
         block(0, None, "PB-OUT", "Outer"),
         rename(1, 0, "ParameterBlockRename", "PR-A", "PB-OUT", "Valid"),
@@ -419,6 +427,47 @@ fn a_cross_target_leaf_keeps_the_named_block_from_a_valid_own_leaf() {
     refused.sort_unstable();
     assert_eq!(refused, [1, 3]);
     assert_eq!(base_labels(&activation), ["Outer", "Inner"]);
+}
+
+#[test]
+fn a_cross_target_leaf_renames_a_channel_owner_of_the_same_tree() {
+    // WP-05 cross-target: a leaf under a block may name the enclosing channel,
+    // a caption host like any block.
+    let channel = DynamicNode {
+        element_id: Some("CH-1".into()),
+        text: Some("Channel".into()),
+        ..node(0, None, "Channel")
+    };
+    let activation = run(vec![
+        channel,
+        block(1, Some(0), "PB-1", "Base"),
+        rename(
+            2,
+            1,
+            "ParameterBlockRename",
+            "PR-1",
+            "CH-1",
+            "Renamed channel",
+        ),
+    ]);
+    assert!(refused(&activation).is_empty());
+    assert_eq!(activation.renames.len(), 1);
+    assert_eq!(activation.renames[0].target_node_id, 0);
+    assert_eq!(activation.renames[0].target_id, "CH-1");
+    assert_eq!(base_labels(&activation), ["Channel", "Base"]);
+}
+
+#[test]
+fn a_leaf_naming_a_host_of_another_tree_stays_refused() {
+    // Cross-scope: `path.block` resolution is per-tree, and the host index holds
+    // only this tree's hosts, so a `@RefId` naming another tree's block finds
+    // nothing here.
+    let activation = run(vec![
+        block(0, None, "PB-1", "Base"),
+        rename(1, 0, "ParameterBlockRename", "PR-1", "MD-1_PB-1", "Foreign"),
+    ]);
+    assert_eq!(refused(&activation), [1]);
+    assert!(activation.renames.is_empty());
 }
 
 #[test]

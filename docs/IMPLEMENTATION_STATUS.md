@@ -1070,6 +1070,13 @@ ingest/migration, HTTP edit/undo/redo, Vitest and the `parameters` browser lane;
 download claim. WP-05 stays open for its other items.
 Accepted on main `da7d667d1`; [source-bound software acceptance and remaining boundaries](status/2026-11-09-conditional-block-captions.md).
 
+**Update 19 November 2026 (WP-05i):** a leaf's `@RefId` may now also name another caption host
+of the same tree — a different `ParameterBlock`, or a `Channel`/`ChannelIndependentBlock` — a
+cross-target rename admitted as KNXBench policy (the 9 November observation never showed one);
+naming a host of another tree stays refused. Settlement resolves the target through a per-tree
+caption-host index; the server overlay retitles any labelled host of the same tree. No schema
+change. [Contract](contracts/conditional-parameter-block-rename.md).
+
 ## Edits answer first, the journal follows in the background (9 November 2026; issue #35)
 
 Owner decision after ADR-0165: a value change must not wait for the journal.

@@ -43,6 +43,7 @@ const PROGRAM: &str = r##"<?xml version="1.0" encoding="utf-8"?>
 <choose ParamRefId="R-S">
 <when test="1"><ParameterBlockRename Id="PR-1" RefId="PB-1" Text="fixture_switch_py page" /></when>
 <when test="2"><ParameterBlockRename Id="PR-2" RefId="PB-1" Text="fixture_switch_pz {{0}}" TextParameterRefId="R-T" /></when>
+<when test="3"><ParameterBlockRename Id="PR-X" RefId="PB-2" Text="Cross to locked" /></when>
 </choose></ParameterBlock>
 <ParameterBlock Id="PB-2" Text="Base locked" Access="Read"><ParameterRefRef RefId="R-R" />
 <choose ParamRefId="R-R"><when test="1"><ParameterBlockRename Id="PR-3" RefId="PB-2" Text="Renamed locked" /></when></choose></ParameterBlock>
@@ -68,7 +69,8 @@ fn products() -> (tempfile::TempDir, knx_productdb::Connection) {
          ('Program','A-1','de-DE','PR-2','Text','probe_de_pz'),
          ('Program','A-1','fr-FR','PB-1','Text','Page de base'),
          ('Program','A-1','de-DE','PB-2','Text','Gesperrt'),
-         ('Program','A-1','de-DE','PR-3','Text','Umbenannt gesperrt');",
+         ('Program','A-1','de-DE','PR-3','Text','Umbenannt gesperrt'),
+         ('Program','A-1','de-DE','PR-X','Text','probe_de_cross');",
     )
     .unwrap();
     (dir, conn)
@@ -311,6 +313,42 @@ async fn competing_leaves_leave_the_base_caption_and_are_reported_once_each() {
 }
 
 #[tokio::test]
+async fn a_cross_target_leaf_retites_the_addressed_block_through_its_own_translation() {
+    let (_dir, products) = products();
+    let state = Arc::new(state(products, &[("R-S", "3")]));
+    let app = knx_server::app(state, None);
+    // PR-X sits in PB-1 but names PB-2: PB-2 shows the replacement, PB-1 its base.
+    let dto = panel(&app, None).await;
+    assert_eq!(group_of(&dto, "R-S"), ("PB-1".into(), json!("Base page")));
+    assert_eq!(
+        group_of(&dto, "R-R"),
+        ("PB-2".into(), json!("Cross to locked"))
+    );
+    // The replacement is translated by the leaf's own entry, not the block's.
+    let de = panel(&app, Some("de-DE")).await;
+    assert_eq!(
+        group_of(&de, "R-R"),
+        ("PB-2".into(), json!("probe_de_cross"))
+    );
+    assert_eq!(group_of(&de, "R-S"), ("PB-1".into(), json!("Basisseite")));
+    // The restricted block keeps its access: the rename widened nothing.
+    let field = dto["sections"][0]["fields"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["etsId"] == "R-R")
+        .unwrap()
+        .clone();
+    assert_eq!(field["blockAccess"], "Read");
+    // Only the competing block's two leaves are reported; the cross-target one is not.
+    assert_eq!(unrecognized(&dto), 2);
+    // Returning the selector to its default restores both base captions.
+    assert_eq!(set(&app, "R-S", "0").await, StatusCode::OK);
+    let dto = panel(&app, None).await;
+    assert_eq!(group_of(&dto, "R-R"), ("PB-2".into(), json!("Base locked")));
+}
+
+#[tokio::test]
 async fn source_bytes_and_stored_leaves_survive_every_state() {
     let (_dir, products) = products();
     let sha = knx_productdb::sha256_hex(PROGRAM.as_bytes());
@@ -326,7 +364,7 @@ async fn source_bytes_and_stored_leaves_survive_every_state() {
         .unwrap()
     };
     let stored_before = leaves(&products);
-    assert_eq!(stored_before.len(), 5);
+    assert_eq!(stored_before.len(), 6);
     let state = Arc::new(state(products, &[]));
     let app = knx_server::app(state.clone(), None);
     for raw in ["1", "2", "0"] {

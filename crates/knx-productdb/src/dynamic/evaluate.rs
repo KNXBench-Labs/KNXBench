@@ -377,8 +377,14 @@ pub struct DynamicTree {
     has_unmodelled_attributes: bool,
     /// Nodes whose stored row keeps attributes outside the normalized model.
     opaque: HashSet<i64>,
-    /// How often each `ParameterBlock/@Id` is declared, for rename target uniqueness.
+    /// How often each addressable caption host's `@Id` is declared, for rename
+    /// target uniqueness: `ParameterBlock` plus the channel-owner kinds, which
+    /// carry a label of their own (`Channel`, `ChannelIndependentBlock`).
     block_ids: HashMap<String, usize>,
+    /// Caption-host `@Id` to `node_id`, for rename target resolution without a
+    /// per-label scan (WP-05 cross-target renames). Same population as
+    /// [`DynamicTree::block_ids`].
+    host_ids: HashMap<String, i64>,
     /// How often each `ParameterBlockRename`/`Rename` `@Id` is declared.
     rename_ids: HashMap<String, usize>,
     /// Pre-order position and last descendant position per reachable node, built only when
@@ -396,6 +402,7 @@ impl DynamicTree {
     pub fn from_nodes(nodes: Vec<DynamicNode>) -> DynamicTree {
         let mut children: HashMap<Option<i64>, Vec<i64>> = HashMap::new();
         let mut block_ids: HashMap<String, usize> = HashMap::new();
+        let mut host_ids: HashMap<String, i64> = HashMap::new();
         let mut rename_ids: HashMap<String, usize> = HashMap::new();
         let mut has_rename = false;
         for n in &nodes {
@@ -404,8 +411,9 @@ impl DynamicTree {
             let Some(id) = n.element_id.as_ref() else {
                 continue;
             };
-            if n.kind == "ParameterBlock" {
+            if n.kind == "ParameterBlock" || is_channel(&n.kind) {
                 *block_ids.entry(id.clone()).or_default() += 1;
+                host_ids.insert(id.clone(), n.node_id);
             } else if is_rename(&n.kind) {
                 *rename_ids.entry(id.clone()).or_default() += 1;
             }
@@ -423,6 +431,7 @@ impl DynamicTree {
             has_unmodelled_attributes: false,
             opaque: HashSet::new(),
             block_ids,
+            host_ids,
             rename_ids,
             spans,
             renames_in_order,
@@ -481,6 +490,13 @@ impl DynamicTree {
     }
 
     fn node(&self, id: i64) -> Option<&DynamicNode> {
+        self.nodes.get(&id)
+    }
+
+    /// The `node_id` of the caption host declaring `element_id`, if this tree
+    /// holds exactly one (WP-05 cross-target rename targets).
+    fn node_id_of_element(&self, element_id: &str) -> Option<&DynamicNode> {
+        let id = *self.host_ids.get(element_id)?;
         self.nodes.get(&id)
     }
 
@@ -1563,12 +1579,13 @@ pub struct ActiveLabel {
     pub text: String,
 }
 
-/// One active literal `ParameterBlockRename`/`Rename` leaf that retitles its enclosing block.
+/// One active literal `ParameterBlockRename`/`Rename` leaf that retitles the addressed
+/// caption host (WP-05 cross-target renames).
 ///
-/// Only the root application tree qualifies, so there is no module scope: `target_node_id`
-/// names the block's [`ActiveLabel`] with `scope: None`. Base and replacement stay separate
-/// so a later evaluation with another value map restores the base caption by simply not
-/// reporting the rename.
+/// `target_node_id` names the addressed block's or channel's [`ActiveLabel`] in the
+/// leaf's own tree (`scope` names the module expansion chain, `None` = program scope).
+/// Base and replacement stay separate so a later evaluation with another value map
+/// restores the base caption by simply not reporting the rename.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ActiveRename {
     /// `dynamic_node.node_id` of the rename leaf; its `@Id` is the translation host.
@@ -1577,9 +1594,9 @@ pub struct ActiveRename {
     pub kind: String,
     /// The leaf's own `@Id`.
     pub rename_id: String,
-    /// `dynamic_node.node_id` of the enclosing block.
+    /// `dynamic_node.node_id` of the addressed caption host (block or channel owner).
     pub target_node_id: i64,
-    /// The block's `@Id`, equal to the leaf's `@RefId`.
+    /// The addressed host's `@Id`, equal to the leaf's `@RefId`.
     pub target_id: String,
     /// The leaf's `@Text` as stored.
     pub text: String,
@@ -1681,7 +1698,9 @@ struct PathContext<'a> {
     channel: Option<&'a Rc<ChannelOwner>>,
     /// The most restrictive block `Access` so far ([`ActiveRef::block_access`]).
     block_access: Option<&'a Rc<str>>,
-    /// The nearest enclosing `ParameterBlock`, the only target a rename may name.
+    /// The nearest enclosing caption host a rename may name: a
+    /// `ParameterBlock`, or a channel owner (`Channel`/`ChannelIndependentBlock`)
+    /// when no block sits between (WP-05 cross-target renames).
     block: Option<i64>,
 }
 
@@ -2294,7 +2313,9 @@ fn walk(
             block_access: narrowed.as_ref().or(path.block_access),
             // inline-section-flatten-v1: an `Inline` block renders inside its
             // parent page, so it does not become the group owner below it.
-            block: if node.kind == "ParameterBlock" && !node.inline {
+            // WP-05 cross-target: a channel owner is a caption host too, so it
+            // is the nearest host when no (non-inline) block sits between.
+            block: if (node.kind == "ParameterBlock" && !node.inline) || is_channel(&node.kind) {
                 Some(node_id)
             } else {
                 path.block
@@ -2321,7 +2342,7 @@ fn walk(
     }
     // A supported rename is a candidate, not a label: the walk stays in document order
     // and `resolve_renames` settles the target once the pass has seen every branch.
-    if is_rename(&node.kind) && collect_rename(tree, node, activation, scope, path) {
+    if is_rename(&node.kind) && collect_rename(tree, node, activation, scope) {
         return;
     }
     match node.kind.as_str() {
@@ -2672,33 +2693,41 @@ fn is_rename(kind: &str) -> bool {
 
 /// Records `node` as a rename candidate when it is the one shape the contract admits:
 /// a childless, fully modelled leaf with its own unique `@Id`, a plain `@Text`, and a
-/// `@RefId` naming the unique enclosing block of the root application tree. Any other
-/// shape is noted as an intent on its `@RefId` and returns `false`, keeping today's
-/// `UnrecognizedNode` report. Scanning and every retained copy are admitted first; `true`
-/// without a candidate means the shared work budget refused and the walk stops here.
+/// `@RefId` naming a uniquely declared caption host (`ParameterBlock`, `Channel` or
+/// `ChannelIndependentBlock`) of the same tree — the enclosing one or any other one
+/// (WP-05 cross-target renames). Any other shape is noted as an intent on its `@RefId`
+/// and returns `false`, keeping today's `UnrecognizedNode` report. Scanning and every
+/// retained copy are admitted first; `true` without a candidate means the shared work
+/// budget refused and the walk stops here.
 fn collect_rename(
     tree: &DynamicTree,
     node: &DynamicNode,
     activation: &mut Activation,
     scope: Option<&Rc<ModuleScope>>,
-    path: PathContext<'_>,
 ) -> bool {
     let text = node.text.as_deref().unwrap_or_default();
     // The placeholder scan reads the whole text before anything is decided.
     if !activation.admit_work(scope, node.node_id, text.len()) {
         return true;
     }
-    // The target is the nearest enclosing block *in this tree* (program or module
-    // expansion): `path.block` already resolves per-tree, so a module-scope leaf naming
-    // its own module's block is admitted (WP-05 module-scoped renames); naming a block
-    // of another tree stays a cross-target refusal.
-    let target = path.block.and_then(|id| tree.node(id));
+    // The target is the `@RefId`-addressed caption host *in this tree* (program or module
+    // expansion): a leaf names the unique block/channel it addresses, enclosing or not.
+    // A `@RefId` that names nothing in this tree — including a host of another tree, e.g.
+    // a module-scope leaf naming a program-tree block — stays a cross-scope refusal.
+    let target = node
+        .ref_id
+        .as_deref()
+        .and_then(|id| tree.node_id_of_element(id));
     let rename_id = node.element_id.as_deref();
     let ref_names_parameter = node.text_parameter_ref.is_some();
     let admitted = !text.is_empty()
         && (!text.contains(PLACEHOLDER_OPEN) || ref_names_parameter)
         && node.ref_id.is_some()
-        && target.is_some_and(|target| node.ref_id == target.element_id)
+        // Same-tree addressing: `host_ids` holds only this tree's caption hosts
+        // (`ParameterBlock`, `Channel`, `ChannelIndependentBlock`), so an
+        // addressed host is enclosing or cross-target within this tree; a
+        // `@RefId` naming another tree's host finds no entry and refuses.
+        && target.is_some()
         && tree.children_of(Some(node.node_id)).is_empty()
         && !tree.opaque.contains(&node.node_id)
         && rename_id.is_some_and(|id| tree.rename_ids.get(id) == Some(&1))
@@ -2816,10 +2845,14 @@ fn resolve_renames(program: &DynamicTree, activation: &mut Activation) {
             .entry((key_of(&candidate.scope), candidate.target_node_id))
             .or_default() += 1;
     }
-    // Labelled blocks per tree: a module-scope candidate needs its own module tree's label.
+    // Labelled caption hosts per tree: a module-scope candidate needs its own
+    // module tree's label. Blocks and channel owners both carry labels.
     let mut labelled: HashSet<(String, i64)> = HashSet::new();
     for label in &activation.labels {
-        if label.kind != "ParameterBlock" {
+        if !matches!(
+            label.kind.as_str(),
+            "ParameterBlock" | "Channel" | "ChannelIndependentBlock"
+        ) {
             continue;
         }
         let tree = label

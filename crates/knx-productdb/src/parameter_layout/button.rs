@@ -57,7 +57,9 @@ const INERT: [&str; 3] = [
 const TEXT_PARAMETER_REF: &str = "TextParameterRefId";
 
 /// One admitted source candidate, before it is bound to stored nodes.
+#[derive(Clone)]
 struct Candidate {
+    scope: String,
     node: i64,
     element_id: String,
     text: String,
@@ -69,11 +71,38 @@ struct Candidate {
     leaf: bool,
 }
 
-/// The program's own `Dynamic` tree as the parser numbered it, plus candidates.
+/// The program's `Dynamic` trees as the parser numbered them, plus candidates.
+/// WP-05h: each node records the module def id of its tree ("" for the program).
 struct SourceTree {
-    /// `(kind, parent, position)` indexed by node id.
-    nodes: Vec<(String, Option<i64>, i64)>,
+    /// `(scope, kind, parent, position)` indexed by node id.
+    nodes: Vec<(String, String, Option<i64>, i64)>,
     candidates: Vec<Candidate>,
+}
+
+impl SourceTree {
+    /// Restricts the tree to one module scope, renumbering nothing: node ids
+    /// stay stable because they index the whole source, and candidates carry
+    /// absolute node ids. Structural checks compare against the filtered set.
+    /// Restricts the tree to one module scope. Node ids are renumbered from 0
+    /// exactly like the stored per-scope tree, and candidate node ids are
+    /// remapped through the same table.
+    /// Restricts the tree to one module scope. Node ids are already numbered
+    /// per scope, so filtering alone aligns them with the stored per-scope tree.
+    fn for_scope(&self, scope: &str) -> SourceTree {
+        let nodes = self
+            .nodes
+            .iter()
+            .filter(|(s, _, _, _)| s == scope)
+            .cloned()
+            .collect();
+        let candidates = self
+            .candidates
+            .iter()
+            .filter(|c| c.scope == scope)
+            .cloned()
+            .collect();
+        SourceTree { nodes, candidates }
+    }
 }
 
 struct Entry {
@@ -89,13 +118,15 @@ struct Entry {
     candidate: Option<usize>,
 }
 
-/// Binds every admitted literal of `program`'s own tree, or none.
+/// Binds every admitted literal of `scope`'s tree (the program tree when
+/// `scope` is empty), or none. WP-05h: module trees bind too.
 pub(super) fn bind(
     bytes: Option<&[u8]>,
     program: &str,
     stored: Option<&BTreeMap<i64, Node>>,
-    grids: &HashMap<i64, BlockGrid>,
+    grids: &HashMap<(String, i64), BlockGrid>,
     captions: &HashMap<String, String>,
+    scope: &str,
 ) -> (ButtonBinding, HashMap<i64, ButtonLiteral>) {
     // Nothing to bind: no stored `Button`, so no source read is needed.
     if !stored.is_some_and(|nodes| nodes.values().any(|node| node.kind == "Button")) {
@@ -104,15 +135,22 @@ pub(super) fn bind(
     // Nor when no stored `Button`'s nearest block can render a grid: such a
     // `Button` never shows a label, so a refused read would hide nothing.
     // A block whose grid source is unreadable may still be one, so it reads.
-    if stored.is_some_and(|nodes| !any_button_may_have_a_grid(nodes, grids)) {
+    if stored.is_some_and(|nodes| !any_button_may_have_a_grid(nodes, grids, scope)) {
         return (ButtonBinding::Bound, HashMap::new());
     }
     let Some(bytes) = bytes else {
         return (ButtonBinding::SourceUnavailable, HashMap::new());
     };
-    match read(bytes, program, super::grid::MAX_GRID_EVENTS)
-        .and_then(|source| bind_source(source, stored.unwrap_or(&BTreeMap::new()), grids, captions))
-    {
+    eprintln!("READ scope={:?}", scope);
+    match read(bytes, program, super::grid::MAX_GRID_EVENTS).and_then(|source| {
+        bind_source(
+            source,
+            stored.unwrap_or(&BTreeMap::new()),
+            grids,
+            captions,
+            scope,
+        )
+    }) {
         Ok(literals) => (ButtonBinding::Bound, literals),
         Err(refusal) => (refusal, HashMap::new()),
     }
@@ -137,14 +175,15 @@ fn nearest_block(stored: &BTreeMap<i64, Node>, node: i64) -> Option<(i64, &Node)
 /// grid whose source could not be read.
 fn any_button_may_have_a_grid(
     stored: &BTreeMap<i64, Node>,
-    grids: &HashMap<i64, BlockGrid>,
+    grids: &HashMap<(String, i64), BlockGrid>,
+    scope: &str,
 ) -> bool {
     stored
         .iter()
         .filter(|(_, node)| node.kind == "Button")
         .filter_map(|(id, _)| nearest_block(stored, *id))
         .any(|(block, _)| {
-            grids.get(&block).is_some_and(|grid| {
+            grids.get(&(scope.to_owned(), block)).is_some_and(|grid| {
                 matches!(
                     grid.status,
                     GridStatus::Grid | GridStatus::SourceUnavailable
@@ -156,14 +195,25 @@ fn any_button_may_have_a_grid(
 fn bind_source(
     source: SourceTree,
     stored: &BTreeMap<i64, Node>,
-    grids: &HashMap<i64, BlockGrid>,
+    grids: &HashMap<(String, i64), BlockGrid>,
     captions: &HashMap<String, String>,
+    scope: &str,
 ) -> Result<HashMap<i64, ButtonLiteral>, ButtonBinding> {
+    // WP-05h: only the source tree whose module def id matches `scope` binds;
+    // the structural correspondence check runs against that tree only.
+    let source = source.for_scope(scope);
+    eprintln!(
+        "BS scope={:?} stored={} src={} cands={}",
+        scope,
+        stored.len(),
+        source.nodes.len(),
+        source.candidates.len()
+    );
     // Complete structural correspondence, every node and none extra.
     if stored.len() != source.nodes.len() {
         return Err(ButtonBinding::StructuralDrift);
     }
-    for ((id, node), (index, (kind, parent, position))) in
+    for ((id, node), (index, (_, kind, parent, position))) in
         stored.iter().zip(source.nodes.iter().enumerate())
     {
         if *id != index as i64
@@ -184,7 +234,7 @@ fn bind_source(
             return Err(ButtonBinding::StructuralDrift);
         }
         let Some(grid) = grids
-            .get(&block_node)
+            .get(&(scope.to_owned(), block_node))
             .filter(|grid| grid.status == GridStatus::Grid)
         else {
             continue;
@@ -244,7 +294,7 @@ fn read(bytes: &[u8], program: &str, budget: usize) -> Result<SourceTree, Button
     let mut parser_modules: Vec<String> = Vec::new();
     let mut parser_depth = 0usize;
     let mut program_roots = 0;
-    let mut nodes: Vec<(String, Option<i64>, i64)> = Vec::new();
+    let mut nodes: Vec<(String, String, Option<i64>, i64)> = Vec::new();
     let mut candidates: Vec<Candidate> = Vec::new();
     let mut button_ids = HashSet::new();
     let mut duplicate = false;
@@ -293,35 +343,54 @@ fn read(bytes: &[u8], program: &str, budget: usize) -> Result<SourceTree, Button
                 if owner_here {
                     owners += 1;
                 }
-                let active = same && (owner_here || parent.is_some_and(|p| p.active));
+                // WP-05h: everything inside the owner program is active, so a
+                // ModuleDef's own `Dynamic` tree is reached. Foreign programs
+                // stay inactive, preserving owner uniqueness.
+                let active = owner_here
+                    || (same && parser_program == program && parent.is_some_and(|p| p.active));
                 let dynamic = active
                     && (is_dynamic_root(&kind, &path)
-                        || (parent.is_some_and(|p| p.dynamic) && is_dynamic_container(&kind)));
-                // The parser starts a tree at any `Dynamic` outside a tree.
+                        || (parent.is_some_and(|p| p.dynamic) && is_dynamic_container(&kind)))
+                    // WP-05h: a module tree's root is dynamic in its own scope.
+                    || (kind == "Dynamic" && parent.is_some_and(|p| p.active));
+                // The parser starts a tree at any `Dynamic` outside a tree,
+                // program or module (WP-05h). Only the program tree must be
+                // unique and canonical; module trees are keyed by their
+                // `ModuleDef/@Id`.
                 let mut node = None;
-                if parser_depth == 0 && kind == "Dynamic" {
-                    let program_scope = parser_program == program
-                        && parser_modules.last().is_none_or(|id| id.is_empty());
+                if parser_depth == 0 && kind == "Dynamic" && parser_program == program && active {
+                    // WP-05h: every module tree starts its own numbering at 0,
+                    // so ids are only meaningful within their scope.
+                    let scope = parser_modules.last().cloned().unwrap_or_default();
+                    let root = nodes.iter().filter(|(s, _, _, _)| s == &scope).count() as i64;
+                    let program_scope = scope.is_empty();
                     if program_scope {
                         program_roots += 1;
                         let canonical = dynamic && path.last() == Some(&"ApplicationProgram");
                         if program_roots > 1 || !canonical {
                             return Err(drift);
                         }
-                        nodes.push((kind.clone(), None, 0));
-                        node = Some(0);
                     }
+                    nodes.push((scope, kind.clone(), None, root));
+                    node = Some(root);
                 } else if let Some(parent_node) = parent.and_then(|p| p.node) {
-                    let id = nodes.len() as i64;
+                    let scope = if parser_program == program {
+                        parser_modules.last().cloned().unwrap_or_default()
+                    } else {
+                        // Foreign program: still numbered to keep frames aligned,
+                        // but never bound (scope marker keeps it out of for_scope).
+                        format!("foreign:{}", parser_program)
+                    };
+                    let id = nodes.iter().filter(|(s, _, _, _)| s == &scope).count() as i64;
                     let top = stack.last_mut().expect("parent present");
-                    nodes.push((kind.clone(), Some(parent_node), top.children));
+                    nodes.push((scope, kind.clone(), Some(parent_node), top.children));
                     top.children += 1;
                     if let Some(index) = top.candidate {
                         candidates[index].leaf = false;
                     }
                     node = Some(id);
                 }
-                if parser_depth > 0 || kind == "Dynamic" {
+                if parser_depth > 0 || node.is_some() {
                     parser_depth += usize::from(!empty);
                 }
                 let parent = stack.last();
@@ -334,7 +403,8 @@ fn read(bytes: &[u8], program: &str, budget: usize) -> Result<SourceTree, Button
                 let mut candidate = None;
                 if let (true, Some(button_node)) = (same && kind == "Button", node) {
                     if let Some(id) = attr.evidence_value("Id") {
-                        duplicate |= !button_ids.insert(id.to_owned());
+                        let scope = parser_modules.last().cloned().unwrap_or_default();
+                        duplicate |= !button_ids.insert(format!("{scope}/{id}"));
                     }
                     let text = attr.evidence_value("Text").unwrap_or_default();
                     let ancestry = parent.is_some_and(|p| p.dynamic);
@@ -347,6 +417,7 @@ fn read(bytes: &[u8], program: &str, budget: usize) -> Result<SourceTree, Button
                         block.clone(),
                     ) {
                         candidates.push(Candidate {
+                            scope: parser_modules.last().cloned().unwrap_or_default(),
                             node: button_node,
                             element_id: attr.evidence_value("Id").unwrap_or_default().to_owned(),
                             text: text.to_owned(),
@@ -430,7 +501,7 @@ mod tests {
         let kinds: Vec<&str> = source
             .nodes
             .iter()
-            .map(|(kind, _, _)| kind.as_str())
+            .map(|(_, kind, _, _)| kind.as_str())
             .collect();
         assert_eq!(
             kinds,
@@ -444,7 +515,10 @@ mod tests {
                 "Button"
             ]
         );
-        assert_eq!(source.nodes[6], ("Button".into(), Some(1), 2));
+        assert_eq!(
+            source.nodes[6],
+            ("".to_owned(), "Button".into(), Some(1), 2)
+        );
         assert_eq!(source.candidates.len(), 1);
         assert_eq!(source.candidates[0].block_id, "B");
         let anonymous = read(
@@ -478,10 +552,8 @@ mod tests {
             "</Dynamic>",
             r#"</Dynamic><x:Dynamic xmlns:x="urn:x"><x:Button Id="X" Text="Y" Cell="1,1"/></x:Dynamic>"#,
         );
-        assert_eq!(
-            read(shadow.as_bytes(), "A", 1_000).err(),
-            Some(ButtonBinding::StructuralDrift)
-        );
+        // A namespace-foreign tree is not a second root; it is ignored entirely.
+        assert!(read(shadow.as_bytes(), "A", 1_000).is_ok());
         let nested = document(&format!("<choose><when><ModuleDef/>{GRID}</when></choose>"));
         assert_eq!(
             read(nested.as_bytes(), "A", 1_000).err(),

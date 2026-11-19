@@ -29,6 +29,10 @@ mod ownership {
     pub(super) fn is_dynamic_root(kind: &str, path: &[&str]) -> bool {
         kind == "Dynamic"
             && (path.strip_suffix(&["ApplicationProgram"]) == Some(&PROGRAMS)
+                // WP-05h: a `ModuleDef` may sit under `Static` (or directly under
+                // the program); both are module tree roots.
+                || path.strip_suffix(&["Static", "ModuleDefs", "ModuleDef"])
+                    == Some(&[PROGRAMS.as_slice(), &["ApplicationProgram"]].concat())
                 || path.strip_suffix(&["ApplicationProgram", "ModuleDefs", "ModuleDef"])
                     == Some(&PROGRAMS))
     }
@@ -84,7 +88,8 @@ pub struct ParameterLayout {
     grids: HashMap<(String, i64), BlockGrid>,
     separators: HashMap<(String, i64), SeparatorPlacement>,
     declarations: HashMap<(String, i64), SeparatorDeclaration>,
-    buttons: HashMap<i64, ButtonLiteral>,
+    /// `(module_def_id, node)` → literal; module trees bind too (WP-05h).
+    buttons: HashMap<(String, i64), ButtonLiteral>,
     /// `nested-block-cell-passive-v1`: program-owned nested blocks placed in
     /// their parent grid, bound by structure.
     nested_cells: HashMap<i64, NestedBlockCell>,
@@ -100,13 +105,10 @@ impl ParameterLayout {
     pub fn literal_grid_axes(&self, program: &str) -> Option<&std::collections::HashSet<String>> {
         (self.axis_program == program).then_some(&self.literal_grid_axes)
     }
-    /// `button-literal-passive-v1`: the admitted literal of the program-owned
-    /// `Button` at `node`; module definitions never have one.
+    /// `button-literal-passive-v1`: the admitted literal of the `Button` at
+    /// `node` in `definition`'s tree; since WP-05h module trees bind too.
     pub fn button(&self, definition: &str, node: i64) -> Option<&ButtonLiteral> {
-        if !definition.is_empty() {
-            return None;
-        }
-        self.buttons.get(&node)
+        self.buttons.get(&(definition.to_owned(), node))
     }
     /// Whether the program's `Button` literals could be bound to stored nodes at all.
     /// `nested-block-cell-passive-v1`: the admitted cell of the program-owned
@@ -207,10 +209,37 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
             },
         ))
     })?;
+    // WP-05h: renumber each scope's tree from 0 (per-scope ids, matching
+    // button::read), keeping parent relationships within the scope.
     let mut trees: BTreeMap<String, BTreeMap<i64, Node>> = BTreeMap::new();
-    for row in rows {
-        let (scope, id, node) = row?;
-        trees.entry(scope).or_default().insert(id, node);
+    {
+        let mut remaps: HashMap<String, HashMap<i64, i64>> = HashMap::new();
+        let mut raw: BTreeMap<String, Vec<(i64, Node)>> = BTreeMap::new();
+        for row in rows {
+            let (scope, id, node) = row?;
+            raw.entry(scope.clone()).or_default().push((id, node));
+            let remap = remaps.entry(scope).or_default();
+            remap.insert(id, remap.len() as i64 - 1 + 1); // placeholder, fixed below
+        }
+        for (scope, entries) in raw {
+            let remap = remaps.get_mut(&scope).unwrap();
+            remap.clear();
+            for (index, (old_id, _)) in entries.iter().enumerate() {
+                remap.insert(*old_id, index as i64);
+            }
+            let tree: BTreeMap<i64, Node> = entries
+                .into_iter()
+                .map(|(old_id, node)| {
+                    let new_id = remap[&old_id];
+                    let node = Node {
+                        parent: node.parent.and_then(|p| remap.get(&p).copied()),
+                        ..node
+                    };
+                    (new_id, node)
+                })
+                .collect();
+            trees.insert(scope, tree);
+        }
     }
     let mut result = ParameterLayout {
         button_binding: ButtonBinding::Bound,
@@ -218,7 +247,7 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
         axis_program: program.to_owned(),
         ..ParameterLayout::default()
     };
-    for (scope, nodes) in trees {
+    for (scope, nodes) in &trees {
         let mut structural = BTreeSet::new();
         for node in nodes.values() {
             if matches!(node.kind.as_str(), "Rows" | "Columns") {
@@ -226,7 +255,7 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
             }
         }
         let mut scope_grids: HashMap<i64, BlockGrid> = HashMap::new();
-        for (id, node) in &nodes {
+        for (id, node) in nodes.iter() {
             if node.kind != "ParameterBlock" {
                 continue;
             }
@@ -255,7 +284,7 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
         // inline-section-flatten-v1: an `Inline` block's heading renders in the
         // group of its nearest non-inline block ancestor. Recorded for every
         // inline block, before the field walk below skips non-field kinds.
-        for (&node_id, node) in &nodes {
+        for (&node_id, node) in nodes.iter() {
             if node.kind == "ParameterBlock" && node.inline {
                 let mut outer = None;
                 let mut parent = node.parent;
@@ -289,7 +318,7 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
                 }
             }
         }
-        for (&node_id, node) in &nodes {
+        for (&node_id, node) in nodes.iter() {
             if !matches!(
                 node.kind.as_str(),
                 "ParameterRefRef" | "ComObjectRefRef" | "ParameterSeparator"
@@ -433,7 +462,7 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
         }
         if scope.is_empty() {
             if let Some(source_grids) = &grids {
-                let bound = grid::axis_caption_ids(source_grids, &nodes);
+                let bound = grid::axis_caption_ids(source_grids, nodes);
                 result.literal_grid_axes = scope_grids
                     .values()
                     .filter(|grid| grid.status == GridStatus::Grid)
@@ -442,21 +471,67 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
                     .map(|axis| axis.id.clone())
                     .collect();
             }
-            // button-literal-passive-v1: program-owned Buttons only.
-            let (binding, buttons) = button::bind(
-                source.as_deref(),
-                program,
-                Some(&nodes),
-                &scope_grids,
-                &captions,
-            );
+        }
+        // button-literal-passive-v1 / module-scoped-buttons-v1 (WP-05h):
+        // every tree binds its own Buttons; a refusal in any tree refuses
+        // the whole program's labels, never a subset.
+        // WP-05h: the bind walk checks every scope's nearest block, so
+        // the grid lookup must cover all trees, not only this scope's.
+        // Keyed by (scope, node) so per-scope ids never collide.
+        // The stored per-scope tree is renumbered from 0, but the source
+        // grid map is keyed by element `@Id`; look blocks up by `@Id` and
+        // re-key with this scope's renumbered node id.
+        // Merge every scope's structural fallback (unavailable grids for
+        // blocks with stored axes) with the source-declared grids.
+        let mut all_grids: HashMap<(String, i64), BlockGrid> = trees
+            .iter()
+            .flat_map(|(tree_scope, tree)| {
+                tree.iter()
+                    .filter(|(_, n)| n.kind == "ParameterBlock")
+                    .filter_map(|(id, n)| {
+                        grids
+                            .as_ref()
+                            .and_then(|g| n.id.as_ref().and_then(|e| g.blocks.get(e)))
+                            .map(|grid| ((tree_scope.clone(), *id), grid.clone()))
+                    })
+            })
+            .collect();
+        for (tree_scope, tree) in trees.iter() {
+            let mut structural = BTreeSet::new();
+            for node in tree.values() {
+                if matches!(node.kind.as_str(), "Rows" | "Columns") {
+                    structural.extend(node.parent);
+                }
+            }
+            for (id, node) in tree.iter() {
+                if node.kind == "ParameterBlock"
+                    && !all_grids.contains_key(&(tree_scope.clone(), *id))
+                    && structural.contains(id)
+                {
+                    all_grids.insert((tree_scope.clone(), *id), BlockGrid::unavailable());
+                }
+            }
+        }
+        let (binding, buttons) = button::bind(
+            source.as_deref(),
+            program,
+            Some(nodes),
+            &all_grids,
+            &captions,
+            scope.as_str(),
+        );
+        if binding != ButtonBinding::Bound && result.button_binding == ButtonBinding::Bound {
             result.button_binding = binding;
-            result.buttons = buttons;
-            // nested-block-cell-passive-v1: program-owned nested blocks only.
+        }
+        for (node, literal) in buttons {
+            result.buttons.insert((scope.clone(), node), literal);
+        }
+        // nested-block-cell-passive-v1: program-owned nested blocks only.
+        if scope.is_empty() {
             let (nested_binding, nested_cells) = nested::bind(
                 source.as_deref(),
                 program,
-                Some(&nodes),
+                Some(nodes),
                 &scope_grids,
                 &captions,
             );
@@ -485,6 +560,7 @@ fn retained_source(conn: &Connection, program: &str) -> Result<Option<Vec<u8>>, 
     {
         return Ok(None);
     }
+
     let bytes: Vec<u8> = conn.query_row(
         "SELECT bytes FROM source_file WHERE sha256=?1",
         [&sha],

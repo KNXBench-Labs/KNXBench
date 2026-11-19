@@ -48,6 +48,7 @@ import DeviceInstructionsPanel from "./DeviceInstructionsPanel";
 import { LanguageFallbackBadge, fellBack } from "./languageFallback";
 import { useGroupAddressFormat } from "./gaNotation";
 import GroupAddressPicker from "./GroupAddressPicker";
+import CompactSelect from "./CompactSelect";
 import { effectiveDpt } from "./comObjectView";
 import {
   directionLabel,
@@ -454,7 +455,7 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
       <span className="inspector-field-heading">{t("inspector.dpt")}
         <ValueProvenance layer={com.dpt_layer ?? (com.dpt === null && com.program_dpt !== null ? "Program" : null)} />
       </span>
-      <select
+      <CompactSelect
         aria-label={t("inspector.dpt")}
         aria-describedby={`com-dpt-hint-${com.id}`}
         value={value}
@@ -473,7 +474,7 @@ function DptField(props: { com: ComObjectNode; onApplied: (tree: ProjectTree) =>
         {DPT_OPTIONS.map(entry => <option key={entry.id} value={entry.id}>
           {dptDisplay(entry.id, language)}
         </option>)}
-      </select>
+      </CompactSelect>
       {com.dpt !== null && <details className="dpt-reference">
         <summary>{t("dpt.technicalReference")}</summary>
         <small className="mono">{t("dpt.reference", { value: com.dpt })}</small>
@@ -675,7 +676,7 @@ function NewGroupLinkRow(props: {
       onDrop={drop}>
       {/* Issue #8: searchable, shows each address's DPT and marks a mismatch with this object's. */}
       <GroupAddressPicker addresses={groupAddresses} objectDpt={effectiveDpt(com)} value={gaId} onChange={setGaId} />
-      <select
+      <CompactSelect
         value={direction}
         aria-label={t("inspector.direction.label")}
         aria-describedby={showHint ? hintId : undefined}
@@ -684,7 +685,7 @@ function NewGroupLinkRow(props: {
       >
         <option value="Send">{t("inspector.direction.send")}</option>
         <option value="Receive">{t("inspector.direction.receive")}</option>
-      </select>
+      </CompactSelect>
       <button onClick={link} disabled={!canLink}>
         {t("inspector.link")}
       </button>

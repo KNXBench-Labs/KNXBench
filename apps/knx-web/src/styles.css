@@ -3505,13 +3505,13 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   display: grid; grid-template-columns: 100px minmax(0, 1fr); align-items: center;
   gap: 4px 10px; margin-bottom: var(--workspace-gap); overflow-wrap: anywhere;
 }
-.workbench .inspector .inspector-field > :is(input, select, textarea, .address-editor):not(.value-slot-text) {
+.workbench .inspector .inspector-field > :is(input, select, textarea, .address-editor, .select-compact):not(.value-slot-text) {
   min-width: 0; width: min(100%, var(--workspace-scalar-width));
 }
 .workbench .inspector-field > :is(input, textarea).value-slot-text {
   width: min(100%, var(--workspace-text-width));
 }
-.workbench .inspector > .inspector-field > :is(input, select, textarea, .address-editor),
+.workbench .inspector > .inspector-field > :is(input, select, textarea, .address-editor, .select-compact),
 .workbench .inspector > .rename-name-field > .inspector-field > input,
 .device-workspace > .rename-name-field > .inspector-field > input { grid-column: 2; grid-row: 1; }
 .workbench .inspector > .inspector-field > :is(.field-error, .inspector-description, details, small) { grid-column: 1 / -1; }
@@ -3522,7 +3522,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 @container (max-width: 300px) {
   .workbench .inspector > .inspector-field,
   .workbench .inspector > .rename-name-field > .inspector-field { grid-template-columns: minmax(0, 1fr); }
-  .workbench .inspector > .inspector-field > :is(input, select, textarea, .address-editor),
+  .workbench .inspector > .inspector-field > :is(input, select, textarea, .address-editor, .select-compact),
   .workbench .inspector > .rename-name-field > .inspector-field > input { grid-column: 1; grid-row: auto; }
 }
 @container (max-width: 360px) {
@@ -4028,7 +4028,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 .com-object-more-fields > .inspector-field { flex: 1 1 240px; min-width: 0; }
 .com-object-edit-fields .inspector-field-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .com-object-edit-fields .inspector-field-heading .provenance-badge { max-width: 100%; overflow-wrap: anywhere; opacity: 1; }
-.com-object-edit-fields .dpt-field select { box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; }
+.com-object-edit-fields .dpt-field .select-compact { box-sizing: border-box; width: min(100%, var(--workspace-scalar-width)); max-width: 100%; min-width: 0; }
 .com-object-edit-fields .dpt-reference,
 .com-object-edit-fields .value-source-reference { overflow-wrap: anywhere; }
 /* The technical reference is where a routine source layer is still shown. */
@@ -5587,3 +5587,37 @@ html[data-motion-flow="off"] .flow-camera,
 
 /* A stable footprint keeps sorting from changing measured column requirements. */
 .resizable-table-heading .table-sort-indicator { width: 1em; flex-shrink: 0; }
+
+/* WP-45: compact selects sit in the shared WP-41 scalar value slot (10 rem,
+   ~20-25 monospace chars) instead of stretching to the longest option. The
+   full value stays reachable via the title tooltip and the native dropdown;
+   on hover a value that overflows scrolls slowly through the field. */
+.select-compact { display: inline-block; width: min(100%, var(--workspace-scalar-width)); max-width: 100%; min-width: 0; vertical-align: bottom; }
+.select-compact > select {
+  display: block; width: 100%; min-width: 0; max-width: 100%;
+  box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* The hidden twin of the selected option's text, measured in JS to learn the
+   overflow; it must never show or take layout space. */
+.select-compact-measure {
+  position: absolute; visibility: hidden; white-space: nowrap;
+  pointer-events: none;
+}
+/* Hover marquee: the select's own text is not addressable, so the scroll is
+   a transform on the control itself, clipped by the wrapper. Soft start
+   (ease-in-out), one slow pass, then a 2 s pause at the end before looping.
+   Gated twice: OS reduced motion and the in-app motion level "off" both keep
+   the field static (ellipsis only). Duration derives from the shared motion
+   clock so subtle/standard levels scale it; the pause is a fixed 2 s. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion-level="off"]) .select-compact.is-marquee:hover > select,
+  :root:not([data-motion-level="off"]) .select-compact.is-marquee:focus-within > select {
+    animation: knx-select-marquee calc(var(--knx-transition-duration) * 30) ease-in-out infinite;
+  }
+}
+@keyframes knx-select-marquee {
+  0% { transform: translateX(0); opacity: 0.3; }
+  6% { opacity: 1; }
+  60% { transform: translateX(calc(var(--select-marquee-distance, 0px) * -1)); }
+  100% { transform: translateX(calc(var(--select-marquee-distance, 0px) * -1)); }
+}

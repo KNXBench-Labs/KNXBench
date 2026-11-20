@@ -4,7 +4,8 @@ The [ADR-0174](../adr/0174-last-downloaded-links-and-flags.md) backend (WP-37f)
 records effective object flags with Parameters and links with Group addresses,
 with independent usability and settlement times. Backend and the
 communication-object UI (row marks, editor-row details, summary line) are on
-main; group-address views carry no marks.
+main; the group-address views (tree, columns, atlas, matrix) carry the same
+link marks since 20 November 2026 (web-only, `DeviceDetail.last_download`).
 
 - Evidence describes what a completed regular/batch request built its image
   from, not a device readback. Per-part pending flags remain authoritative.

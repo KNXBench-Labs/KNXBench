@@ -3738,16 +3738,27 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   display: inline-block; flex: none; width: 7px; height: 7px; border-radius: 50%;
   background: var(--knx-warning-color);
 }
-/* ADR-0173: a plain line when nothing differs or nothing can be compared. */
+/* ADR-0174: a plain line when nothing differs or nothing can be compared. */
 .parameter-last-download, .com-last-download { margin: 0 0 12px; font-size: 13px; color: var(--knx-muted); overflow-wrap: anywhere; }
 .parameter-last-download[data-differs="true"], .com-last-download[data-differs="true"] { color: var(--knx-foreground); }
+/* Group-address views: the same amber row dot and summary line (WP-37). */
+.ga-last-download { margin: 0 0 12px; font-size: 13px; color: var(--knx-muted); overflow-wrap: anywhere;
+  display: flex; align-items: center; gap: 8px; width: fit-content; max-width: 100%; box-sizing: border-box; }
+.ga-last-download[data-differs="true"] { color: var(--knx-foreground);
+  border: 1px solid color-mix(in srgb, var(--knx-warning-color) 60%, transparent);
+  background: color-mix(in srgb, var(--knx-warning-color) 12%, transparent);
+  padding: 4px 10px; border-radius: 6px; }
+.ga-last-download-dot { display: inline-block; flex: none; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--knx-warning-color); }
 /* The step-1 dot beside a value that differs from the last download; the
    transparent border widens the tooltip target without growing the dot. */
-.parameter-download-mark, .com-object-download-mark {
+.parameter-download-mark, .com-object-download-mark, .ga-download-mark {
   display: inline-block; box-sizing: content-box; width: 7px; height: 7px; margin-left: 2px; vertical-align: middle;
   border: 4px solid transparent; border-radius: 50%; background: var(--knx-warning-color); background-clip: padding-box;
   cursor: help;
 }
+/* A group-address row's caption names what differs. */
+.ga-download-note { display: block; overflow-wrap: anywhere; }
 /* The downloaded value as a caption under its row, always shown: visible for
    keyboard and touch users, and no layout shift under a pointer. */
 .parameter-download-note { display: block; margin: -10px 0 16px; overflow-wrap: anywhere; }
@@ -3759,7 +3770,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
 /* Forced colours drop author backgrounds: keep every status dot painted. */
 @media (forced-colors: active) {
   .device-pending-dot, .parameter-last-download-dot, .parameter-download-mark, .com-last-download-dot, .com-object-download-mark,
-  .parameter-section-download-mark {
+  .parameter-section-download-mark, .ga-last-download-dot, .ga-download-mark {
     forced-color-adjust: none; background-color: CanvasText;
   }
 }

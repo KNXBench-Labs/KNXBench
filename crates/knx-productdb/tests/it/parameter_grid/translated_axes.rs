@@ -14,10 +14,16 @@ fn translation(conn: &Connection, program: &str, id: &str, language: &str, text:
 }
 
 fn project(conn: &Connection, language: Option<&str>) -> GridAxisCaptions {
+    project_scope(conn, "", language)
+}
+
+/// WP-05n: project the bound literal axis captions of one definition's tree.
+fn project_scope(conn: &Connection, definition: &str, language: Option<&str>) -> GridAxisCaptions {
     parameter_grid_axis_captions(
         conn,
         "A-1",
         &load(conn, "A-1").unwrap(),
+        definition,
         language,
         &mut TextProjectionBudget::default(),
     )
@@ -36,8 +42,8 @@ fn own_row_and_column_translation_preserves_declaration_order_and_geometry() {
     assert_eq!(
         selected.texts,
         std::collections::HashMap::from([
-            ("AX-R9".into(), "Nord".into()),
-            ("AX-C8".into(), "Eingang".into())
+            (("".to_owned(), "AX-R9".to_owned()), "Nord".to_owned()),
+            (("".to_owned(), "AX-C8".to_owned()), "Eingang".to_owned())
         ])
     );
     assert!(selected.unsupported.is_empty());
@@ -78,7 +84,9 @@ fn missing_no_requested_and_unknown_languages_keep_source_fallback() {
         println!("WP05_CELL|pdb|fallback|{language:?}");
     }
     let selected = project(&fixture.conn, Some("de-DE"));
-    assert!(!selected.texts.contains_key("AX-R2"));
+    assert!(!selected
+        .texts
+        .contains_key(&("".to_owned(), "AX-R2".to_owned())));
     assert_eq!(
         grid_of(&load(&fixture.conn, "A-1").unwrap(), "", "P-1_R-1")
             .unwrap()
@@ -96,9 +104,19 @@ fn explicit_empty_translation_is_present_while_missing_and_null_are_not() {
     translation(&fixture.conn, "A-1", "AX-R9", "de-DE", "");
     fixture.conn.execute_batch("INSERT INTO translation(scope,scope_id,ref_id,language,attribute_name,text) VALUES('Program','A-1','AX-C8','de-DE','Text',NULL)").unwrap();
     let selected = project(&fixture.conn, Some("de-DE"));
-    assert_eq!(selected.texts.get("AX-R9").map(String::as_str), Some(""));
-    assert!(!selected.texts.contains_key("AX-C8"));
-    assert!(!selected.texts.contains_key("AX-R2"));
+    assert_eq!(
+        selected
+            .texts
+            .get(&("".to_owned(), "AX-R9".to_owned()))
+            .map(String::as_str),
+        Some("")
+    );
+    assert!(!selected
+        .texts
+        .contains_key(&("".to_owned(), "AX-C8".to_owned())));
+    assert!(!selected
+        .texts
+        .contains_key(&("".to_owned(), "AX-R2".to_owned())));
     println!("WP05_CELL|pdb|empty|complete");
 }
 
@@ -112,14 +130,17 @@ fn language_policy_is_exact_then_one_way_prefix_with_lexical_tie_break() {
     ] {
         translation(&fixture.conn, "A-1", "AX-R9", language, text);
     }
-    assert_eq!(project(&fixture.conn, Some("de")).texts["AX-R9"], "Nord AT");
     assert_eq!(
-        project(&fixture.conn, Some("de-DE")).texts["AX-R9"],
+        project(&fixture.conn, Some("de")).texts[&("".into(), "AX-R9".into())],
+        "Nord AT"
+    );
+    assert_eq!(
+        project(&fixture.conn, Some("de-DE")).texts[&("".into(), "AX-R9".into())],
         "Nord DE"
     );
     translation(&fixture.conn, "A-1", "AX-R9", "de", "Exact short");
     assert_eq!(
-        project(&fixture.conn, Some("de")).texts["AX-R9"],
+        project(&fixture.conn, Some("de")).texts[&("".into(), "AX-R9".into())],
         "Exact short"
     );
     assert!(project(&fixture.conn, Some("de-CH")).texts.is_empty());
@@ -139,6 +160,7 @@ fn wrong_axis_program_scope_and_attribute_never_supply_a_caption() {
         &fixture.conn,
         "Other",
         &layout,
+        "",
         Some("de-DE"),
         &mut TextProjectionBudget::default()
     )
@@ -171,7 +193,10 @@ fn source_hash_length_and_stored_structure_drift_refuse_axis_binding() {
     ] {
         let fixture = ingest(AXES, "");
         translation(&fixture.conn, "A-1", "AX-R9", "de-DE", "Nord");
-        assert_eq!(project(&fixture.conn, Some("de-DE")).texts["AX-R9"], "Nord");
+        assert_eq!(
+            project(&fixture.conn, Some("de-DE")).texts[&("".into(), "AX-R9".into())],
+            "Nord"
+        );
         fixture.conn.execute_batch(sql).unwrap();
         assert!(
             project(&fixture.conn, Some("de-DE")).texts.is_empty(),
@@ -228,7 +253,7 @@ fn selected_translated_placeholders_are_refused_without_evaluation() {
         assert!(selected.texts.is_empty());
         assert_eq!(
             selected.unsupported,
-            std::collections::HashSet::from(["AX-R9".into()])
+            std::collections::HashSet::from([("".to_owned(), "AX-R9".to_owned())])
         );
         assert_eq!(
             grid_of(&load(&fixture.conn, "A-1").unwrap(), "", "P-1_R-1")
@@ -294,6 +319,7 @@ fn measured_axes(
         conn,
         "A-1",
         layout,
+        "",
         Some(language),
         &mut TextProjectionBudget::default(),
     )
@@ -343,7 +369,13 @@ fn axis_translation_sql_work_excludes_unrelated_program_rows() {
             .zip(baseline)
             {
                 let (selected, steps) = measured_axes(&fixture.conn, &layout, language);
-                assert_eq!(selected.texts.get("AX-R9").map(String::as_str), expected);
+                assert_eq!(
+                    selected
+                        .texts
+                        .get(&("".to_owned(), "AX-R9".to_owned()))
+                        .map(String::as_str),
+                    expected
+                );
                 assert_eq!(selected.texts.len(), usize::from(expected.is_some()));
                 assert!(selected.unsupported.is_empty());
                 // B-tree height may change; a row scan/sort cannot fit this fixed allowance.
@@ -387,8 +419,14 @@ fn unmatched_axis_language_metadata_exhausts_the_same_sticky_budget() {
             .unwrap();
         let changes = fixture.conn.total_changes();
         let guard = VmSteps::install(&fixture.conn);
-        let result =
-            parameter_grid_axis_captions(&fixture.conn, "A-1", &layout, Some("fr"), &mut budget);
+        let result = parameter_grid_axis_captions(
+            &fixture.conn,
+            "A-1",
+            &layout,
+            "",
+            Some("fr"),
+            &mut budget,
+        );
         let steps = *guard.steps;
         drop(guard);
         assert!(matches!(
@@ -443,7 +481,7 @@ fn foreign_namespace_owner_ancestors_never_admit_axis_translations() {
         let fixture = ingest_axis_source(&qualified_owner(&canonical, name, namespace));
         translation(&fixture.conn, "A-1", "AX-R9", "de-DE", "Nord");
         assert_eq!(
-            project(&fixture.conn, Some("de-DE")).texts["AX-R9"],
+            project(&fixture.conn, Some("de-DE")).texts[&("".into(), "AX-R9".into())],
             "Nord",
             "{name}"
         );
@@ -486,7 +524,10 @@ fn foreign_namespace_owner_ancestors_never_admit_axis_translations() {
         assert!(xml.contains(&format!("xmlns=\"{root}\"")));
         let fixture = ingest_axis_source(&xml);
         translation(&fixture.conn, "A-1", "AX-R9", "de-DE", "Nord");
-        assert_eq!(project(&fixture.conn, Some("de-DE")).texts["AX-R9"], "Nord");
+        assert_eq!(
+            project(&fixture.conn, Some("de-DE")).texts[&("".into(), "AX-R9".into())],
+            "Nord"
+        );
         println!("WP05_CELL|pdb|ancestor|root|{root}");
     }
     // A namespace-free ancestor in a canonical source is different from that policy.
@@ -514,9 +555,16 @@ fn selected_axis_text_and_metadata_share_the_sticky_utf8_byte_budget() {
         .admit_copy(&"x".repeat(MAX_TEXT_PROJECTION_WORK - 27))
         .unwrap();
     assert_eq!(
-        parameter_grid_axis_captions(&fixture.conn, "A-1", &layout, Some("de-DE"), &mut budget)
-            .unwrap()
-            .texts["AX-R9"],
+        parameter_grid_axis_captions(
+            &fixture.conn,
+            "A-1",
+            &layout,
+            "",
+            Some("de-DE"),
+            &mut budget
+        )
+        .unwrap()
+        .texts[&("".into(), "AX-R9".into())],
         "é"
     );
     assert!(budget.copy_text("x").is_err());
@@ -529,9 +577,156 @@ fn selected_axis_text_and_metadata_share_the_sticky_utf8_byte_budget() {
         &fixture.conn,
         "A-1",
         &layout,
+        "",
         Some("de-DE"),
         &mut budget
     )
     .is_err());
     println!("WP05_CELL|pdb|utf8-budget|complete");
+}
+
+// WP-05n: a ModuleDef's own dynamic tree owns its literal grid axes, keyed
+// `(module_def_id, axis @Id)`; `""` remains the program's own tree.
+const MODULE_AXES: &str = r#"<ParameterBlock Id="MD-1_AX-B" Text="Module axes" Layout="Table">
+<Rows><Row Id="AX-R9" Text="Module north"/></Rows>
+<Columns><Column Id="MD-1_AX-C8" Text="Module input" Width="50%"/></Columns>
+<ParameterRefRef RefId="MD-1_P-1_R-1" Cell="1,1"/></ParameterBlock>"#;
+
+fn module_translation(conn: &Connection, program: &str, id: &str, language: &str, text: &str) {
+    conn.execute("INSERT INTO translation(scope,scope_id,ref_id,language,attribute_name,text) VALUES('Program',?1,?2,?3,'Text',?4)",
+        rusqlite::params![program, id, language, text]).unwrap();
+}
+
+#[test]
+fn module_scoped_axes_translate_in_their_own_tree_only() {
+    let fixture = ingest(AXES, MODULE_AXES);
+    // Same axis id in both trees: each scope must bind its own caption.
+    module_translation(&fixture.conn, "A-1", "AX-R9", "de-DE", "Program nord");
+    module_translation(&fixture.conn, "A-1", "MD-1_AX-C8", "de-DE", "Modul eingang");
+    let program = project_scope(&fixture.conn, "", Some("de-DE"));
+    assert_eq!(
+        program
+            .texts
+            .get(&("".to_owned(), "AX-R9".to_owned()))
+            .map(String::as_str),
+        Some("Program nord")
+    );
+    assert!(!program
+        .texts
+        .contains_key(&("".to_owned(), "MD-1_AX-C8".to_owned())));
+    let module = project_scope(&fixture.conn, "MD-1", Some("de-DE"));
+    assert_eq!(
+        module.texts,
+        std::collections::HashMap::from([(
+            ("MD-1".to_owned(), "MD-1_AX-C8".to_owned()),
+            "Modul eingang".to_owned()
+        )])
+    );
+    // The module tree's Row shares the program tree's axis id but is NOT bound
+    // there: the program tree's AX-R9 keeps its own translation, and the
+    // module's AX-R9 never leaks into the program scope.
+    assert_eq!(
+        program
+            .texts
+            .get(&("".to_owned(), "AX-R9".to_owned()))
+            .map(String::as_str),
+        Some("Program nord")
+    );
+    assert!(!module
+        .texts
+        .contains_key(&("MD-1".to_owned(), "AX-R9".to_owned())));
+    // Module-scope axes without a translation keep their source fallback.
+    let module_fr = project_scope(&fixture.conn, "MD-1", Some("fr"));
+    assert!(module_fr.texts.is_empty());
+    let layout = load(&fixture.conn, "A-1").unwrap();
+    let grid = grid_of(&layout, "MD-1", "MD-1_P-1_R-1").unwrap();
+    assert_eq!(grid.rows[0].text.as_deref(), Some("Module north"));
+    assert_eq!(grid.columns[0].text.as_deref(), Some("Module input"));
+    println!("WP05_CELL|pdb|scoped|complete");
+}
+
+#[test]
+fn module_scoped_repeat_and_placeholder_axes_keep_source_fallback() {
+    for module_dynamic in [
+        format!("<Repeat Id=\"MD-1_R\" Count=\"2\">{MODULE_AXES}</Repeat>"),
+        MODULE_AXES.replace("Text=\"Module north\"", "Text=\"{{0}}\""),
+        MODULE_AXES.replace(
+            "Text=\"Module north\"",
+            "Text=\"Module north\" TextParameterRefId=\"MD-1_P-1_R-1\"",
+        ),
+        MODULE_AXES.replace(
+            "Text=\"Module north\"",
+            "Text=\"Module north\" Mystery=\"1\"",
+        ),
+    ] {
+        let fixture = ingest(AXES, &module_dynamic);
+        module_translation(&fixture.conn, "A-1", "AX-R9", "de-DE", "Leak");
+        module_translation(&fixture.conn, "A-1", "MD-1_AX-C8", "de-DE", "Leak");
+        let module = project_scope(&fixture.conn, "MD-1", Some("de-DE"));
+        assert!(module.texts.is_empty(), "{module_dynamic}");
+        assert!(module.unsupported.is_empty(), "{module_dynamic}");
+        // The program tree is unaffected by the module refusal.
+        let program = project_scope(&fixture.conn, "", Some("de-DE"));
+        assert_eq!(
+            program
+                .texts
+                .get(&("".to_owned(), "AX-R9".to_owned()))
+                .map(String::as_str),
+            Some("Leak")
+        );
+        println!("WP05_CELL|pdb|scoped-excluded|{module_dynamic}");
+    }
+}
+
+#[test]
+fn module_scoped_placeholder_translation_is_refused_per_scope() {
+    let fixture = ingest(AXES, MODULE_AXES);
+    module_translation(&fixture.conn, "A-1", "MD-1_AX-C8", "de-DE", "Kanal {{0}}");
+    let module = project_scope(&fixture.conn, "MD-1", Some("de-DE"));
+    assert!(module.texts.is_empty());
+    assert_eq!(
+        module.unsupported,
+        std::collections::HashSet::from([("MD-1".to_owned(), "MD-1_AX-C8".to_owned())])
+    );
+    // The refusal never leaks into the program tree's captions.
+    assert!(project_scope(&fixture.conn, "", Some("de-DE"))
+        .unsupported
+        .is_empty());
+    let layout = load(&fixture.conn, "A-1").unwrap();
+    assert_eq!(
+        grid_of(&layout, "MD-1", "MD-1_P-1_R-1").unwrap().columns[0]
+            .text
+            .as_deref(),
+        Some("Module input")
+    );
+    println!("WP05_CELL|pdb|scoped-placeholder|complete");
+}
+
+#[test]
+fn module_scoped_axis_drift_refuses_only_that_scope() {
+    let fixture = ingest(AXES, MODULE_AXES);
+    module_translation(&fixture.conn, "A-1", "AX-R9", "de-DE", "Program nord");
+    module_translation(&fixture.conn, "A-1", "MD-1_AX-C8", "de-DE", "Modul eingang");
+    assert_eq!(
+        project_scope(&fixture.conn, "MD-1", Some("de-DE"))
+            .texts
+            .len(),
+        1
+    );
+    // Drift the module tree's stored structure: its axes refuse, the program's stay.
+    fixture.conn.execute_batch(
+        "UPDATE dynamic_node SET position=99 WHERE program_id='A-1' AND module_def_id='MD-1' AND kind='Row' AND position=0",
+    ).unwrap();
+    assert!(project_scope(&fixture.conn, "MD-1", Some("de-DE"))
+        .texts
+        .is_empty());
+    let program = project_scope(&fixture.conn, "", Some("de-DE"));
+    assert_eq!(
+        program
+            .texts
+            .get(&("".to_owned(), "AX-R9".to_owned()))
+            .map(String::as_str),
+        Some("Program nord")
+    );
+    println!("WP05_CELL|pdb|scoped-drift|complete");
 }

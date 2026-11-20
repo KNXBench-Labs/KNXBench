@@ -162,6 +162,46 @@ postimplementation mutant evidence, not published-baseline RED or package passes
 This is focused software evidence and independent source review, not whole WP-05,
 release, publication or hardware acceptance.
 
+## Module-scoped literal axis translations
+
+Implemented 20 November 2026 (WP-05n) as an extension of the bounded literal
+rule above, without changing its program-tree behaviour.
+
+- **Ownership.** Each dynamic tree of the selected program — its own
+  `Dynamic` and every `ModuleDef`'s — is counted exactly like the stored
+  per-scope parser and binds separately, keyed by its `module_def_id`
+  (`""` = the program's own tree). A scope whose source tree does not
+  correspond completely to its stored nodes contributes no axes, never
+  another scope's. Within a scope the same literal admission rule holds:
+  only a valid grid's direct Row/Column with a document-unique `@Id` and
+  literal `Text` binds. A scope holding a Repeat-scoped axis, an axis whose
+  `Text` carries a placeholder delimiter, an axis declaring
+  `TextParameterRefId`, an unknown axis attribute or a child/content-bearing
+  axis is refused as a whole and keeps the source fallback — the same
+  exclusions the program tree already had, now enforced per scope by failing
+  that scope's source/stored correspondence. The program tree may reuse an
+  `@Id` a module tree also declares (its own per-scope census is unique
+  there); any other scope's axis must be document-unique, because the
+  translation table names no tree. Selected placeholders in a *translation*
+  remain unsupported per scope, never evaluated, and never leak into
+  another tree's captions.
+- **Selection.** Identical language-key enumeration, exact/prefix policy and
+  sticky budget as above; the overlay is keyed by
+  `(module_def_id, axis @Id)`, so a module-scope axis never collides with a
+  same-named program-tree axis. Repeat expansions share one definition and
+  one caption set.
+- **Projection.** Unchanged: original metadata retained, selected literal
+  text through the existing grid DTO's `text` fields; the ADR-0177
+  parameter-driven caption resolution stays program-tree-only. No DTO
+  version, schema, dependency, reimport or language-selection change.
+- **Executed focused regression seams.** ProductDB integration
+  `parameter_grid::translated_axes` covers per-scope binding, same-id
+  isolation between trees, source-fallback refusals (Repeat, placeholder,
+  `TextParameterRefId`, unknown attribute), per-scope selected-placeholder
+  refusal and per-scope structural drift, all 20 November 2026:
+  24/24 passed. No HTTP or browser regression was run for this slice; broader
+  WP-05, cross-scope interactions and Grid-specific visuals remain open.
+
 ## Passive source Button labels (`button-literal-passive-v1`)
 
 Since Alpha 19 (31 October 2026 source). This is KNXBench presentation policy, not ETS

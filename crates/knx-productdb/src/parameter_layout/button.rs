@@ -141,7 +141,6 @@ pub(super) fn bind(
     let Some(bytes) = bytes else {
         return (ButtonBinding::SourceUnavailable, HashMap::new());
     };
-    eprintln!("READ scope={:?}", scope);
     match read(bytes, program, super::grid::MAX_GRID_EVENTS).and_then(|source| {
         bind_source(
             source,
@@ -202,13 +201,6 @@ fn bind_source(
     // WP-05h: only the source tree whose module def id matches `scope` binds;
     // the structural correspondence check runs against that tree only.
     let source = source.for_scope(scope);
-    eprintln!(
-        "BS scope={:?} stored={} src={} cands={}",
-        scope,
-        stored.len(),
-        source.nodes.len(),
-        source.candidates.len()
-    );
     // Complete structural correspondence, every node and none extra.
     if stored.len() != source.nodes.len() {
         return Err(ButtonBinding::StructuralDrift);

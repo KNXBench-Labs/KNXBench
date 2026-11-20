@@ -35,7 +35,13 @@ feature at a time, never inferred manufacturer behaviour.
   (cross-scope) stays refused. See the
   [contract](../contracts/conditional-parameter-block-rename.md).
 - Translated row/column captions outside the bounded literal program-owned
-  implementation; module/Repeat, template and text-reference semantics remain open.
+  implementation; since 20 November 2026 (WP-05n) the bounded rule also covers
+  a `ModuleDef`'s own dynamic tree — module/Repeat-scoped grids select the
+  requested-language `Text` keyed by `(module_def_id, axis @Id)`, while a
+  scope holding a Repeat-scoped, placeholder, `TextParameterRefId` or
+  unknown-attribute axis keeps the source fallback, mirroring the
+  program-tree rule ([contract](../contracts/alpha16-parameter-layout.md#module-scoped-literal-axis-translations));
+  template and text-reference semantics remain open.
 - Inline sections: an `Inline` block's fields/separators now join the outer
   block's group and its label renders as a row-view heading in the parent page
   (`inline-section-flatten-v1`, product DB v34, contract section added

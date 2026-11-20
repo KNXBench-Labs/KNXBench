@@ -99,14 +99,18 @@ pub fn parameter_caption_templates(
 }
 
 /// Request-local literal axis overlays; refusals retain their own original caption.
+/// WP-05n: keyed by `(module_def_id, axis @Id)` so module/Repeat-scoped grids
+/// translate independently; `""` is the program's own tree.
 #[derive(Debug, Default)]
 pub struct GridAxisCaptions {
-    pub texts: HashMap<String, String>,
+    pub texts: HashMap<(String, String), String>,
     /// A selected translated template is unsupported, never evaluated as a binding.
-    pub unsupported: std::collections::HashSet<String>,
+    pub unsupported: std::collections::HashSet<(String, String)>,
 }
 
-/// Select each source-bound program axis's own `Text`, never `Value` or another owner.
+/// Select each source-bound axis's own `Text`, never `Value` or another owner.
+/// WP-05n: axes of `definition`'s tree only (`""` = the program's own tree);
+/// Repeat expansions share one definition and one caption set.
 /// ADR-0177: an axis declaring `TextParameterRefId` is not translated — its
 /// caption resolves from the referenced parameter — so the candidate set is
 /// limited to axes without a reference.
@@ -120,21 +124,25 @@ pub fn parameter_grid_axis_captions(
     conn: &Connection,
     program: &str,
     layout: &crate::parameter_layout::ParameterLayout,
+    definition: &str,
     language: Option<&str>,
     budget: &mut TextProjectionBudget,
 ) -> Result<GridAxisCaptions, CaptionTemplateError> {
     let mut result = GridAxisCaptions::default();
-    let (Some(language), Some(axes)) = (language, layout.literal_grid_axes(program)) else {
+    let (Some(language), Some(axes)) = (language, layout.literal_grid_axes(program, definition))
+    else {
         return Ok(result);
     };
     // ADR-0177: only axes without a declared `TextParameterRefId` are
     // translation candidates; a referenced axis's caption resolves from the
-    // parameter instead.
-    let axes: Vec<&String> = layout
-        .program_grids()
+    // parameter instead. WP-05n: `definition` selects the owning tree's
+    // grids, so a module-scope axis is never matched against the program's.
+    let bound: std::collections::HashSet<&str> = axes.collect();
+    let axes: Vec<&str> = layout
+        .grids_for(definition)
         .flat_map(|grid| grid.rows.iter().chain(grid.columns.iter()))
-        .filter(|axis| axis.text_parameter_ref_id.is_none() && axes.contains(&axis.id))
-        .map(|axis| &axis.id)
+        .filter(|axis| axis.text_parameter_ref_id.is_none() && bound.contains(axis.id.as_str()))
+        .map(|axis| axis.id.as_str())
         .collect();
     if axes.is_empty() {
         return Ok(result);
@@ -179,7 +187,7 @@ pub fn parameter_grid_axis_captions(
                     budget.admit_copy(id)?;
                     budget.admit_copy(&candidate)?;
                     languages
-                        .entry((*id).clone())
+                        .entry((*id).to_owned())
                         .or_default()
                         .push(candidate.clone());
                 }
@@ -213,10 +221,13 @@ pub fn parameter_grid_axis_captions(
         budget.admit_copy(&id)?;
         // Inspect selected content under the same byte allowance, even on refusal.
         budget.admit_copy(text)?;
+        // WP-05n: the overlay is keyed by the owning tree, so a module-scope
+        // axis never collides with a same-named program-tree axis.
+        let key = (definition.to_owned(), id);
         if text.contains("{{") || text.contains("}}") {
-            result.unsupported.insert(id);
+            result.unsupported.insert(key);
         } else {
-            result.texts.insert(id, text.to_owned());
+            result.texts.insert(key, text.to_owned());
         }
     }
     Ok(result)

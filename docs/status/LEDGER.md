@@ -427,6 +427,22 @@ the write-dedup keyed by Parameter id alone silently skipped every module
 instantiation after the first; the dedup is now scope-aware for scoped refs.
 Package gate green change-scoped vs origin/main (receipt 1794983520177388417,
 rust-tests 6144/0/24 binaries, corpus 97/97).
+
+## REL-01 catalogue accepted; B-11 decided (20 November 2026)
+
+Owner decisions recorded in
+[OWN-01](../open-work/OWN-01-owner-decisions.md#decision-recorded--20-november-2026)
+and [ADR-0178](../adr/0178-rel01-catalogue-defines-the-beta-exit.md): the
+REL-01 beta-exit catalogue (B-01 to B-19) is accepted as the definition of
+beta — [REL-01](../open-work/REL-01-beta-exit-criteria.md) stays the living
+checklist — and B-11 is decided: ETS 5.7 (schema 20) is declared supported
+for beta on the public-sample evidence (schema-20 import since 12 Oct 2026,
+`f23be82cc`, KL-177; unknown schemas refused naming the supported list
+11/20/21/23). Still pending: B-06, B-05/B-08, B-18, Docker signing, website
+privacy copy, KL-186 and WP-12 consents. Not claimed: any bus/device write,
+release or deployment authority; tagging `0.1.0-beta.1` additionally requires
+the Must cells of REL-01 to hold.
+
 ## Reconciliation record (AR14D D2, 2026-10-04)
 
 The ledger was built from the routing table in `alpha-release-goal.md` §7–§8

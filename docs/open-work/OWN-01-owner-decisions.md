@@ -2,6 +2,28 @@
 
 **Status:** Decisions recorded; remaining evidence and owner review pending. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
+## Decision recorded — 20 November 2026
+
+- **REL-01 beta-exit catalogue accepted.** The owner accepts the proposed
+  19-criteria catalogue (B-01 to B-19, Must/Should) as the definition of beta,
+  recorded as [ADR-0178](../adr/0178-rel01-catalogue-defines-the-beta-exit.md);
+  [REL-01](REL-01-beta-exit-criteria.md) stays the living checklist. The version
+  scheme decision of 12 November (standard SemVer, beta is `0.1.0-beta.N`)
+  stands.
+- **B-11 decided: ETS 5.7 supported for beta.** The evidence that schema-20
+  projects import since 12 October 2026 (`f23be82cc`, KL-177) on three public
+  ETS 5.7 samples, with unknown schemas refused naming the supported list
+  (11, 20, 21, 23), is accepted as sufficient for the beta declaration. Not
+  verified on the #7 reporter's project; the supported ETS versions must be
+  listed in the release notes.
+- **Still pending from REL-01:** B-06 (System-2 experimental vs fix-first),
+  B-05/B-08 (declared family list, simulator-only evidence), B-18 (Docker
+  prerelease channel name). Still pending overall: Docker signing, website
+  privacy copy, KL-186 and WP-12 consents.
+- None of this is blanket authority for bus or device writes, releases or
+  deployments; tagging `0.1.0-beta.1` additionally requires the Must cells of
+  REL-01 to hold.
+
 ## Decision recorded — 17 November 2026
 
 - **WP-07 unblocked.** The owner accepts the independently counted

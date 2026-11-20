@@ -24,6 +24,38 @@
   deployments; tagging `0.1.0-beta.1` additionally requires the Must cells of
   REL-01 to hold.
 
+## Decision recorded — 20 November 2026 (second round)
+
+- **B-06 decided: System-2 ships in the beta as experimental** with its own
+  consent text — the current UI behaviour ("System-2 — experimental configured
+  download", own risk text and phrase confirmation) stands. Evidence: one
+  device and configuration only, reporter run 8 November verified 27/27;
+  the `Download_Flag` clear time stays unknown.
+- **B-05/B-08 decided: the declared programming-family list may include
+  families with simulator/loopback-only evidence.** Each family's evidence
+  class (simulator only, or field report) is named beside it in the release
+  notes and manual. This does not lift WP-12: operation-specific hardware
+  consents stay blocked — on 20 November 2026 the owner was asked for a
+  consent and answered "all devices that need a manufacturer plugin, all
+  actions"; that is a blanket phrase, not a named device-and-operation
+  consent, and is **not** recorded as authority for any bus or device write.
+- **B-18 decided: the Docker prerelease channel is `next`.** `latest`
+  semantics stay unchanged during beta (from the first stable release it
+  follows only the newest verified stable release, per the 27 October
+  decision). All five REL-01 owner decisions (B-01, B-11, B-06, B-05/B-08,
+  B-18) are now recorded; [REL-01](REL-01-beta-exit-criteria.md) cells updated.
+- **Docker image signing: the bounded design proposal**
+  ([2026-10-27-docker-image-signing-design](../research/2026-10-27-docker-image-signing-design.md)
+  — identity, verification, recovery) **is approved**, to be implemented
+  before the first stable release. No key creation, external login, image
+  publication or retrospective change is authorised by this approval.
+- **Kept pending by owner:** website / Evolution Story privacy copy (no blanket
+  approval without a concrete review copy), KL-186 plug-in acceptance (lift
+  needs owner-verified acceptance in the originating plug-in), the SmartSensor
+  bootloader follow-up. WP-12 stays blocked on named consents.
+- None of this is blanket authority for bus or device writes, releases or
+  deployments.
+
 ## Decision recorded — 17 November 2026
 
 - **WP-07 unblocked.** The owner accepts the independently counted

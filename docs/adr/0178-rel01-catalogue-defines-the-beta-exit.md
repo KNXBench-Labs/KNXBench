@@ -49,8 +49,11 @@ Owner decisions recorded with this acceptance (20 November 2026):
   are refused with a message naming the schema and the supported list
   (11, 20, 21, 23; schema 22 stays refused). Not verified on the #7 reporter's
   project; the supported ETS versions must be listed in the release notes.
-- **B-06, B-05/B-08, B-18:** still pending owner decision; the current states in
-  REL-01 stand until decided.
+- **B-06, B-05/B-08, B-18:** decided in a second owner round on 20 November 2026
+  (System-2 ships experimental with its own consent text; the declared list may
+  include simulator-evidence-only families; Docker prerelease channel `next`) —
+  recorded in [OWN-01](../open-work/OWN-01-owner-decisions.md#decision-recorded--20-november-2026).
+  All five REL-01 owner decisions are now recorded.
 
 ## Alternatives considered
 

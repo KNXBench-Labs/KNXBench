@@ -28,6 +28,8 @@ use serde_json::{json, Value};
 use super::*;
 #[path = "device_download_check_0700_tests.rs"]
 mod exact0700;
+#[path = "device_download_check_0702_tests.rs"]
+mod exact0702;
 use MemoryLoadStateMachine::{AddressTable, ApplicationProgram, AssociationTable};
 
 const HARDWARE: [u8; 6] = [0, 0, 0, 0, 0x01, 0x27];
@@ -289,7 +291,7 @@ struct Run {
 /// A synthetic report as `prepare_report` would give it, before the run.
 fn report_template() -> DownloadReport {
     DownloadReport {
-        kind: REPORT_KIND.into(),
+        kind: REPORT_KIND,
         format: REPORT_FORMAT,
         knxbench_version: "test".into(),
         program: ReportedProgram {
@@ -300,8 +302,8 @@ fn report_template() -> DownloadReport {
             manufacturer: "0083".into(),
             mask: "0701".into(),
         },
-        scope: "complete".into(),
-        support: "untested".into(),
+        scope: "complete",
+        support: "untested",
         inferences: vec![],
         warnings: vec![],
         plan: ReportedPlan {

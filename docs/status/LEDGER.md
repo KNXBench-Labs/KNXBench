@@ -563,3 +563,23 @@ of the generic `WAITING_OWNER`. Per-row evidence stays in
 
 This checkpoint changes only the 24 UI rows and adds no ID. It is no Alpha
 release, no hardware permission and no native-acceptance claim.
+
+## PRG-01-N2: descriptor-qualified exact-0702 run-state observation (20 November 2026)
+
+Bounded software increment on `work/prg01-n2-clean-20261120` off `origin/main`
+`d18687ba1` (single clean commit; no foreign merge commits in the PR range): exact `0702h` joins
+the admitted run-state masks with the same descriptor-qualified shape as exact
+`0700h` (Resources footnote 94 grants legacy `PDT_UNSIGNED_CHAR` only to
+`0020h`/`0701h`, so `0702h` is `PDT_CONTROL`). Contract
+[post-download-run-state-0702](../contracts/post-download-run-state-0702.md),
+research
+[2026-11-20-property-run-state-observation-0702](../research/2026-11-20-property-run-state-observation-0702.md),
+[ADR-0180](../adr/0180-exact-0702h-run-state-observation.md), software acceptance
+[2026-11-20-descriptor-qualified-0702-run-state](2026-11-20-descriptor-qualified-0702-run-state.md).
+Simulator/loopback evidence only per B-05/B-08; `0700h`/`0701h`/`0705h`
+schedules, gates and serialized bytes unchanged; other `070nh` masks still
+`UnsupportedMask`. No KL row is affected: KL-006/KL-007 already cover the
+bounded-commissioning and vendor-plug-in residue, and this increment adds no
+new limitation — it is KNX-compatible, hardware-untested. PRG-01 open list
+updated (still open: other object layouts, memory encoding, physical
+function).

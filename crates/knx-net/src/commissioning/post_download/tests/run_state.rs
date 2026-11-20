@@ -4,6 +4,7 @@ use knx_core::commissioning::properties::{PID_OBJECT_TYPE, PID_RUN_STATE_CONTROL
 
 use super::*;
 mod exact0700;
+mod exact0702;
 use crate::commissioning::simulator::{PropertyReadFault, ReadFault};
 
 const APPLICATION_TYPE: [u8; 2] = [0x00, 0x03];
@@ -365,8 +366,8 @@ async fn an_earlier_load_failure_sends_zero_runtime_frames() {
 
 #[tokio::test]
 async fn other_070n_masks_read_the_loads_but_no_runtime_frame() {
-    // Exact 0700's former no-continuation policy is superseded by descriptor qualification.
-    for mask in [0x0702, 0x070F] {
+    // Exact 0700/0702 are superseded by descriptor qualification.
+    for mask in [0x0703, 0x070F] {
         let device = device(mask, 0x01, SimulatorConfig::default());
 
         let observation = observe(&device, &plan_for(mask)).await;

@@ -1,9 +1,10 @@
 # REL-01 — Beta exit criteria: what has to hold before KNXBench leaves alpha
 
-**Status:** Proposed 12 November 2026; version scheme decided (standard SemVer,
-see B-01); acceptance of the catalogue itself pending. Listed in
-[OPEN_WORK](../OPEN_WORK.md). Nothing here is decided until the owner accepts it;
-on acceptance the definition becomes an ADR and this file stays the checklist.
+**Status:** Catalogue **accepted by owner decision 20 November 2026** — recorded
+as [ADR-0178](../adr/0178-rel01-catalogue-defines-the-beta-exit.md); version
+scheme decided (standard SemVer, see B-01); B-11 decided (ETS 5.7 supported for
+beta). This file stays the living checklist. Listed in
+[OPEN_WORK](../OPEN_WORK.md).
 
 ## Why this exists
 
@@ -43,7 +44,7 @@ recorded owner decision. Each row ends with what the owner has to decide, if any
 
 | ID | Level | Criterion → acceptance | Current state |
 | --- | --- | --- | --- |
-| B-01 | Must | **Owner accepts this catalogue** → ADR recorded, version scheme chosen. | **Version scheme decided 12 November 2026: standard SemVer.** The release target stays `0.1.0`; only the pre-release identifier changes, giving `0.1.0-alpha.20 < 0.1.0-beta.1 < … < 0.1.0-rc.1 < 0.1.0` (SemVer 2.0.0 §9, §11). The web update check already implements §11 precedence, and its tests cover the specification chain `alpha.1 → beta → beta.11 → rc.1` (`apps/knx-web/src/releaseUpdates.test.ts`); the AppImage and Docker workflows accept any `vMAJOR.MINOR.PATCH[-PRERELEASE]` tag. *Decide:* the catalogue. |
+| B-01 | Must | **Owner accepts this catalogue** → ADR recorded, version scheme chosen. | **Version scheme decided 12 November 2026: standard SemVer.** The release target stays `0.1.0`; only the pre-release identifier changes, giving `0.1.0-alpha.20 < 0.1.0-beta.1 < … < 0.1.0-rc.1 < 0.1.0` (SemVer 2.0.0 §9, §11). The web update check already implements §11 precedence, and its tests cover the specification chain `alpha.1 → beta → beta.11 → rc.1` (`apps/knx-web/src/releaseUpdates.test.ts`); the AppImage and Docker workflows accept any `vMAJOR.MINOR.PATCH[-PRERELEASE]` tag. **Catalogue accepted by owner decision 20 November 2026 — recorded as [ADR-0178](../adr/0178-rel01-catalogue-defines-the-beta-exit.md).**
 | B-02 | Must | **Written compatibility promise** for `.knxdb`, product database, settings and journals from the first beta on: forward migration for every schema change, a clear refusal of newer files, no silent loss ([ADR-0020](../adr/0020-migrations-may-rederive-from-stored-bytes.md)). | Migrations exist per alpha, but there is no written promise. Alpha 20 alone moved native 16 → 19 and product database 31 → 32 ([upgrade notes](../releases/alpha20.md#upgrade)). |
 | B-03 | Must | **Upgrade test from pinned release fixtures**: a gate stage opens, saves and reopens a fictional project written by each published beta (and by the last alpha) and compares the names and counts. | Only a one-off release receipt check exists (Alpha 19 project, 647/647 names in the [Alpha 20 receipt](../evidence/release-alpha20-2026-11-09.json)). No permanent fixture per release. |
 | B-04 | Must | **No open data-loss or corruption defect.** Every open issue is triaged for data loss, and the result is recorded. | Not triaged against this criterion yet. Open issues #7, #22, #36 and #38 do not report data loss (based on their titles and the open-work notes, not re-verified). |
@@ -63,7 +64,7 @@ recorded owner decision. Each row ends with what the owner has to decide, if any
 | ID | Level | Criterion → acceptance | Current state |
 | --- | --- | --- | --- |
 | B-10 | Must | **Device editor does not hang** after save or after the download dialog (#36, [WP-31](WP-31-device-editor-unavailable-after-save.md)): reproduced and fixed, or the remaining cause is known and has a recovery in the UI. | **Reported #36 blocker closed 14 November 2026.** Original download-dialog path confirmed fixed 10 November; save/reopen retest on `0.1.0-alpha.21+g6a9336c5` no longer hangs or shows the unavailable-editor message, and the reporter closed the issue. No reverse proxy in that setup. [Evidence and limits](../status/2026-11-14-issues36-48-reporter-closure.md): the exact historical cause remains unproven; this closes the reported blocker, not a universal no-hang proof or beta approval. |
-| B-11 | Must | **ETS import scope is declared**: ETS 5.7 projects (schema 20, #7, [WP-10](WP-10-import-and-model-evidence.md)) are either imported or refused with a clear message, and the supported ETS versions are listed. | Checked 12 Nov 2026: ETS 5.7 schema-20 projects **import** since 12 Oct 2026 (`f23be82cc`, KL-177), on evidence from three public ETS 5.7 samples; the import report carries an `unsupported` entry naming that evidence boundary. Unknown schemas are refused with a message naming the schema and the supported list (11, 20, 21, 23); schema 22 stays refused. Not verified on the #7 reporter's project. Remaining: list the supported ETS versions in the release notes. |
+| B-11 | Must | **ETS import scope is declared**: ETS 5.7 projects (schema 20, #7, [WP-10](WP-10-import-and-model-evidence.md)) are either imported or refused with a clear message, and the supported ETS versions are listed. | Checked 12 Nov 2026: ETS 5.7 schema-20 projects **import** since 12 Oct 2026 (`f23be82cc`, KL-177), on evidence from three public ETS 5.7 samples; the import report carries an `unsupported` entry naming that evidence boundary. Unknown schemas are refused with a message naming the schema and the supported list (11, 20, 21, 23); schema 22 stays refused. Not verified on the #7 reporter's project. Remaining: list the supported ETS versions in the release notes. **Decided 20 November 2026: the public-sample evidence suffices — ETS 5.7 (schema 20) is declared supported for beta** ([ADR-0178](../adr/0178-rel01-catalogue-defines-the-beta-exit.md)). |
 | B-12 | Should | **Pending changes are visible everywhere** a download can change something ([WP-37](WP-37-pending-changes-across-ui.md)). | Steps 1–4 shipped in Alpha 21, including per-link/object marks and section/ancestor marks; #48 reporter acceptance done and issue closed 14 November ([evidence](../status/2026-11-14-issues36-48-reporter-closure.md)). Module-scoped parameters remain open; this criterion is not complete. |
 | B-13 | Should | **Unsupported parameter features are visible**: wherever WP-05 to WP-09 and WP-14 are evidence-gated, the editor shows the item as unsupported or read-only, and a download refuses values it cannot encode. | The refusal rules exist per feature; that every gated construct is visible as such is *unverified*. |
 
@@ -97,10 +98,11 @@ These stay open, documented and visible, but do not block the stage change:
 
 ## Owner decisions, smallest first
 
-1. Accept, change or reject this catalogue (B-01). The version scheme is decided.
-2. ETS 5.7 import: before beta, or declared unsupported (B-11). Fact check
-   12 Nov 2026: schema 20 already imports on public-sample evidence; the open
-   choice is whether that evidence suffices for beta.
+1. ~~Accept, change or reject this catalogue (B-01). The version scheme is decided.~~
+   **Accepted 20 November 2026 — ADR-0178.**
+2. ~~ETS 5.7 import: before beta, or declared unsupported (B-11).~~ **Decided
+   20 November 2026: schema 20's public-sample evidence suffices; ETS 5.7 is
+   declared supported for beta (ADR-0178).**
 3. System-2: fix first, or ship it as experimental (B-06).
 4. The declared family list, and whether it may include families with simulator evidence only (B-05, B-08).
 5. Docker prerelease channel name (B-18).
@@ -111,3 +113,8 @@ These stay open, documented and visible, but do not block the stage change:
   KNXBench to leave alpha?". No implementation started.
 - 12 November 2026: owner decision "standard SemVer principle" recorded in B-01
   and [OWN-01](OWN-01-owner-decisions.md). The beta is `0.1.0-beta.N`.
+- 20 November 2026: owner accepted the catalogue (B-01) and decided B-11
+  (ETS 5.7 supported for beta); recorded in
+  [ADR-0178](../adr/0178-rel01-catalogue-defines-the-beta-exit.md) and
+  [OWN-01](OWN-01-owner-decisions.md#decision-recorded--20-november-2026).
+  B-06, B-05/B-08 and B-18 remain pending.

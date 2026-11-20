@@ -316,12 +316,10 @@ test("a parameter-driven axis caption keeps its fill provenance in the header to
   await workspace.locator(".parameter-workspace-nav button").filter({ hasText: "Fictional pairs" }).click();
   const matrix = workspace.locator('.parameter-workspace-rows[data-layout="matrix"]');
   const headers = matrix.locator('.parameter-matrix-caption[data-caption="column"]');
-  await expect(headers.nth(1)).toHaveText("Kitchen");
-  await expect(headers.nth(1)).toHaveAttribute("title", new RegExp(
-    en["comTable.textFill.StoredValue"].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-      + "\\n" + en["comTable.textFill.template"].replace("{value}", "\\{\\{0\\}\\}").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  await expect(headers.nth(2)).toHaveText("Right side");
-  await expect(headers.nth(2)).not.toHaveAttribute("title", /{{0}}/);
+  await expect(headers).toHaveText(["Kitchen", "Right side"]);
+  await expect(headers.nth(0)).toHaveAttribute("title",
+    `${en["comTable.textFill.StoredValue"]}\n${en["comTable.textFill.template"].replace("{value}", "{{0}}")}`);
+  await expect(headers.nth(1)).not.toHaveAttribute("title", /{{0}}/);
   expect(state.unexpected).toEqual([]);
 });
 

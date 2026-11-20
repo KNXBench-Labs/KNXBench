@@ -26,6 +26,8 @@ use MemoryLoadStateMachine::{AddressTable, ApplicationProgram, AssociationTable}
 
 #[path = "post_download_check/exact0700_tests.rs"]
 mod exact0700;
+#[path = "post_download_check/exact0702_tests.rs"]
+mod exact0702;
 #[path = "post_download_check/run_state_tests.rs"]
 mod run_state;
 

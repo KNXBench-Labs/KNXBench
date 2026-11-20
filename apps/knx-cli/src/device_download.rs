@@ -2086,7 +2086,7 @@ mod tests {
     fn a_report_file_is_written_and_both_ways_to_send_it_are_named() {
         use knx_app::download_report::*;
         let report = DownloadReport {
-            kind: REPORT_KIND,
+            kind: REPORT_KIND.into(),
             format: REPORT_FORMAT,
             knxbench_version: "test".into(),
             program: ReportedProgram {
@@ -2097,8 +2097,8 @@ mod tests {
                 manufacturer: "0083".into(),
                 mask: "0701".into(),
             },
-            scope: "complete",
-            support: "untested",
+            scope: "complete".into(),
+            support: "untested".into(),
             inferences: vec![],
             warnings: vec![],
             plan: ReportedPlan {

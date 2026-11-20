@@ -1,12 +1,15 @@
 //! #50 over HTTP: reconciling an external CLI download report with the
-//! server's pending marks, only where the evidence matches the project.
+//! server's pending marks, only where the evidence matches the project (ADR-0179).
 //!
-//! `POST /api/device/{id}/programming/reconcile` accepts a CLI `--report`
-//! JSON. A completed run whose program id + source hash and plan shape
-//! (steps / data octets / group links) match the current project state
-//! clears exactly the scope's parts; stale, mismatched or incomplete
-//! reports clear nothing and refuse with 422. No bus access: the plan is
-//! recomputed offline from the open project.
+//! `POST /api/device/{id}/programming/reconcile` accepts a real CLI `--report`
+//! JSON (all its fields, parsed by the report type itself) plus the target
+//! address the run was started for. A completed run whose post-download check
+//! matches the plan, whose program id + source hash match the catalogue, whose
+//! plan shape matches the offline-recomputed plan for that address and whose
+//! snapshot binding is current clears exactly the scope's parts; stale,
+//! mismatched, unchecked or incomplete reports clear nothing and refuse with
+//! 422 (409 when the snapshot is stale). No bus access: the plan is recomputed
+//! offline from the open project.
 
 use std::sync::{Arc, Mutex};
 
@@ -199,47 +202,14 @@ fn expected_plan(state: &Arc<knx_server::AppState>, scope: &str) -> (usize, usiz
                 }
                 other => panic!("scope {other}"),
             }
-            let steps = prepared.plan.steps.len();
-            let data_octets = prepared
-                .plan
-                .steps
-                .iter()
-                .filter_map(|step| match step {
-                    knx_core::commissioning::memory_download::MemoryDownloadStep::WriteMemory {
-                        octets,
-                        ..
-                    } => Some(octets.len()),
-                    _ => None,
-                })
-                .sum();
-            Ok::<_, String>((steps, data_octets, prepared.request.links.len()))
+            Ok::<_, String>((
+                prepared.plan.steps.len(),
+                prepared.plan.data_octets(),
+                prepared.request.links.len(),
+            ))
         })
         .expect("catalogue read lease")
         .expect("plan preparation")
-}
-
-fn report(
-    state: &Arc<knx_server::AppState>,
-    scope: &str,
-    completed: bool,
-    hash: Option<&str>,
-) -> Value {
-    let (steps, data_octets, group_links) = expected_plan(state, scope);
-    json!({
-        "report": {
-            "kind": "knxbench-download-report",
-            "format": 1,
-            "scope": scope,
-            "plan": { "steps": steps, "dataOctets": data_octets, "groupLinks": group_links },
-            "outcome": { "completed": completed },
-            "program": {
-                "id": PROGRAM_ID,
-                "sourceSha256": hash.unwrap_or("0000000000000000000000000000000000000000000000000000000000000000"),
-                "manufacturer": "FFF6",
-                "mask": "0701",
-            },
-        }
-    })
 }
 
 /// The catalogue's hash for PROGRAM_ID, as the CLI report would carry it.
@@ -259,28 +229,110 @@ fn catalogue_hash(state: &Arc<knx_server::AppState>) -> String {
         .source_sha256
 }
 
+/// A post-download check as the CLI's read-only verification writes it:
+/// reached, identity matched, every load state as the plan leaves it.
+fn check_matches_plan() -> Value {
+    json!({
+        "observation": {
+            "status": "attempted",
+            "reach": {
+                "result": "reached",
+                "identity": {
+                    "result": "match",
+                    "exemplar": "notVerified",
+                    "loadStates": [
+                        {
+                            "machine": "applicationProgram",
+                            "expected": "loaded",
+                            "observed": { "result": "observed", "loadState": "loaded" },
+                        },
+                    ],
+                    "planLoadVerdict": "matchesPlan",
+                },
+            },
+        },
+        "runtime": "unknown",
+    })
+}
+
+/// A complete CLI `--report` file's JSON, exactly the fields
+/// `knx_app::download_report::DownloadReport` serialises: kind, format,
+/// version, program, scope, support, inferences, warnings, plan, outcome,
+/// check and parameter values.
+fn report(
+    state: &Arc<knx_server::AppState>,
+    scope: &str,
+    completed: bool,
+    hash: Option<&str>,
+    check: Option<Value>,
+) -> Value {
+    let (steps, data_octets, group_links) = expected_plan(state, scope);
+    json!({
+        "kind": "knxbench-download-report",
+        "format": 1,
+        "knxbenchVersion": "0.1.0-alpha.22+test",
+        "program": {
+            "id": PROGRAM_ID,
+            "name": "Synthetic plug-in witness",
+            "applicationVersion": "1",
+            "sourceSha256": hash.unwrap_or("0000000000000000000000000000000000000000000000000000000000000000"),
+            "manufacturer": "FFF6",
+            "mask": "0701",
+        },
+        "scope": scope,
+        "support": "untested",
+        "inferences": [],
+        "warnings": [],
+        "plan": { "steps": steps, "dataOctets": data_octets, "groupLinks": group_links },
+        "outcome": {
+            "completed": completed,
+            "written": if completed { "yes" } else { "partially" },
+            "restart": if completed { json!("acknowledged") } else { Value::Null },
+            "stoppedInStep": if completed { Value::Null } else { json!(3) },
+        },
+        "postDownloadCheck": check,
+        "parameterValues": {},
+    })
+}
+
+/// The reconcile request body: the report plus the run's target address and
+/// the snapshot binding.
+fn request(report: Value, target: &str, shown: &Value) -> Value {
+    let mut body = json!({ "report": report, "target": target });
+    body.as_object_mut()
+        .unwrap()
+        .extend(binding(shown).as_object().unwrap().clone());
+    body
+}
+
+async fn reconcile(state: &Arc<knx_server::AppState>, body: Value) -> (StatusCode, Value) {
+    call(
+        state,
+        "POST",
+        "/api/device/1/programming/reconcile",
+        Some(body),
+    )
+    .await
+}
+
 #[tokio::test]
 async fn reconcile_clears_only_the_scoped_parts_of_a_matching_completed_run() {
     let (state, _catalogue) = state_with_catalogue();
     let shown = tree(&state).await;
     assert_eq!(pending(&shown), all(true), "device starts fully pending");
 
-    let mut body = report(
-        &state,
-        "partial-group-addresses",
-        true,
-        Some(&catalogue_hash(&state)),
+    let body = request(
+        report(
+            &state,
+            "partial-group-addresses",
+            true,
+            Some(&catalogue_hash(&state)),
+            Some(check_matches_plan()),
+        ),
+        TARGET,
+        &shown,
     );
-    body.as_object_mut()
-        .unwrap()
-        .extend(binding(&shown).as_object().unwrap().clone());
-    let (status, reconciled) = call(
-        &state,
-        "POST",
-        "/api/device/1/programming/reconcile",
-        Some(body),
-    )
-    .await;
+    let (status, reconciled) = reconcile(&state, body).await;
     assert_eq!(status, StatusCode::OK, "{reconciled}");
     assert_eq!(
         pending(&reconciled),
@@ -300,44 +352,143 @@ async fn reconcile_clears_only_the_scoped_parts_of_a_matching_completed_run() {
 }
 
 #[tokio::test]
+async fn a_serialized_cli_report_file_parses_and_reconciles() {
+    // The wire format is a read contract now: a report written by
+    // DownloadReport::to_json (what --report writes) must parse back and be
+    // accepted field for field, extra diagnostic fields included.
+    let (state, _catalogue) = state_with_catalogue();
+    let shown = tree(&state).await;
+    let wire = report(
+        &state,
+        "partial-parameters",
+        true,
+        Some(&catalogue_hash(&state)),
+        Some(check_matches_plan()),
+    );
+    let parsed: knx_app::download_report::DownloadReport =
+        serde_json::from_value(wire).expect("the CLI report file parses");
+    assert_eq!(parsed.kind, "knxbench-download-report");
+    assert_eq!(parsed.scope, "partial-parameters");
+    // Round-trip through the type changes no field the server reads.
+    let round_tripped: Value = serde_json::to_value(&parsed).expect("the report serialises again");
+    let body = request(round_tripped, TARGET, &shown);
+    let (status, reconciled) = reconcile(&state, body).await;
+    assert_eq!(status, StatusCode::OK, "{reconciled}");
+    assert_eq!(
+        pending(&reconciled),
+        json!({
+            "address": true,
+            "application": true,
+            "parameters": false,
+            "group_addresses": true,
+        }),
+        "a partial-parameters run clears exactly parameters"
+    );
+}
+
+#[tokio::test]
 async fn reconcile_refuses_incomplete_mismatched_or_stale_reports_without_changes() {
     let (state, _catalogue) = state_with_catalogue();
     let shown = tree(&state).await;
     let hash = catalogue_hash(&state);
 
     // Not completed.
-    let mut body = report(&state, "partial-group-addresses", false, Some(&hash));
-    body.as_object_mut()
-        .unwrap()
-        .extend(binding(&shown).as_object().unwrap().clone());
-    let (status, refused) = call(
+    let (status, refused) = reconcile(
         &state,
-        "POST",
-        "/api/device/1/programming/reconcile",
-        Some(body),
+        request(
+            report(&state, "partial-group-addresses", false, Some(&hash), None),
+            TARGET,
+            &shown,
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
     assert_eq!(pending(&tree(&state).await), all(true));
 
     // Wrong program hash (device/program mismatch).
-    let mut body = report(
+    let (status, refused) = reconcile(
         &state,
-        "partial-group-addresses",
-        true,
-        Some("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-    );
-    body.as_object_mut()
-        .unwrap()
-        .extend(binding(&shown).as_object().unwrap().clone());
-    let (status, refused) = call(
-        &state,
-        "POST",
-        "/api/device/1/programming/reconcile",
-        Some(body),
+        request(
+            report(
+                &state,
+                "partial-group-addresses",
+                true,
+                Some("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+                Some(check_matches_plan()),
+            ),
+            TARGET,
+            &shown,
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
+    assert_eq!(pending(&tree(&state).await), all(true));
+
+    // Completed but no post-download check: an unchecked run is not proof.
+    let (status, refused) = reconcile(
+        &state,
+        request(
+            report(&state, "partial-group-addresses", true, Some(&hash), None),
+            TARGET,
+            &shown,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
+    assert!(
+        refused["error"]
+            .as_str()
+            .unwrap()
+            .contains("no post-download check"),
+        "{refused}"
+    );
+    assert_eq!(pending(&tree(&state).await), all(true));
+
+    // The check ran but the load states differ from the plan.
+    let mut doubting = check_matches_plan();
+    doubting["observation"]["reach"]["identity"]["planLoadVerdict"] = json!("differsFromPlan");
+    let (status, refused) = reconcile(
+        &state,
+        request(
+            report(
+                &state,
+                "partial-group-addresses",
+                true,
+                Some(&hash),
+                Some(doubting),
+            ),
+            TARGET,
+            &shown,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
+    assert_eq!(pending(&tree(&state).await), all(true));
+
+    // The run's target does not resolve to this device.
+    let (status, refused) = reconcile(
+        &state,
+        request(
+            report(
+                &state,
+                "partial-group-addresses",
+                true,
+                Some(&hash),
+                Some(check_matches_plan()),
+            ),
+            "1.1.99",
+            &shown,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
+    assert!(
+        refused["error"]
+            .as_str()
+            .unwrap()
+            .contains("does not resolve"),
+        "{refused}"
+    );
     assert_eq!(pending(&tree(&state).await), all(true));
 
     // Stale snapshot: an edit bumped the revision after the client saw it.
@@ -349,15 +500,19 @@ async fn reconcile_refuses_incomplete_mismatched_or_stale_reports_without_change
     )
     .await;
     assert_eq!(status, StatusCode::OK);
-    let mut body = report(&state, "partial-group-addresses", true, Some(&hash));
-    body.as_object_mut()
-        .unwrap()
-        .extend(binding(&shown).as_object().unwrap().clone());
-    let (status, conflict) = call(
+    let (status, conflict) = reconcile(
         &state,
-        "POST",
-        "/api/device/1/programming/reconcile",
-        Some(body),
+        request(
+            report(
+                &state,
+                "partial-group-addresses",
+                true,
+                Some(&hash),
+                Some(check_matches_plan()),
+            ),
+            TARGET,
+            &shown,
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::CONFLICT, "{conflict}");
@@ -372,20 +527,17 @@ async fn reconcile_refuses_a_plan_that_no_longer_matches_the_project() {
 
     // Report numbers for a different project state: one octet short.
     let (steps, data_octets, group_links) = expected_plan(&state, "partial-group-addresses");
-    let mut body = report(&state, "partial-group-addresses", true, Some(&hash));
-    body["report"]["plan"]["dataOctets"] = json!(data_octets - 1);
-    body["report"]["plan"]["steps"] = json!(steps);
-    body["report"]["plan"]["groupLinks"] = json!(group_links);
-    body.as_object_mut()
-        .unwrap()
-        .extend(binding(&shown).as_object().unwrap().clone());
-    let (status, refused) = call(
+    let mut wire = report(
         &state,
-        "POST",
-        "/api/device/1/programming/reconcile",
-        Some(body),
-    )
-    .await;
+        "partial-group-addresses",
+        true,
+        Some(&hash),
+        Some(check_matches_plan()),
+    );
+    wire["plan"]["dataOctets"] = json!(data_octets - 1);
+    wire["plan"]["steps"] = json!(steps);
+    wire["plan"]["groupLinks"] = json!(group_links);
+    let (status, refused) = reconcile(&state, request(wire, TARGET, &shown)).await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
     assert!(
         refused["error"]
@@ -398,5 +550,82 @@ async fn reconcile_refuses_a_plan_that_no_longer_matches_the_project() {
         pending(&tree(&state).await),
         all(true),
         "nothing was cleared"
+    );
+}
+
+#[tokio::test]
+async fn an_edit_after_the_run_stays_pending_and_a_stale_run_never_reconciles_again() {
+    let (state, _catalogue) = state_with_catalogue();
+    let shown = tree(&state).await;
+    let hash = catalogue_hash(&state);
+
+    // The external run reconciles: group addresses clear.
+    let (status, reconciled) = reconcile(
+        &state,
+        request(
+            report(
+                &state,
+                "partial-group-addresses",
+                true,
+                Some(&hash),
+                Some(check_matches_plan()),
+            ),
+            TARGET,
+            &shown,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{reconciled}");
+    assert_eq!(pending(&reconciled)["group_addresses"], false);
+
+    // A later edit in the server marks its own part pending; the reconciled
+    // part stays cleared — the reconcile never touches later edits.
+    let (status, edited) = call(
+        &state,
+        "POST",
+        "/api/individual-address",
+        Some(json!({ "deviceId": 1, "address": "1.1.8" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{edited}");
+    assert_eq!(
+        pending(&tree(&state).await),
+        json!({
+            "address": true,
+            "application": true,
+            "parameters": true,
+            "group_addresses": false,
+        }),
+        "the later edit is pending, the reconciled scope is not re-marked"
+    );
+
+    // The old report (target 1.1.7) no longer matches: the target does not
+    // resolve to device 1 any more and the plan changed. Refused, nothing cleared.
+    let refreshed = tree(&state).await;
+    let (status, refused) = reconcile(
+        &state,
+        request(
+            report(
+                &state,
+                "partial-group-addresses",
+                true,
+                Some(&hash),
+                Some(check_matches_plan()),
+            ),
+            TARGET,
+            &refreshed,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
+    assert_eq!(
+        pending(&tree(&state).await),
+        json!({
+            "address": true,
+            "application": true,
+            "parameters": true,
+            "group_addresses": false,
+        }),
+        "stale evidence cleared nothing"
     );
 }

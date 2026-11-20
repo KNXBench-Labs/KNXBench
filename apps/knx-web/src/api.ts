@@ -2902,6 +2902,9 @@ export interface ParameterNestedCell {
  * `button-literal-passive-v1`: an activated source `Button`'s literal text at
  * its declared cell, shown as plain text. Never an action, editor or write
  * target; handler data is not part of the wire shape. Unknown `kind`s are newer.
+ * WP-05m `button-label-fill-provenance-v1`: `textFill` carries the shown text's
+ * provenance (overlay translation or positional placeholder fill) like any
+ * caption; `undefined` on older servers.
  */
 export interface ParameterPassiveLabel {
   kind: "buttonLiteral" | "inlineHeading" | (string & {});

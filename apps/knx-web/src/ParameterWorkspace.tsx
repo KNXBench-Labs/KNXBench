@@ -54,7 +54,7 @@ export default function ParameterWorkspace({ sections, renderField, differs = NE
     rows.filter(row => row.groupKey === current!.key).map(row => ({ key: row.key, cell: row.field.cell })),
     [
       ...passiveLabels.filter(entry => entry.groupKey === current!.key && entry.label.cell !== null)
-        .map(entry => ({ key: `passive:${entry.key}`, text: entry.label.text, cell: entry.label.cell! })),
+        .map(entry => ({ key: `passive:${entry.key}`, text: entry.label.text, textFill: entry.label.textFill ?? null, cell: entry.label.cell! })),
       // nested-block-cell-passive-v1: a nested block's literal caption sits in
       // its own declared cell like a passive label; no text means no caption.
       ...nestedCells.filter(entry => entry.groupKey === current!.key && entry.cell.text !== undefined)
@@ -177,8 +177,11 @@ export default function ParameterWorkspace({ sections, renderField, differs = NE
           {/* Captions are siblings after the rows, so they never shift editor identity. */}
           {matrix && [...matrix.columnHeaders, ...matrix.rowHeaders, ...matrix.labels].map(caption => caption.passive
             // button-literal-passive-v1: the literal is plain text; no role, focus stop or handler.
+            // WP-05m: its provenance fill still shows in the tooltip like any caption's.
             ? <span key={caption.key} className="parameter-matrix-caption parameter-matrix-passive" data-caption="passive"
-              data-passive-label={passiveIds.get(caption.key)} style={matrixStyle(caption.area)}>
+              data-passive-label={passiveIds.get(caption.key)}
+              title={parameterCaption({ label: caption.text, labelFill: caption.textFill }, t("parameters.caption.text"), t).title}
+              style={matrixStyle(caption.area)}>
               <span className="parameter-matrix-passive-text">{caption.text}</span>
               <span className="parameter-matrix-passive-cue">{t("parameters.matrix.passiveButton")}</span>
             </span>

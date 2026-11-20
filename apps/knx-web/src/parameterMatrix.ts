@@ -31,7 +31,7 @@ export interface MatrixArea { row: number; rowSpan: number; column: number; colu
 /** `passive`: a `button-literal-passive-v1` source label, plain text with no action. */
 export interface MatrixText { key: string; text: string; textFill?: TextFill | null; passive?: true; area: MatrixArea }
 /** A passive source label to place; `key` is unique within the plan. */
-export interface MatrixPassiveLabel { key: string; text: string; cell: ParameterGridCell }
+export interface MatrixPassiveLabel { key: string; text: string; textFill?: TextFill | null; cell: ParameterGridCell }
 export interface ParameterMatrixPlan {
   templateColumns: string;
   columnHeaders: MatrixText[];
@@ -107,7 +107,7 @@ export function planParameterMatrix(layout: ParameterGroupLayout,
     cells.set(id, [...(cells.get(id) ?? []), item]);
   };
   layout.labels.forEach((label, index) => { if (valid(label)) push(label, { kind: "label", key: `label:${index}`, order: index, text: label.text, textFill: label.textFill }); });
-  passive.forEach((label, index) => { if (valid(label.cell)) push(label.cell, { kind: "passive", key: label.key, order: layout.labels.length + index, text: label.text }); });
+  passive.forEach((label, index) => { if (valid(label.cell)) push(label.cell, { kind: "passive", key: label.key, order: layout.labels.length + index, text: label.text, textFill: label.textFill ?? null }); });
   const unplaced: string[] = [];
   for (const entry of rows) {
     if (valid(entry.cell)) push(entry.cell, { kind: "field", key: entry.key, order: 0 });

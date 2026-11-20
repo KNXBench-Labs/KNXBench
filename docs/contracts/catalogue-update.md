@@ -19,9 +19,9 @@ tests and delivery must establish the implemented behavior.
 A `.knxprod` file the user obtained from the manufacturer, or a vendor ZIP that
 holds `.knxprod` packages ([ADR-0140](../adr/0140-vendor-zips-of-product-packages-install-as-a-whole.md)).
 This supplied-file contract itself downloads nothing. A separate
-[Reko acquisition candidate](reko-online-catalogue.md) is branch WIP, not
-accepted or released; it supplies verified bytes to the existing job path
-without changing the import/consent guarantees. Provenance here is the file name the user gave and the
+[Reko acquisition](reko-online-catalogue.md) shipped on main 16 November 2026
+(`c079ec8d6`, not in Alpha 22); it supplies verified bytes to the existing job
+path without changing the import/consent guarantees. Provenance here is the file name the user gave and the
 package SHA-256; an inner package of a vendor ZIP is recorded as
 `<zip name>!/<member path>`.
 

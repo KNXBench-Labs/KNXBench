@@ -1,10 +1,11 @@
 # LS-02 — Online catalogue source
 
-**Work state (16 November 2026):** owner-authorized Reko implementation in progress
-on `work/reko-catalogue-20261115`, based on `f6ef90fb4`. Backend and UI/test work
-exist in the branch; no accepted final review/package gate, delivery commit or
-publication is recorded here. Alpha 22 and the accepted file-based workflow are
-not retroactively changed by this candidate.
+**Work state (19 November 2026):** **delivered** — the owner-authorized Reko
+implementation shipped on main 16 November 2026 as `c079ec8d6` (merged from
+`work/reko-catalogue-20261115`, base `f6ef90fb4`): backend online-catalogue
+module with index sync, verified downloads, encrypted account store, routes and
+tests. Alpha 22 and the accepted file-based workflow are not retroactively
+changed; release/deployment remain separate authorizations.
 
 **Ledger:** `FUTURE-05`; per-ID status of record is the
 [ledger](../status/LEDGER.md). Listed in [OPEN_WORK](../OPEN_WORK.md).
@@ -28,19 +29,16 @@ identity and hashes. Release and deployment remain separate authorizations.
 
 | Package | Actual state | Still required |
 | --- | --- | --- |
-| Decision and provider/API contract | ADR-0176 and the branch contract written from the agreed scope and inspected source | Final integration review against the finished candidate; no authenticated-live proof implied |
-| Manual index snapshot and search | Backend WIP for HTTPS/gzip, ETag/304, last-good snapshot, bounded local search and explicit sync | Source-bound regression and final package acceptance |
-| Shared encrypted account | Backend/UI WIP for password/token, AES-256-GCM, separate key, source binding and explicit forget | Final security/integrity review and failure/leak/concurrency acceptance |
-| Verified acquisition and import handoff | Backend/UI WIP for selected SHA, bounded download cache, modern owned-job feed and separate legacy import | Complete size/hash/cancellation/stale-selection/retry and importer-composition evidence |
-| Web/native and operator documentation | Branch manual describes actual source controls and separate Docker `/config` retention | Final UI composition and controlled replacement/recovery evidence; native runtime claims only if actually exercised |
-| Delivery | Not accepted, committed or published at this checkpoint | Parent-owned independent review, complete selected package gate, final source/evidence binding and authorized delivery |
+| Decision and provider/API contract | ADR-0176 and the contract written from the agreed scope and inspected source | — |
+| Manual index snapshot and search | Delivered in `c079ec8d6`: HTTPS/gzip, ETag/304, last-good snapshot, bounded local search, explicit sync | — |
+| Shared encrypted account | Delivered in `c079ec8d6`: password/token, AES-256-GCM, separate key, source binding, explicit forget | — |
+| Verified acquisition and import handoff | Delivered in `c079ec8d6`: selected SHA, bounded download cache, modern owned-job feed, separate legacy import | — |
+| Web/native and operator documentation | Delivered in `c079ec8d6` with the server routes; Docker `/config` retention documented | — |
+| Delivery | **Delivered on main 16 November 2026 as `c079ec8d6`** | Release/deployment remain separate authorizations; not in Alpha 22 |
 
-The initial backend compile failed; this checkpoint does not turn that attempt
-into a pass or guess later test totals. Parent-owned final evidence must name the
-candidate, reviews, executed checks, skips/failures and what was actually frozen.
-Controlled local HTTPS responses are test fixtures, not successful calls to the
-real provider. No authenticated Reko login/product download, hardware/bus run,
-release or deployment is claimed.
+Controlled local HTTPS responses remain test fixtures, not successful calls to
+the real provider. No authenticated Reko login/product download, hardware/bus
+run, release or deployment is claimed.
 
 ## Acceptance boundaries
 
@@ -74,8 +72,8 @@ cleared rights. General online-source expansion remains separate work.
 
 [ADR-0176](../adr/0176-manual-reko-catalogue-acquisition.md) ·
 [Reko provider/API contract](../contracts/reko-online-catalogue.md) ·
-[Manual workflow](../manual/user-guide/05-devices-and-products.md#reko-online-catalogue-branch-wip) ·
-[Docker key persistence](../manual/user-guide/11-web-and-docker.md#reko-configuration-and-key-persistence-branch-wip) ·
+[Manual workflow](../manual/user-guide/05-devices-and-products.md#reko-online-catalogue) ·
+[Docker key persistence](../manual/user-guide/11-web-and-docker.md#reko-configuration-and-key-persistence) ·
 [ADR-0117](../adr/0117-previewed-recoverable-catalogue-updates.md) ·
 [ADR-0118](../adr/0118-catalogue-updates-through-the-web-server.md) ·
 [catalogue update contract](../contracts/catalogue-update.md) ·

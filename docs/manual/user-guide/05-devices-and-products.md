@@ -732,16 +732,16 @@ bound to their catalogue ids, never to a row number. Search-arrow movement has
 a polite status announcement of the highlighted product and its current position.
 The native table scrolls locally on narrow screens; there is no column resizing.
 
-### Reko online catalogue (branch WIP)
+### Reko online catalogue
 
-**Availability:** owner-authorized source candidate as of 16 November 2026,
-not software-accepted, published or included in Alpha 22. These instructions
-describe the branch controls, not a feature promised by the downloaded image.
-[Work and pending acceptance](../../open-work/LS-02-online-catalogue.md).
+**Availability:** shipped on main since 16 November 2026 (`c079ec8d6`); not
+included in the Alpha 22 release image. These instructions describe the
+current controls, not a feature promised by the Alpha 22 download.
+[Delivered work](../../open-work/LS-02-online-catalogue.md).
 
 **Goal:** find a product file in a local copy of the Reko index, acquire and
 verify that exact file, then explicitly import it. You need a build containing
-this candidate; an account on the provider website is needed for an uncached
+this delivery; an account on the provider website is needed for an uncached
 download. Local-file installation remains available if Reko is unavailable.
 
 1. Open **Product catalog**. At the install control choose **Reko** in
@@ -795,7 +795,7 @@ reads the stored password/token back.
 installation. Everyone using that server shares the account and its daily
 allowance. It is not personal account isolation or KNXBench user management.
 Persist and back up the separate configuration key, including Docker `/config`,
-as described in [key persistence and recovery](11-web-and-docker.md#reko-configuration-and-key-persistence-branch-wip).
+as described in [key persistence and recovery](11-web-and-docker.md#reko-configuration-and-key-persistence).
 A copy of encrypted data without its key is protected; a fully compromised
 host/process or a copy of both is not.
 

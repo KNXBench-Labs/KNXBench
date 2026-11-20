@@ -43,6 +43,39 @@ serialized record bytes are untouched; other `070nh` masks (tested `0703h`,
   `runState.cause.noCorrelatedAnswer`), not the raw template — the UI
   interpolates `{step}`/`{cause}` before display.
 
+## Package-gate receipt and documented pre-existing failures
+
+`python3 tools/run_package_gate.py --base origin/main` (change-scoped,
+inputsFrozen=True), receipt
+`target/package-gates/1795191228056680738/receipt.json` on this branch
+(`b67bb2431`, the only commit in `origin/main..HEAD`; `git diff
+64ea464ae..HEAD --name-only` touches none of the failing test files).
+Green stages: `fmt`, `documentation`, `browser-lanes`, `check-layering`,
+`check-headers`, `check-anchors`, `check-ledger`, `check-corpus-gates`,
+`tool-tests`, `web-gate` (37 stages, 1475 browser tests: 1380 functional +
+95 exclusive), `clean-desktop`, `clippy`. The `rust-tests` stage failed with
+exactly 6 failures, all reproduced on a clean `origin/main` scratch checkout
+(`d18687ba1`) and therefore pre-existing / environment-caused, not caused by
+this diff:
+
+1. `c49_partial_group_addresses::the_49_report_plan_reproduces_offline`
+   (knx-app) — known pre-existing: `C49_PROGRAM_XML path: NotPresent`
+   (private-corpus env unset); documented, not fixed.
+2–6. `http_parameter_grid::{a_declared_grid_is_versioned_geometry_with_cells_and_active_captions,
+   a_stored_axis_text_parameter_value_wins_over_the_product_default,
+   an_axis_text_parameter_ref_resolves_to_the_parameter_value_with_provenance,
+   an_unknown_axis_text_parameter_ref_keeps_the_source_text_and_names_the_reason}`
+   and `http_parameter_captions::translated_axes::literal_axis_http_text_reference_resolves_the_parameter_not_the_source_caption`
+   (knx-server) — reproduce identically on clean `origin/main`
+   (`cargo test -p knx-server --test it http_parameter`: 132 passed, 5 failed
+   there too); they belong to the unmerged WP-05n2/WP-05c literal-axis-captions
+   work, not to this branch.
+
+The change-scoped suites this increment owns are green on both trees with the
+branch delta: knx-net post_download 61 vs 54 passed (main), knx-app
+post_download 27 vs 24 (main) — the +7/+3 are the new `exact0702` tests,
+absent from clean main.
+
 ## Boundaries
 
 KNX-compatible, **hardware-untested**: no live bus, no real device, no ETS VM,

@@ -54,19 +54,31 @@ clean); the unconfirmed restart stays an explicit limitation. Recorded in
 `docs/evidence/tester-report-hager-0701-2026-11-17.json` and added
 `partial-group-addresses` to `verified_downloads.json` for this program.
 
-### B — Done, published on main (`607f35578`, PR !55): searchable combobox destination in BusComposeForm with free-text fallback, send action from the group-address workspace pre-fills the compose form; selection never sends
+### B — Done, published on main
 
-Reuse the existing send owner and DPT/value validation. Preserve free-text destinations,
-explicit sending, project/context lifetime and failure feedback. Verify with fixtures
-and loopback only, including name/address selection and navigation prefill.
+Implemented and merged on `origin/main` as `2a5f122be` (PR !55, 2026-11-17; issue #51
+closed 2026-11-20 with delivery comment). `BusComposeForm.tsx` destination is now a
+searchable combobox over the project's group addresses (typeahead by address, name and
+DPT via `filterPickerAddresses`), keeping free-text entry for addresses outside the
+project; `GroupAddressTable.tsx` offers a send action on a selected address that opens
+the compose form prefilled — selection alone never sends. Covered by
+`BusComposeForm.test.tsx` / `GroupAddressWorkspace.test.tsx`.
 
-### A2 — Done, published on main (`748c7ff3e` + `82116457b`, PR !55): external CLI download reports reconcile against pending marks only on authoritative match; stale/mismatched evidence cannot clear marks
+### A2 — Done, published on main
 
-Establish authoritative matching of device, plan, source and current project state
-before changing stored marks. Stale, incomplete or mismatched evidence cannot clear
-marks; later edits stay pending. No blind acknowledgment or automatic extra download.
-An evidence collector is not itself proof of external device programming.
+Implemented and merged on `origin/main` as `f6b14780f` (PR !99, 2026-11-20; ADR-0179;
+issue #50 already closed). `POST /api/device/{id}/programming/reconcile` accepts the real
+CLI `--report` file plus the target address and clears pending marks only when device,
+source hash, offline-recomputed plan shape and snapshot currency all match, and the run
+completed with an identity-matching post-download check. Stale, mismatched, incomplete
+or unchecked reports refuse (422/409) and clear nothing; later edits stay pending; the
+clear is one bound, undoable, logged `ReconcileDeviceProgramming` command; no bus access
+and no automatic extra download. Tests: `http_programming_reconcile` 5/5,
+`support_report` 9/9, CLI download 79/79, server lib 57/57. The 6 rust-test failures in
+the package gate reproduce identically on `origin/main` `64ea464ae` (C49 corpus env +
+WP-05n caption tests) and are pre-existing, documented in the PR body.
 
 ## Next step
 
-All four packages are published on main (PR !55, merge `0b80d289`, 2026-11-17). WP-43 is complete; no further packages queued from this batch.
+All four slices (A1, C, B, A2) are published on main; issues #49–#52 are closed or
+evidence-recorded. WP-43 is complete.

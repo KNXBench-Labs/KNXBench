@@ -24,8 +24,10 @@ feature at a time, never inferred manufacturer behaviour.
   including a `{{0}}` placeholder filled from the leaf's own `@TextParameterRefId`. Since
   19 November 2026 (WP-05i) a leaf's `@RefId` may also name **another caption host of the
   same tree** — a different `ParameterBlock`, or a `Channel`/`ChannelIndependentBlock` — a
-  cross-target rename, admitted as KNXBench policy on the declared `@RefId`-addresses-a-host
-  semantics (the 9 November observation never showed one); naming a host of another tree
+  cross-target rename, and since 19 November 2026 (WP-05k) a `ParameterSeparator` with a
+  base caption too, all admitted as KNXBench policy on the declared
+  `@RefId`-addresses-a-host semantics (the 9 November observation never showed one);
+  naming a host of another tree
   (cross-scope) stays refused. See the
   [contract](../contracts/conditional-parameter-block-rename.md).
 - Translated row/column captions outside the bounded literal program-owned
@@ -85,7 +87,7 @@ that block's caption while its `when` is active, in navigation, heading, context
 with its own translation and the base caption restored when it is not. Contract:
 [conditional-parameter-block-rename](../contracts/conditional-parameter-block-rename.md).
 Evidence: one ETS6 observation (one product, German text, no claim about repaint timing).
-Still open: cross-**scope** renames (a module-scope leaf naming a program-tree block and
+Still open: cross-**scope** renames (a module-scope leaf naming a program-tree host and
 vice versa), competing
 or undecided leaves, template replacements, a placeholder in a selected translation (falls
 back to the leaf's source text and is named in the panel diagnostics; a placeholder in the

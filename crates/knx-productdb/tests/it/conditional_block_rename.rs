@@ -1185,3 +1185,54 @@ fn rival_member(rival: &[u8]) -> String {
     std::io::Read::read_to_end(&mut member, &mut bytes).unwrap();
     knx_productdb::sha256_hex(&bytes)
 }
+
+/// WP-05k: a rename leaf naming a `ParameterSeparator` of its own tree.
+const SEPARATOR_PROGRAM: &[u8] = br#"<KNX xmlns="http://knx.org/xml/project/20"><ManufacturerData><Manufacturer RefId="M-0001"><ApplicationPrograms><ApplicationProgram Id="A-1" Name="Program">
+<Static>
+<ParameterTypes><ParameterType Id="PT-Num" Name="Num"><TypeNumber SizeInBit="8" Type="unsignedInt" minInclusive="0" maxInclusive="255"/></ParameterType></ParameterTypes>
+<Parameters><Parameter Id="P-1" Name="One" ParameterType="PT-Num" Text="One" Value="0"/></Parameters>
+<ParameterRefs><ParameterRef Id="P-1_R-1" RefId="P-1"/></ParameterRefs>
+</Static>
+<Dynamic>
+<ParameterBlock Id="PB-1" Name="main" Text="Base one">
+<ParameterRefRef RefId="P-1_R-1"/>
+<ParameterSeparator Id="PS-1" Text="Ruler caption" UIHint="Headline"/>
+<choose ParamRefId="P-1_R-1">
+<when test="1"><ParameterBlockRename Id="PR-S1" RefId="PS-1" Text="Retitled ruler"/></when>
+<when test="2"><ParameterBlockRename Id="PR-S2" RefId="PS-NONE" Text="Missing separator"/></when>
+</choose>
+</ParameterBlock>
+</Dynamic>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"#;
+
+#[test]
+fn a_leaf_naming_a_separator_is_admitted_and_a_missing_one_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("products.sqlite");
+    let conn = open_and_migrate(&path).unwrap();
+    install_package(&conn, "synthetic.knxprod", &package(SEPARATOR_PROGRAM)).unwrap();
+    let trees = load_program_trees(&conn, "A-1").unwrap();
+    let separator = node_of(&conn, "PS-1");
+    // Active leaf names the separator: one rename settled on its node.
+    let renamed = evaluate(&trees, &with_in(&conn, "A-1", &[("P-1_R-1", "1")]));
+    assert_eq!(renamed.renames.len(), 1);
+    assert_eq!(renamed.renames[0].target_node_id, separator);
+    assert_eq!(renamed.renames[0].target_id, "PS-1");
+    assert_eq!(renamed.renames[0].text, "Retitled ruler");
+    assert_eq!(refused(&renamed, node_of(&conn, "PR-S1")), 0);
+    // The separator's base label is immutable, like a block's.
+    let labels: Vec<&str> = renamed
+        .labels
+        .iter()
+        .filter(|l| l.node_id == separator)
+        .map(|l| l.text.as_str())
+        .collect();
+    assert_eq!(labels, ["Ruler caption"]);
+    // A `@RefId` naming no separator of the tree is refused as before.
+    let missing = evaluate(&trees, &with_in(&conn, "A-1", &[("P-1_R-1", "2")]));
+    assert!(missing.renames.is_empty());
+    assert_eq!(refused(&missing, node_of(&conn, "PR-S2")), 1);
+    // Inactive: nothing.
+    let idle = evaluate(&trees, &with_in(&conn, "A-1", &[]));
+    assert!(idle.renames.is_empty());
+}

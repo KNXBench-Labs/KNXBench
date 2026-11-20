@@ -2,13 +2,14 @@
 
 Status: implemented 9 November 2026 on the narrow shape below; cross-target
 renames within one tree (a leaf naming another block, or a channel owner, of the
-same tree) were admitted 19 November 2026 (WP-05i). Evidence:
-[observation](../research/2026-11-09-conditional-parameter-block-rename.md).
+same tree) were admitted 19 November 2026 (WP-05i); a leaf may also name a
+`ParameterSeparator` of its own tree since 19 November 2026 (WP-05k).
+Evidence: [observation](../research/2026-11-09-conditional-parameter-block-rename.md).
 Everything outside the shape stays what it was: `UnrecognizedNode`, base caption
 kept. The 9 November observation never showed a leaf naming anything but its
-enclosing block; admitting same-tree cross-target renames is KNXBench policy on
-the declared `@RefId`-addresses-a-host semantics, not an observed ETS rule, and
-is marked as such here.
+enclosing block; admitting same-tree cross-target renames and separator targets
+is KNXBench policy on the declared `@RefId`-addresses-a-host semantics, not an
+observed ETS rule, and is marked as such here.
 
 ## Supported shape
 
@@ -19,8 +20,11 @@ A `ParameterBlockRename` (or its schema-23 spelling `Rename`) is applied only wh
    of `Dynamic`; it is reached through the existing `choose`/`when` engine, so an inactive
    branch contributes nothing. A leaf inside an unexpanded `ModuleDef` is not consulted.
 2. Its `@RefId` names a caption host declared exactly once in the leaf's own tree: a
-   `ParameterBlock`, or a channel owner (`Channel`/`ChannelIndependentBlock`), which
-   carries a label of its own. The host may be the leaf's enclosing host or any other host
+   `ParameterBlock`, a channel owner (`Channel`/`ChannelIndependentBlock`), which
+   carries a label of its own, or a `ParameterSeparator` with a base caption
+   (WP-05k: the separator's `@Text` is its caption like a block's; a separator
+   without a non-empty `@Text` leaves nothing to replace and is not a host).
+   The host may be the leaf's enclosing host or any other host
    of the same tree — a cross-target rename within the tree is admitted (WP-05i, policy
    above). Naming a host of another tree (e.g. a module-scope leaf naming a program-tree
    block) is a cross-scope rename and is refused, as is naming anything else: no such id,
@@ -58,14 +62,15 @@ caption, activations, identifiers and access are untouched.
   competing candidates, intents and blocked targets count within the candidate's own tree
   (`module_def_id`), so a module-scope leaf never competes with or blocks a program-tree
   host, and vice versa. The target host is resolved through a per-tree index of caption-host
-  `@Id`s (`ParameterBlock` plus `Channel`/`ChannelIndependentBlock`), built once per tree
-  that holds a rename leaf — never by scanning labels. The host's `ActiveLabel` keeps the
+  `@Id`s (`ParameterBlock` plus `Channel`/`ChannelIndependentBlock`, and since WP-05k
+  `ParameterSeparator`), built once per tree that holds a rename leaf — never by scanning
+  labels. The host's `ActiveLabel` keeps the
   base caption; nothing mutates a label or stored source. Every evaluation recomputes the
   result, so no active leaf means the base caption again.
 - The server overlay (`parameter_captions::apply`) picks the displayed caption once per
   request and the existing DTO carries it: navigation, heading, context and search read the
   same group label. The group key and every DTO field stay as they were. The replacement
-  applies to any labelled host — block or channel owner — of the same tree.
+  applies to any labelled host — block, channel owner or separator — of the same tree.
 - A replacement is translated by its **own** identity (`translation` entry for the leaf's
   `@Id`, attribute `Text`) with the existing language rule. The block's translation never
   overrides an active replacement; without a translation the leaf's source text is shown.
@@ -119,12 +124,14 @@ Catalogue schema admission moves with the version (`ADMITTED_VERSION` 33; data-o
 ## Not implemented
 
 Renames of a host of another tree (cross-scope: a module-scope leaf naming a
-program-tree block and vice versa), renames of separators, template replacements,
-competing or undecided leaves, a rename of a host without a base caption, a
-placeholder in a selected translation (still never filled), and any claim about
+program-tree block and vice versa), template replacements,
+competing or undecided leaves, a rename of a host without a base caption,
+a placeholder in a selected translation (still never filled), and any claim about
 ETS behaviour beyond the one observation. Same-tree cross-target renames (another
 block or a channel owner of the leaf's own tree) are implemented as of
-19 November 2026 (WP-05i) as KNXBench policy, not ETS observation. Text-parameter
+19 November 2026 (WP-05i) as KNXBench policy, not ETS observation. Separator
+targets (`@RefId` naming a `ParameterSeparator` of the leaf's own tree) are
+implemented as of 19 November 2026 (WP-05k), likewise as KNXBench policy. Text-parameter
 replacements via the leaf's own `@TextParameterRefId` and module-scoped renames
 are implemented as of 19 November 2026 (`rename-text-parameter-ref-v1`,
 module-scoped rename admission).
@@ -132,16 +139,19 @@ module-scoped rename admission).
 ## Verification
 
 Evaluator unit tests (`evaluate/rename_tests.rs`, including same-tree cross-target
-admission, channel-owner targets, cross-scope refusal and competing cross-target
+admission, channel-owner targets, separator targets (WP-05k), cross-scope refusal and
+competing cross-target
 leaves), `tests/it/conditional_block_rename.rs`
 (ingest columns, evaluation sequence over one loaded source with default value resolution,
-every refused shape, admitted cross-target and channel-target leaves, undecided competitors,
+every refused shape, admitted cross-target and channel-target leaves, a separator target,
+undecided competitors,
 module scope, v32 to v33 equal to
 a fresh install with one and two members, idempotence, damaged blob, mixed intact and damaged
 member, invalid historical report, injected database failure, id-conflict loser), the HTTP
 test `http_parameter_block_rename.rs` (edit, undo, redo, languages including empty and
 unsupported entries, restricted block, cross-target rename onto a restricted block with its
-own translation, competing leaves, source bytes, translation copy
+own translation, competing leaves, a separator target through the panel DTO, source bytes,
+translation copy
 budget on GET and POST), `ParameterWorkspace.test.tsx` (row and declared-matrix areas) and
 `e2e/parameter-block-rename.e2e.ts` in the `parameters` browser lane. Opt-in private tests run
 every rename leaf of the held witness through the public entry points, and migrate a store

@@ -567,3 +567,79 @@ async fn a_rename_leaf_fills_its_placeholder_from_its_own_text_parameter() {
         ("PB-1".into(), json!("fixture_switch_pz "))
     );
 }
+
+/// WP-05k: a rename leaf naming a `ParameterSeparator` retitles that separator's
+/// caption through the real parameter route; the block's own caption is untouched.
+const SEPARATOR_PROGRAM: &str = r##"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="Fictional" ApplicationVersion="1" MaskVersion="MV-0701">
+<Static><ParameterTypes>
+<ParameterType Id="PT-N" Name="Number"><TypeNumber SizeInBit="8" Type="unsignedInt" minInclusive="0" maxInclusive="255" /></ParameterType>
+</ParameterTypes><Parameters>
+<Parameter Id="P-S" Name="Selector" ParameterType="PT-N" Value="0" />
+</Parameters><ParameterRefs>
+<ParameterRef Id="R-S" RefId="P-S" />
+</ParameterRefs></Static><Dynamic>
+<ParameterBlock Id="PB-1" Text="Base page"><ParameterRefRef RefId="R-S" />
+<ParameterSeparator Id="PS-1" Text="Base ruler" UIHint="Headline" />
+<choose ParamRefId="R-S">
+<when test="1"><ParameterBlockRename Id="PR-S" RefId="PS-1" Text="Retitled ruler" /></when>
+</choose></ParameterBlock>
+</Dynamic></ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"##;
+
+fn separator_products() -> (tempfile::TempDir, knx_productdb::Connection) {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    super::native_source_fixture::install(
+        &conn,
+        11,
+        ("M-0001/Hardware.xml", HARDWARE.as_bytes()),
+        ("M-0001/A.xml", SEPARATOR_PROGRAM.as_bytes()),
+    );
+    conn.execute_batch(
+        "INSERT INTO translation (scope,scope_id,language,ref_id,attribute_name,text) VALUES
+         ('Program','A-1','de-DE','PS-1','Text','Basislinie'),
+         ('Program','A-1','de-DE','PR-S','Text','probe_de_ruler');",
+    )
+    .unwrap();
+    (dir, conn)
+}
+
+/// The `text` of the separator with `elementId` in any section.
+fn separator_text(dto: &Value, element_id: &str) -> Value {
+    dto["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|s| s["separators"].as_array().unwrap())
+        .find(|s| s["elementId"] == element_id)
+        .unwrap_or_else(|| panic!("separator {element_id} is not shown"))["text"]
+        .clone()
+}
+
+#[tokio::test]
+async fn a_leaf_naming_a_separator_retitles_its_caption_in_the_panel() {
+    let (_dir, products) = separator_products();
+    let state = Arc::new(state(products, &[]));
+    let app = knx_server::app(state.clone(), None);
+    // Base: the separator keeps its own caption, the block its own.
+    let base = panel(&app, None).await;
+    assert_eq!(separator_text(&base, "PS-1"), json!("Base ruler"));
+    assert_eq!(group_of(&base, "R-S"), ("PB-1".into(), json!("Base page")));
+    // Activate the rename: the separator shows the replacement, the block does not.
+    assert_eq!(set(&app, "R-S", "1").await, StatusCode::OK);
+    let dto = panel(&app, None).await;
+    assert_eq!(separator_text(&dto, "PS-1"), json!("Retitled ruler"));
+    assert_eq!(group_of(&dto, "R-S"), ("PB-1".into(), json!("Base page")));
+    // The replacement is translated by the leaf's own entry, not the separator's.
+    let de = panel(&app, Some("de-DE")).await;
+    assert_eq!(separator_text(&de, "PS-1"), json!("probe_de_ruler"));
+    // The separator's own German translation stays for the inactive leaf.
+    assert_eq!(set(&app, "R-S", "0").await, StatusCode::OK);
+    let de = panel(&app, Some("de-DE")).await;
+    assert_eq!(separator_text(&de, "PS-1"), json!("Basislinie"));
+    // Reads changed nothing.
+    let before = state.project.lock().unwrap().clone();
+    assert_eq!(panel(&app, None).await, panel(&app, None).await);
+    assert_eq!(*state.project.lock().unwrap(), before);
+}

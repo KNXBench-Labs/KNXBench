@@ -1077,6 +1077,13 @@ naming a host of another tree stays refused. Settlement resolves the target thro
 caption-host index; the server overlay retitles any labelled host of the same tree. No schema
 change. [Contract](contracts/conditional-parameter-block-rename.md).
 
+**Update 19 November 2026 (WP-05k):** the caption-host index and the server overlay also admit
+`ParameterSeparator` — a leaf's `@RefId` may name a separator of its own tree that has a base
+caption (non-empty `@Text`), and the replacement shows as that separator's `text` in the panel
+DTO, translated by the leaf's own entry like any other host. Also KNXBench policy, not an
+observed ETS rule; a separator without a base caption or an `@Id` declared twice is not a
+host. No schema change. [Contract](contracts/conditional-parameter-block-rename.md).
+
 ## Edits answer first, the journal follows in the background (9 November 2026; issue #35)
 
 Owner decision after ADR-0165: a value change must not wait for the journal.

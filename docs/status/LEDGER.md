@@ -443,6 +443,18 @@ privacy copy, KL-186 and WP-12 consents. Not claimed: any bus/device write,
 release or deployment authority; tagging `0.1.0-beta.1` additionally requires
 the Must cells of REL-01 to hold.
 
+## Owner grants no further consents; WP-12 stays blocked (20 November 2026, third round)
+
+Owner decision recorded in
+[OWN-01](../open-work/OWN-01-owner-decisions.md#decision-recorded--20-november-2026-third-round):
+no further operation-specific hardware consents will be granted, so WP-12
+stays blocked and all bus evidence remains simulator/loopback-only. This is
+not a blanket release: per the 1 November 2026 decision a blanket "approve
+everything" is not a consent for bus or device writes, and none is recorded.
+Read-only access to the owner's own installation is unaffected. Still pending:
+website privacy copy, KL-186, SmartSensor follow-up. Not claimed: any bus or
+device write, release or deployment authority.
+
 ## REL-01 decisions complete; Docker signing approved (20 November 2026, second round)
 
 Owner decisions recorded in

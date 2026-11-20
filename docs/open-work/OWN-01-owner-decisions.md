@@ -2,6 +2,21 @@
 
 **Status:** Decisions recorded; remaining evidence and owner review pending. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
+## Decision recorded — 20 November 2026 (third round)
+
+- **The owner grants no further consents.** WP-12 (field evidence under
+  operation-specific hardware consent) stays **blocked** permanently unless a
+  new, specifically named consent (device + operation) is given. All bus
+  evidence stays simulator/loopback-only; no field runs are commissioned.
+  This records the owner's stated wish not to grant any more consents — it is
+  deliberately **not** a blanket release of devices or operations: per the
+  1 November 2026 decision, a blanket "approve everything" is not a consent
+  for bus or device writes, and none is recorded here. Read-only access to
+  the owner's own installation is unaffected (it never needed a consent).
+- Still pending: website / Evolution Story privacy copy, KL-186 plug-in
+  acceptance, SmartSensor bootloader follow-up.
+- None of this is authority for bus or device writes, releases or deployments.
+
 ## Decision recorded — 20 November 2026
 
 - **REL-01 beta-exit catalogue accepted.** The owner accepts the proposed

@@ -19,6 +19,10 @@ feature at a time, never inferred manufacturer behaviour.
 
 - Parameter-driven row/column captions (`TextParameterRefId`): grid axis captions now resolve
   the referenced text parameter (delivered 17 November 2026, ADR-0177; contract updated).
+  Since 20 November 2026 (WP-05l) the resolved caption's fill provenance (`textFill` in the
+  wire DTO) also rides the matrix row/column header entries and shows in the header's
+  tooltip, the same provenance separator labels already had; a plain axis header keeps no
+  fill line, and placement, identities and the conservative caption fallback are unchanged.
   `Rename` is implemented for the literal leaf that retitles its enclosing block — in the
   program tree and in a `Module` expansion (module-scoped, delivered 19 November 2026) —,
   including a `{{0}}` placeholder filled from the leaf's own `@TextParameterRefId`. Since

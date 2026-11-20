@@ -6946,7 +6946,7 @@ fn assemble_parameter_panel_for_project(
     }
     let layout =
         knx_productdb::parameter_layout::load(products, &program_id).map_err(|e| e.to_string())?;
-    caption_fills.load_grid_axes(products, &program_id, &layout, language)?;
+    caption_fills.load_grid_axes(products, &program_id, &layout, "", language)?;
     diagnostics.extend(passive_label_binding_diagnostic(
         layout.button_binding(),
         activation.buttons.iter().filter(|b| b.scope.is_none()).count(),
@@ -7105,6 +7105,20 @@ fn assemble_parameter_panel_for_project(
     let mut sections = Vec::with_capacity(section_order.len());
     for key in section_order {
         let section = sections_by_key.remove(&key).expect("just inserted above");
+        // WP-05n: each section's own defining tree gets its own axis overlay,
+        // so a module/Repeat-scoped grid's axes translate without touching the
+        // program tree's captions.
+        let section_definition = section
+            .scope
+            .as_ref()
+            .map_or("", |s| s.module_def_id.as_str());
+        caption_fills.load_grid_axes(
+            products,
+            &program_id,
+            &layout,
+            section_definition,
+            language,
+        )?;
         // D39: a section earns editability, it does not start with it. An
         // unscoped section is editable exactly as before D39. A
         // module-scoped section is editable only when exactly one

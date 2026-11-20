@@ -12,7 +12,9 @@ pub(crate) type CaptionKey = (Option<Vec<i64>>, i64);
 pub(crate) struct CaptionFills {
     fills: HashMap<CaptionKey, TextFill>,
     budget: TextProjectionBudget,
-    axes: knx_productdb::query::GridAxisCaptions,
+    /// WP-05n: per-definition overlays; one section's axes never read another
+    /// tree's caption.
+    axes: HashMap<String, knx_productdb::query::GridAxisCaptions>,
     /// ADR-0177: resolved parameter-driven axis captions, keyed by axis `Id`.
     axis_texts: HashMap<String, (String, knx_projection::TextFill)>,
 }
@@ -34,16 +36,19 @@ impl CaptionFills {
         products: &knx_productdb::Connection,
         program: &str,
         layout: &knx_productdb::parameter_layout::ParameterLayout,
+        definition: &str,
         language: Option<&str>,
     ) -> Result<(), String> {
-        self.axes = knx_productdb::query::parameter_grid_axis_captions(
+        let axes = knx_productdb::query::parameter_grid_axis_captions(
             products,
             program,
             layout,
+            definition,
             language,
             &mut self.budget,
         )
         .map_err(|e| e.to_string())?;
+        self.axes.insert(definition.to_owned(), axes);
         Ok(())
     }
 
@@ -56,15 +61,23 @@ impl CaptionFills {
         program: &str,
         texts: &knx_productdb::text_parameters::DeviceTexts<'_>,
     ) -> Result<(), String> {
-        let Some(axes) = layout.literal_grid_axes(program) else {
+        // WP-05n: the program tree's bound axes, as before; module trees are
+        // resolved by their own definitions in `load_axis_texts_module`.
+        let Some(axes) = layout.literal_grid_axes(program, "") else {
             return Ok(());
         };
+        let bound: std::collections::HashSet<&str> = axes.collect();
         for grid in layout.program_grids() {
             for axis in grid.rows.iter().chain(grid.columns.iter()) {
                 let Some(reference) = axis.text_parameter_ref_id.as_deref() else {
                     continue;
                 };
-                if !axes.contains(&axis.id) {
+                // ADR-0177: the reference must sit on an axis this tree
+                // actually admitted as a caption host; WP-05n makes that
+                // admission scope-local, so the lookup below consults only
+                // the program tree's own bound axes (a module-scope axis id
+                // must never satisfy the program tree's reference check).
+                if !bound.contains(axis.id.as_str()) {
                     continue;
                 }
                 let value = texts.value(
@@ -122,10 +135,13 @@ impl CaptionFills {
         definition: &str,
         axis: &knx_productdb::parameter_layout::GridAxis,
     ) -> Result<(Option<String>, Option<knx_projection::TextFill>), String> {
-        let translated = definition
-            .is_empty()
-            .then(|| self.axes.texts.get(&axis.id))
-            .flatten()
+        // WP-05n: any definition's bound literal axes translate, keyed by
+        // `(module_def_id, axis id)`; the ADR-0177 parameter-driven overlay
+        // below stays program-tree-only.
+        let translated = self
+            .axes
+            .get(definition)
+            .and_then(|axes| axes.texts.get(&(definition.to_owned(), axis.id.clone())))
             .map(String::as_str);
         let base = translated.or(axis.text.as_deref());
         // ADR-0177: a program-owned literal axis whose declared
@@ -159,8 +175,13 @@ impl CaptionFills {
         Ok((text, fill))
     }
 
+    /// WP-05n: whether `definition`'s axis `id` has a selected translation that
+    /// is unsupported (a placeholder template); any definition's bound axes.
     pub(crate) fn axis_unsupported(&self, definition: &str, id: &str) -> bool {
-        definition.is_empty() && self.axes.unsupported.contains(id)
+        self.axes.get(definition).is_some_and(|axes| {
+            axes.unsupported
+                .contains(&(definition.to_owned(), id.to_owned()))
+        })
     }
 
     /// The requested language's own `Text` translation for a defining tree/node,

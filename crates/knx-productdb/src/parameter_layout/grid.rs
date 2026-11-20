@@ -103,25 +103,47 @@ pub(super) struct SourceGrids {
     /// `(block @Id, ParameterRefRef @RefId)` → the one valid `@IndentLevel`
     /// every occurrence in that block declares (census P4).
     pub indents: HashMap<(String, String), u8>,
-    /// Program-tree structure, counted exactly like the stored dynamic parser.
-    program_nodes: Vec<(String, Option<i64>, i64, Option<String>)>,
+    /// Program-tree `Dynamic` roots, counted like the stored dynamic parser;
+    /// exactly one is required for the program tree to bind.
     program_roots: usize,
-    /// Only literal axes outside modules and Repeat, with document-unique identities.
-    axis_candidates: HashSet<String>,
+    /// Per-scope trees, counted like the stored per-scope dynamic parser
+    /// (WP-05n): `scope` → `(kind, parent, position, block @Id)`.
+    scope_nodes: HashMap<String, Vec<ScopeNode>>,
+    /// Only literal axes outside modules and Repeat, with document-unique
+    /// identities, per scope (`""` = the program's own tree).
+    axis_candidates: HashMap<String, HashSet<String>>,
+    /// Document-wide `@Id` census over the selected program, so an id shared
+    /// by a module tree and the program tree binds in the program tree only
+    /// (WP-05n: `translation.ref_id` names no tree).
     identifiers: HashMap<String, usize>,
+    /// WP-05n: per-scope `@Id` census (`scope` = `ModuleDef/@Id`, `""` =
+    /// the program's own tree), so the program tree may reuse an id a module
+    /// tree also uses without losing its own axis.
+    scope_identifiers: HashMap<String, HashMap<String, usize>>,
 }
 
-/// Bind literal axis identities only after complete source/stored-tree correspondence.
-/// Axis IDs/text are not typed dynamic columns; never reconstruct them from `extra`.
-pub(super) fn axis_caption_ids(
+/// One counted node of a scope's dynamic tree, mirroring the stored parser:
+/// `(kind, parent, position, block @Id)`.
+type ScopeNode = (String, Option<i64>, i64, Option<String>);
+
+/// Bind literal axis identities only after complete source/stored-tree
+/// correspondence. WP-05n: every scope's tree binds separately, keyed by its
+/// `module_def_id`. Axis IDs/text are not typed dynamic columns; never
+/// reconstruct them from `extra`.
+///
+/// The bound literal axis ids of one scope's tree, or `None` when that scope's
+/// source tree does not correspond completely to its stored nodes.
+pub(super) fn scoped_axis_caption_ids(
     source: &SourceGrids,
+    scope: &str,
     stored: &std::collections::BTreeMap<i64, super::Node>,
-) -> HashSet<String> {
-    if source.program_roots != 1 || source.program_nodes.len() != stored.len() {
-        return HashSet::new();
+) -> Option<HashSet<String>> {
+    let nodes = source.scope_nodes.get(scope)?;
+    if nodes.len() != stored.len() {
+        return None;
     }
     for ((id, node), (index, (kind, parent, position, block_id))) in
-        stored.iter().zip(source.program_nodes.iter().enumerate())
+        stored.iter().zip(nodes.iter().enumerate())
     {
         if *id != index as i64
             || node.kind != *kind
@@ -129,15 +151,40 @@ pub(super) fn axis_caption_ids(
             || node.position != *position
             || (kind == "ParameterBlock" && node.id != *block_id)
         {
-            return HashSet::new();
+            return None;
         }
     }
-    source
-        .axis_candidates
-        .iter()
-        .filter(|id| source.identifiers.get(*id) == Some(&1))
-        .cloned()
-        .collect()
+    if scope.is_empty() && source.program_roots != 1 {
+        return None;
+    }
+    Some(
+        source
+            .axis_candidates
+            .get(scope)
+            .map(|candidates| {
+                candidates
+                    .iter()
+                    // WP-05n: the program tree may reuse an id a module tree
+                    // also declares (its own census is unique there); any other
+                    // scope's axis must be document-unique, because the
+                    // translation table names no tree, so a shared id could
+                    // only ever resolve to the program tree's caption.
+                    .filter(|id| {
+                        let census = if scope.is_empty() {
+                            source
+                                .scope_identifiers
+                                .get(scope)
+                                .and_then(|ids| ids.get(*id))
+                        } else {
+                            source.identifiers.get(*id)
+                        };
+                        census == Some(&1)
+                    })
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default(),
+    )
 }
 
 struct Frame {
@@ -172,7 +219,9 @@ struct Entry {
     role: Role,
     /// Nearest enclosing grid frame, inherited by descendants.
     owner: Option<usize>,
-    program_node: Option<i64>,
+    /// WP-05n: this node's id within its scope's per-scope tree, when the node
+    /// belongs to a dynamic tree of the selected program.
+    scope_node: Option<(String, i64)>,
     children: i64,
     axis_candidate: Option<String>,
 }
@@ -189,6 +238,13 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
     let mut namespace = None;
     let mut owners = 0;
     let mut bindings = SourceGrids::default();
+    // The stored-tree parser's own view, namespace-blind (`dynamic::parse`):
+    // `parser_program` is the current `ApplicationProgram/@Id`, `parser_modules`
+    // the open `ModuleDef/@Id` stack, and `parser_depth` counts elements inside
+    // the first opened tree, so per-scope numbering mirrors the stored parser.
+    let mut parser_program = String::new();
+    let mut parser_modules: Vec<String> = Vec::new();
+    let mut parser_depth = 0usize;
     for _ in 0..budget {
         let (ns, event) = reader.read_resolved_event().ok()?;
         let empty = matches!(&event, Event::Empty(_));
@@ -209,6 +265,24 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                 let same = resolved == namespace;
                 let path: Vec<&str> = stack.iter().map(|entry| entry.kind.as_str()).collect();
                 let parent = stack.last();
+                // A tree holding these names desynchronizes the parser's frames.
+                if parser_depth > 0 && matches!(kind.as_str(), "ApplicationProgram" | "ModuleDef") {
+                    return None;
+                }
+                if kind == "ApplicationProgram" {
+                    parser_program = attr_id(&e);
+                    parser_modules.clear();
+                } else if kind == "ModuleDef" && !empty {
+                    parser_modules.push(attr_id(&e));
+                }
+                // WP-05n: the parser's scope is the last open `ModuleDef` of the
+                // selected program; foreign programs are numbered but never
+                // bound, so they key under a marker no scope can match.
+                let parser_scope = if parser_program == program {
+                    parser_modules.last().cloned().unwrap_or_default()
+                } else {
+                    format!("foreign:{parser_program}")
+                };
                 // Keep the existing root/source-identity namespace policy, but
                 // never restart new translation authority below a foreign or
                 // unresolved ancestor. Baseline grid rendering is unchanged.
@@ -236,52 +310,68 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                 if active {
                     if let Some(id) = attr.evidence_value("Id") {
                         *bindings.identifiers.entry(id.to_owned()).or_default() += 1;
+                        // WP-05n: the per-scope census lets the program tree reuse
+                        // an id a module tree also declares; the document-wide
+                        // census gates module-scope axes (translation names no tree).
+                        *bindings
+                            .scope_identifiers
+                            .entry(parser_scope.clone())
+                            .or_default()
+                            .entry(id.to_owned())
+                            .or_default() += 1;
                     }
                 }
-                // Count every namespace's child, as dynamic::parse does. Only the
-                // canonical program root can bind; module trees never enter this map.
-                let mut program_node = None;
+                // The program tree binds only with exactly one canonical
+                // `Dynamic` root; module trees never count here.
                 if active && kind == "Dynamic" && !path.contains(&"ModuleDef") {
                     bindings.program_roots += 1;
-                    if path.last() == Some(&"ApplicationProgram") && bindings.program_roots == 1 {
-                        program_node = Some(0);
-                        bindings.program_nodes.push((kind.clone(), None, 0, None));
-                    }
-                } else if let Some(parent_node) = parent.and_then(|p| p.program_node) {
-                    program_node = Some(bindings.program_nodes.len() as i64);
-                    bindings.program_nodes.push((
-                        kind.clone(),
-                        Some(parent_node),
-                        parent.expect("parent node").children,
-                        (same && kind == "ParameterBlock")
-                            .then(|| attr.evidence_value("Id").map(str::to_owned))
-                            .flatten(),
-                    ));
+                }
+                // WP-05n: every dynamic tree of the selected program (its own
+                // `Dynamic` and each `ModuleDef`'s) is numbered per scope, exactly
+                // like the stored per-scope dynamic_node ids, so each scope's
+                // axes can bind against its own stored tree. Foreign programs are
+                // numbered too, to keep the frames aligned, but never bound.
+                let mut scope_node = None;
+                if parser_depth == 0 && kind == "Dynamic" && parser_program == program && active {
+                    let nodes = bindings
+                        .scope_nodes
+                        .entry(parser_scope.clone())
+                        .or_default();
+                    let root = nodes.len() as i64;
+                    nodes.push((kind.clone(), None, 0, None));
+                    scope_node = Some((parser_scope.clone(), root));
+                } else if let Some((scope, parent_node)) = parent.and_then(|p| p.scope_node.clone())
+                {
+                    let id = bindings
+                        .scope_nodes
+                        .get(&scope)
+                        .map_or(0, |nodes| nodes.len() as i64);
+                    bindings
+                        .scope_nodes
+                        .entry(scope.clone())
+                        .or_default()
+                        .push((
+                            kind.clone(),
+                            Some(parent_node),
+                            parent.expect("parent node").children,
+                            (same && kind == "ParameterBlock")
+                                .then(|| attr.evidence_value("Id").map(str::to_owned))
+                                .flatten(),
+                        ));
+                    scope_node = Some((scope, id));
+                }
+                if parser_depth > 0 || scope_node.is_some() {
+                    parser_depth += usize::from(!empty);
                 }
                 let parent_dynamic = parent.is_some_and(|p| p.dynamic);
                 let dynamic = active
                     && (is_dynamic_root(&kind, &path)
-                        || (parent_dynamic && is_dynamic_container(&kind)));
+                        || (parent_dynamic && is_dynamic_container(&kind))
+                        // WP-05n: a module tree's root is dynamic in its own scope.
+                        || (kind == "Dynamic" && parent.is_some_and(|p| p.active)));
                 let inherited = parent.and_then(|p| p.owner);
                 let mut role = Role::Other;
                 let mut owner = inherited;
-                if kind == "ParameterBlock" {
-                    eprintln!(
-                        "PB id={:?} dynamic={} active={} path={:?}",
-                        attr.evidence_value("Id"),
-                        dynamic,
-                        active,
-                        path
-                    );
-                }
-                if kind == "ParameterBlock" {
-                    eprintln!(
-                        "PB id={:?} dynamic={} active={}",
-                        attr.evidence_value("Id"),
-                        dynamic,
-                        active
-                    );
-                }
                 if dynamic && kind == "ParameterBlock" {
                     // A nested block's own `@Cell` places it in its parent's grid.
                     if let (Some(frame), Some(cell)) = (inherited, attr.evidence_value("Cell")) {
@@ -341,18 +431,25 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                     place(&mut frames, inherited, &kind, &attr);
                 }
                 let mut axis_candidate = None;
-                if axis_namespace
-                    && program_node.is_some()
+                let axis_admitted = axis_namespace
+                    && scope_node.is_some()
                     && matches!(kind.as_str(), "Row" | "Column")
                     && matches!(
                         parent.map(|p| p.role),
                         Some(Role::Rows(_) | Role::Columns(_))
                     )
+                    // WP-05n: Repeat-scoped axes never bind, in any tree, as
+                    // before; the check keys on the path, so it holds inside
+                    // module trees too.
                     && !path.contains(&"Repeat")
                     // ADR-0177: an axis declaring `TextParameterRefId` is a
                     // parameter-driven caption candidate too, not only a
                     // translation candidate; the attribute whitelist below
-                    // admits the reference, so the axis identity stays bound.
+                    // admits the reference, so the axis identity stays bound
+                    // for that resolution in every scope — including the
+                    // program tree, whose ADR-0177 resolution must keep
+                    // working. WP-05n only refuses *translation* for a scope
+                    // holding such an axis (the sentinel below).
                     && attr.evidence_value("Text").is_none_or(literal_caption)
                     && attr.names().all(|name| {
                         name == "xmlns"
@@ -361,17 +458,74 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                                 name,
                                 "Id" | "Text" | "TextParameterRefId" | "Width" | "CollapseIfEmpty"
                             )
-                    })
-                {
+                    });
+                if axis_admitted {
                     if let Some(id) = attr.evidence_value("Id") {
-                        bindings.axis_candidates.insert(id.to_owned());
+                        // WP-05n: candidates are per scope, so a module tree's
+                        // axis can never collide with the program tree's.
+                        if let Some((scope, _)) = &scope_node {
+                            bindings
+                                .axis_candidates
+                                .entry(scope.clone())
+                                .or_default()
+                                .insert(id.to_owned());
+                        }
                         axis_candidate = Some(id.to_owned());
                     }
                 }
-                if let Some(id) = parent.and_then(|p| p.axis_candidate.as_ref()) {
-                    bindings.axis_candidates.remove(id);
+                // WP-05n: a refused axis (Repeat-scoped, placeholder text, a
+                // declared `TextParameterRefId`, unknown attribute, child
+                // content) refuses its whole scope for translation, mirroring
+                // the literal program-tree rule: a sentinel node is appended
+                // to that scope's counted tree, so the source/stored
+                // correspondence check below always fails and no axis of the
+                // scope ever translates. `TextParameterRefId` axes stay
+                // admitted as caption hosts above (ADR-0177); they only
+                // refuse translation, as the query layer would exclude them
+                // anyway.
+                let axis_refusal = matches!(kind.as_str(), "Row" | "Column")
+                    && matches!(
+                        parent.map(|p| p.role),
+                        Some(Role::Rows(_) | Role::Columns(_))
+                    )
+                    && (path.contains(&"Repeat")
+                        || attr
+                            .evidence_value("Text")
+                            .is_some_and(|t| !literal_caption(t))
+                        || attr.evidence_value("TextParameterRefId").is_some()
+                        || !attr.names().all(|name| {
+                            name == "xmlns"
+                                || name.starts_with("xmlns:")
+                                || matches!(
+                                    name,
+                                    "Id" | "Text"
+                                        | "TextParameterRefId"
+                                        | "Width"
+                                        | "CollapseIfEmpty"
+                                )
+                        }));
+                if axis_refusal {
+                    if let Some((scope, _)) = &scope_node {
+                        if let Some(nodes) = bindings.scope_nodes.get_mut(scope) {
+                            if !nodes
+                                .iter()
+                                .any(|(kind, _, _, _)| kind == "__wp05n_refused__")
+                            {
+                                nodes.push(("__wp05n_refused__".to_owned(), None, -1, None));
+                            }
+                        }
+                    }
                 }
-                if program_node.is_some() {
+                let parent_scope =
+                    parent.and_then(|p| p.scope_node.as_ref().map(|(s, _)| s.clone()));
+                if let Some(id) = parent.and_then(|p| p.axis_candidate.as_ref()) {
+                    if let Some(scope) = &parent_scope {
+                        if let Some(candidates) = bindings.axis_candidates.get_mut(scope) {
+                            candidates.remove(id);
+                        }
+                    }
+                }
+                if scope_node.is_some() {
                     if let Some(parent) = stack.last_mut() {
                         parent.children += 1;
                     }
@@ -384,7 +538,7 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                         dynamic,
                         role,
                         owner,
-                        program_node,
+                        scope_node,
                         children: 0,
                         axis_candidate,
                     });
@@ -393,27 +547,40 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                     }
                 }
             }
-            Event::End(_) => {
+            Event::End(e) => {
+                if e.local_name().as_ref() == "ModuleDef" {
+                    parser_modules.pop();
+                }
+                parser_depth = parser_depth.saturating_sub(1);
                 stack.pop()?;
             }
             Event::DocType(_) => return None,
             Event::Text(text) if !text.as_ref().as_bytes().iter().all(u8::is_ascii_whitespace) => {
                 if let Some(id) = stack.last().and_then(|p| p.axis_candidate.as_ref()) {
-                    bindings.axis_candidates.remove(id);
+                    if let Some((scope, _)) = stack.last().and_then(|p| p.scope_node.as_ref()) {
+                        if let Some(candidates) = bindings.axis_candidates.get_mut(scope) {
+                            candidates.remove(id);
+                        }
+                    }
                 }
             }
             Event::CData(_) | Event::GeneralRef(_) => {
                 if let Some(id) = stack.last().and_then(|p| p.axis_candidate.as_ref()) {
-                    bindings.axis_candidates.remove(id);
+                    if let Some((scope, _)) = stack.last().and_then(|p| p.scope_node.as_ref()) {
+                        if let Some(candidates) = bindings.axis_candidates.get_mut(scope) {
+                            candidates.remove(id);
+                        }
+                    }
                 }
             }
             Event::Eof => {
                 return (stack.is_empty() && owners == 1).then(|| {
                     let mut result = finish(frames);
-                    result.program_nodes = bindings.program_nodes;
                     result.program_roots = bindings.program_roots;
+                    result.scope_nodes = bindings.scope_nodes;
                     result.axis_candidates = bindings.axis_candidates;
                     result.identifiers = bindings.identifiers;
+                    result.scope_identifiers = bindings.scope_identifiers;
                     result
                 });
             }
@@ -421,6 +588,15 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
         }
     }
     None
+}
+
+/// The element's `@Id` for the parser-tracking pass, which reads attributes of
+/// every element kind (unlike the layout read's `relevant` filter).
+fn attr_id(e: &quick_xml::events::BytesStart<'_>) -> String {
+    crate::xml::attrs(e, "parameter grid")
+        .ok()
+        .and_then(|attrs| attrs.evidence_value("Id").map(str::to_owned))
+        .unwrap_or_default()
 }
 
 pub(crate) fn literal_caption(text: &str) -> bool {

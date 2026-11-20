@@ -96,14 +96,28 @@ pub struct ParameterLayout {
     nested_binding: NestedBinding,
     button_binding: ButtonBinding,
     axis_program: String,
-    literal_grid_axes: std::collections::HashSet<String>,
+    /// `(module_def_id, axis @Id)` of every bound literal grid axis;
+    /// `""` is the program's own tree (WP-05n: module/Repeat-scoped grids
+    /// bind per scope).
+    literal_grid_axes: std::collections::HashSet<(String, String)>,
     /// `inline-section-flatten-v1`: `(definition, inline block node)` → the
     /// outer group its heading renders in.
     inline_label_groups: HashMap<(String, i64), Group>,
 }
 impl ParameterLayout {
-    pub fn literal_grid_axes(&self, program: &str) -> Option<&std::collections::HashSet<String>> {
-        (self.axis_program == program).then_some(&self.literal_grid_axes)
+    /// The bound literal axis ids of `definition`'s tree (`""` = the
+    /// program's own tree), when this layout was loaded for `program`.
+    pub fn literal_grid_axes<'a>(
+        &'a self,
+        program: &str,
+        definition: &'a str,
+    ) -> Option<impl Iterator<Item = &'a str> + use<'a>> {
+        (self.axis_program == program).then(|| {
+            self.literal_grid_axes
+                .iter()
+                .filter(move |(scope, _)| scope == definition)
+                .map(|(_, id)| id.as_str())
+        })
     }
     /// `button-literal-passive-v1`: the admitted literal of the `Button` at
     /// `node` in `definition`'s tree; since WP-05h module trees bind too.
@@ -145,11 +159,20 @@ impl ParameterLayout {
     }
 
     /// ADR-0177: every grid declared in the program's own tree, for resolving
-    /// axis `TextParameterRefId` captions. Module trees hold no literal axes.
+    /// axis `TextParameterRefId` captions.
     pub fn program_grids(&self) -> impl Iterator<Item = &BlockGrid> {
+        self.grids_for("")
+    }
+
+    /// WP-05n: every grid declared in `definition`'s tree (`""` = the
+    /// program's own tree).
+    pub fn grids_for<'a>(
+        &'a self,
+        definition: &'a str,
+    ) -> impl Iterator<Item = &'a BlockGrid> + use<'a> {
         self.grids
             .iter()
-            .filter(|((definition, _), _)| definition.is_empty())
+            .filter(move |((scope, _), _)| scope == definition)
             .map(|(_, grid)| grid)
     }
     pub fn separator(&self, definition: &str, node: i64) -> Option<&SeparatorPlacement> {
@@ -460,16 +483,24 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
                 },
             );
         }
-        if scope.is_empty() {
-            if let Some(source_grids) = &grids {
-                let bound = grid::axis_caption_ids(source_grids, nodes);
-                result.literal_grid_axes = scope_grids
-                    .values()
-                    .filter(|grid| grid.status == GridStatus::Grid)
-                    .flat_map(|grid| grid.rows.iter().chain(&grid.columns))
-                    .filter(|axis| bound.contains(&axis.id))
-                    .map(|axis| axis.id.clone())
-                    .collect();
+        if let Some(source_grids) = &grids {
+            // WP-05n: every scope's grid axes bind against its own stored
+            // per-scope tree; a scope whose source/stored correspondence
+            // fails contributes no axes, never another scope's.
+            let bound = grid::scoped_axis_caption_ids(source_grids, scope, nodes);
+            let axes: std::collections::HashSet<String> = scope_grids
+                .values()
+                .filter(|grid| grid.status == GridStatus::Grid)
+                .flat_map(|grid| grid.rows.iter().chain(&grid.columns))
+                // WP-05n: an axis declaring `TextParameterRefId` is a
+                // parameter-driven caption host (ADR-0177), never an axis
+                // translation candidate — in any scope.
+                .filter(|axis| axis.text_parameter_ref_id.is_none())
+                .filter(|axis| bound.as_ref().is_some_and(|bound| bound.contains(&axis.id)))
+                .map(|axis| axis.id.clone())
+                .collect();
+            for id in axes {
+                result.literal_grid_axes.insert((scope.clone(), id));
             }
         }
         // button-literal-passive-v1 / module-scoped-buttons-v1 (WP-05h):

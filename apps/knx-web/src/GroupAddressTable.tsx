@@ -16,6 +16,11 @@ import GroupAddressAtlas from "./GroupAddressAtlas";
 import GroupAddressMatrix from "./GroupAddressMatrix";
 import { buildGroupAddressMatrix } from "./groupAddressMatrix";
 import { useGroupAddressObjectInventory } from "./groupAddressObjectInventory";
+import { useDeviceLastDownloads } from "./deviceLastDownloads";
+import { collectInstallationDevices } from "./treeUtils";
+import { differingAddresses, type AddressLinkChange } from "./groupAddressLastDownload";
+import { rawGroupAddress } from "./rawGroupAddress";
+import { GroupAddressLastDownloadSummary } from "./GroupAddressLastDownload";
 import GroupAddressLinks from "./GroupAddressLinks";
 import NewGroupAddressInRangeDialog from "./NewGroupAddressInRangeDialog";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
@@ -67,6 +72,32 @@ export default function GroupAddressTable(props: {
   const [closedDuringSearch, setClosedDuringSearch] = useState<Set<string>>(() => new Set());
   const inventory = useGroupAddressObjectInventory(installation, `${props.projectContextKey ?? ""}:${installation.id}`);
   const matrix = useMemo(() => buildGroupAddressMatrix(index, inventory.current), [index, inventory.current]);
+  // ADR-0174: one device-detail read per device carries `last_download`; the
+  // union of all usable link comparisons marks the group-address rows.
+  const gaDevices = useMemo(() => [...collectInstallationDevices(installation).values()], [installation]);
+  const lastDownloads = useDeviceLastDownloads(gaDevices, installation, `${props.projectContextKey ?? ""}:${installation.id}`);
+  const differing = useMemo(() => {
+    const merged = new Map<number, AddressLinkChange[]>();
+    for (const lastDownload of lastDownloads.current.values()) {
+      for (const [address, changes] of differingAddresses(lastDownload)) {
+        const list = merged.get(address) ?? [];
+        for (const change of changes) if (!list.some(existing => existing.kind === change.kind && existing.address === change.address)) list.push(change);
+        merged.set(address, list);
+      }
+    }
+    return merged;
+  }, [lastDownloads.current]);
+  const differingRowKeys = useMemo(() => {
+    const style = props.tree.group_address_style;
+    const keys = new Set<string>();
+    for (const row of index.rows) {
+      if (differing.size === 0) break;
+      const raw = rawGroupAddress(row.node.address, style);
+      if (raw !== null && differing.has(raw)) keys.add(row.key);
+    }
+    return keys;
+  }, [index, differing, props.tree.group_address_style]);
+  const addressStyle = props.tree.group_address_style;
   const [columnKeys, setColumnKeys] = useState<Set<string> | null>(null);
   const [columnQuery, setColumnQuery] = useState("");
   const [limit, setLimit] = useState(GROUP_ADDRESS_WINDOW);
@@ -108,7 +139,8 @@ export default function GroupAddressTable(props: {
   const selectedRows = index.rows.filter(row => selection?.kind === "group_address" && row.node.id === selection.id);
   const selected = selectedRows.length === 1 ? selectedRows[0].node : null;
   const shared: GroupAddressWorkspaceViewProps = { installation, index, rows, baseRows, scope: validScope,
-    onScope: setScope, selection, multiSelection, onItemClick, limit, onLimit: setLimit, showColumnReset: props.showColumnReset };
+    onScope: setScope, selection, multiSelection, onItemClick, limit, onLimit: setLimit, showColumnReset: props.showColumnReset,
+    differing, addressStyle, differingRowKeys };
   const searching = query.trim() !== "" || filter !== "all";
   useEffect(() => { setClosedDuringSearch(new Set()); }, [query, filter]);
   const matches = searching ? groupsWithMatches(index, new Set(rows.map(row => row.key))) : null;
@@ -186,6 +218,7 @@ export default function GroupAddressTable(props: {
       <ul>{index.issues.map((issue, i) => <li key={i}>{t(`gaWorkspace.issue.${issue.code}`)} · {issue.key} → #{issue.reference}</li>)}</ul>
     </details>}
     {rangeScope !== null && externalGroups.length !== 1 && <p role="status">{t("gaWorkspace.scopeUnavailable")}</p>}
+    <GroupAddressLastDownloadSummary differingRows={differingRowKeys} rows={rows} lastDownloads={lastDownloads.current} />
     {view === "columns" ? <GroupAddressColumns {...shared} /> : view === "atlas" ? <GroupAddressAtlas {...shared} /> : view === "matrix" ? <GroupAddressMatrix {...shared}
       matrix={matrix} inventory={inventory} columnKeys={columnKeys} onColumns={setColumnKeys} columnQuery={columnQuery} onColumnQuery={setColumnQuery} /> : <GroupAddressTreeTable {...shared}
       expanded={expanded} onToggle={toggle} includeEmpty={query.trim() === "" && filter === "all" && validScope === null && externalScope === null}

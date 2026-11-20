@@ -1,5 +1,6 @@
 /** Native hierarchical address table over the shared presentation index. */
 import ResizableTable from "./ResizableTable";
+import { useId } from "react";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
 import type { GroupAddressWorkspaceViewProps } from "./groupAddressWorkspaceView";
@@ -8,6 +9,8 @@ import { useUiLanguage } from "./uiLanguage";
 import { useGroupAddressFormat } from "./gaNotation";
 import { dptText, hasDptConflict, linkDirectionCounts, rangePath } from "./groupAddressView";
 import { groupAddressTreeEntries, limitGroupAddressEntries, type GroupAddressTreeEntry } from "./groupAddressPresentation";
+import { addressDiffers } from "./groupAddressLastDownload";
+import { rawGroupAddress } from "./rawGroupAddress";
 import HelpTip from "./HelpTip";
 import GroupAddressWindowNotice from "./GroupAddressWindowNotice";
 
@@ -31,6 +34,30 @@ export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewPr
 }) {
   const { installation, index, rows, selection, multiSelection, onItemClick, expanded, onToggle } = props;
   const t = useTranslate(); const [language] = useUiLanguage(); const formatGa = useGroupAddressFormat();
+  const differing = props.differing ?? new Map();
+  const style = props.addressStyle ?? "ThreeLevel";
+  const rowDiffers = (row: { key: string; node: GroupAddressNode }) =>
+    props.differingRowKeys !== undefined ? props.differingRowKeys.has(row.key)
+      : (rawGroupAddress(row.node.address, style) !== null && addressDiffers(differing, rawGroupAddress(row.node.address, style)!));
+  // A group holds a differing row when any of its descendant rows differs.
+  const groupDiffers = (groupKey: string): boolean => {
+    if (props.differingRowKeys !== undefined) {
+      const group = index.groups.get(groupKey);
+      if (group === undefined) return false;
+      const subtree = new Set<string>();
+      const queue = [groupKey];
+      for (let i = 0; i < queue.length; i += 1) {
+        const key = queue[i];
+        subtree.add(key);
+        for (const child of index.groups.get(key)?.children ?? []) queue.push(child);
+      }
+      for (const row of index.rows) if (subtree.has(row.groupKey) && props.differingRowKeys.has(row.key)) return true;
+      return false;
+    }
+    for (const row of index.rows) if (row.groupKey === groupKey && rowDiffers(row)) return true;
+    return false;
+  };
+  const noteId = useId();
   const allEntries: GroupAddressTreeEntry[] = props.flat
     ? rows.map(row => ({ kind: "address", key: row.key, depth: 0, row }))
     : groupAddressTreeEntries(index, rows, expanded, props.includeEmpty);
@@ -61,10 +88,15 @@ export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewPr
                 const group = entry.group;
                 const label = group.range ? (group.range.name || t("gaWorkspace.unnamedRange", { id: group.range.id }))
                   : t(group.kind === "unassigned" ? "addressTable.noRange" : "gaWorkspace.unresolved");
+                const differs = groupDiffers(entry.key);
                 return <tr key={entry.key} className="ga-range-row"><td colSpan={6}><span className="ga-range-heading">
                   <button type="button" data-ga-expand={entry.key} data-ga-nav=""
                     style={{ paddingInlineStart: treeIndent(entry.depth) }}
-                    aria-expanded={expanded.has(entry.key)} onClick={() => onToggle(entry.key)}>{expanded.has(entry.key) ? "▾" : "▸"} {label} <small>({entry.count})</small></button>
+                    aria-expanded={expanded.has(entry.key)} onClick={() => onToggle(entry.key)}
+                    aria-describedby={differs ? noteId : undefined}
+                    data-differs-from-download={differs ? "true" : undefined}>{expanded.has(entry.key) ? "▾" : "▸"} {label} <small>({entry.count})</small>
+                    {differs && <span className="ga-download-mark" title={t("gaWorkspace.lastDownload.group")} aria-hidden="true" />}
+                  </button>
                   {group.range && props.onCreateInRange && <button type="button" className="ga-range-add"
                     data-ga-range-add={group.range.id} aria-label={t("gaWorkspace.newInRange.add", { range: label })}
                     title={t("gaWorkspace.newInRange.add", { range: label })}
@@ -75,12 +107,14 @@ export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewPr
               const ga = row.node;
               const counts = linkDirectionCounts(ga);
               const path = rangePath(installation.group_ranges, ga.range);
+              const differs = rowDiffers(row);
               return (
                 <tr
                   key={row.key}
                   data-rename-kind={row.selectable ? "group_address" : undefined} data-rename-id={row.selectable ? ga.id : undefined}
                   data-crt-surface="row"
                   aria-selected={selection?.kind === "group_address" && selection.id === ga.id}
+                  data-differs-from-download={differs ? "true" : undefined}
                   className={checked(ga) ? "row-multi-selected" : undefined}
                 >
                   <td className={props.flat ? "address-table-check" : "address-table-check address-table-check--tree"}>
@@ -107,6 +141,7 @@ export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewPr
                       className="table-select"
                       data-ga-select={ga.id} data-ga-nav="" disabled={!row.selectable}
                       data-crt-activate=""
+                      aria-describedby={differs ? `${noteId}-row-${row.key}` : undefined}
                       onClick={(e) =>
                         onItemClick(
                           e,
@@ -118,9 +153,12 @@ export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewPr
                       }
                     >
                       {formatGa(ga.address)}
+                      {differs && <span className="ga-download-mark" title={t("gaWorkspace.lastDownload.row")} aria-hidden="true" />}
                     </button>
                   </td>
-                  <td>{ga.name}</td>
+                  <td>{ga.name}
+                    {differs && <small className="ga-download-note" id={`${noteId}-row-${row.key}`}>{t("gaWorkspace.lastDownload.row")}</small>}
+                  </td>
                   <td>{path ?? t("addressTable.noRange")}</td>
                   <td className={hasDptConflict(ga) ? "mono dpt-conflict" : "mono"}>
                     {dptText(t, ga, language)}
@@ -149,6 +187,7 @@ export default function GroupAddressTreeTable(props: GroupAddressWorkspaceViewPr
           </p>
         )}
         <GroupAddressWindowNotice shown={shownAddresses} total={totalAddresses} onLimit={props.onLimit} />
+        <span id={noteId} hidden>{t("gaWorkspace.lastDownload.group")}</span>
       </div>
   );
 }

@@ -4,6 +4,7 @@ import type { MultiSelection, Selection } from "./selection";
 import type { ItemClickHandler } from "./multiSelection";
 import type { Translate } from "./i18n";
 import type { GroupAddressPresentation, GroupAddressPresentationGroup, GroupAddressPresentationRow } from "./groupAddressPresentation";
+import type { AddressLinkChange } from "./groupAddressLastDownload";
 
 export interface GroupAddressWorkspaceViewProps {
   installation: InstallationNode;
@@ -18,6 +19,12 @@ export interface GroupAddressWorkspaceViewProps {
   limit: number;
   onLimit: (limit: number) => void;
   showColumnReset?: boolean;
+  /** ADR-0174: raw addresses whose sending links differ from the last download, with their changes. */
+  differing?: ReadonlyMap<number, AddressLinkChange[]>;
+  /** Row keys (of the whole index) whose address differs; group marks derive from these. */
+  differingRowKeys?: ReadonlySet<string>;
+  /** The project's address style, to parse projected addresses back to raw values. */
+  addressStyle?: string;
 }
 
 export function groupAddressGroupLabel(t: Translate, group: GroupAddressPresentationGroup): string {

@@ -313,7 +313,12 @@ description after the name.
 
 ## Not covered
 
-- Group-address views carry no last-download marks (ADR-0174 §5).
+- ~~Group-address views carry no last-download marks (ADR-0174 §5)~~
+  **delivered 20 November 2026**: tree, columns, atlas and matrix rows and group
+  headings carry the amber last-download mark when the server's per-device link
+  comparison (`DeviceDetail.last_download`, native schema 21) names the address's
+  raw value in a sending-direction difference; a summary line above the views
+  reports the count and the links state. Web-only change in `apps/knx-web`.
 - Differences on object numbers without a selected project row are counted in
   the communication-object summary, not listed.
 - ~~Module-scoped parameters (no baseline until module downloads exist)~~

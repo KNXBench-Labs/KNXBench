@@ -48,6 +48,23 @@ describe("matrix plan", () => {
     expect(empty.columnHeaders[0].text).toBe("Right");
   });
 
+  it("carries an axis textFill through to its header and leaves plain axes fill-free", () => {
+    // ADR-0177: the server-reported fill of a parameter-driven caption rides the header
+    // entry unchanged; an axis without a fill gets none, and placement is untouched.
+    const driven = layout({
+      columns: [{ ...layout().columns[0], text: "Kitchen", textParameterRefId: "P-4_R-1",
+        textFill: { template: "{{0}}", source: "StoredValue" } }, layout().columns[1]],
+    });
+    const fields = [{ key: "a", cell: { row: 1, column: 2 } }];
+    const plan = planParameterMatrix(driven, fields);
+    expect(plan.columnHeaders).toEqual([
+      { key: "column:C-1", text: "Kitchen", textFill: { template: "{{0}}", source: "StoredValue" },
+        area: { row: 1, rowSpan: 1, column: 2, columnSpan: 1 } },
+      { key: "column:C-2", text: "Right", area: { row: 1, rowSpan: 1, column: 3, columnSpan: 1 } },
+    ]);
+    expect(plan.fields).toEqual(planParameterMatrix(layout(), fields).fields);
+  });
+
   it("places fields and captions at their declared 1-based cells after the header row and column", () => {
     const plan = planParameterMatrix(layout(), [
       { key: "a", cell: { row: 1, column: 2 } }, { key: "b", cell: { row: 2, column: 2 } }]);

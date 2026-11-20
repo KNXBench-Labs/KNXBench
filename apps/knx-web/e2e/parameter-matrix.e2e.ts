@@ -47,7 +47,7 @@ const passiveLabels: ParameterPassiveLabel[] = [
   passive("B-HTML", "<b>Fictional</b> & note", { key: "only", label: null }, 1, 1),
 ];
 
-async function intercept(page: Page, language: "en" | "de", translatedAxes = false,
+async function intercept(page: Page, language: "en" | "de", translatedAxes = false, driven = false,
   appearance = { theme: "porcelain", density: "compact" }) {
   const state = { unexpected: [] as string[], posts: [] as { etsId: string; raw: string }[], envelopes: [] as Record<string, unknown>[],
     projectOpen: false, aLeft: "0", bLeft: "1", revision: 1,
@@ -60,8 +60,11 @@ async function intercept(page: Page, language: "en" | "de", translatedAxes = fal
     rows: pairs.rows.map((row, index) => index === 0 ? { ...row, text: "Paar A" } : row),
     columns: pairs.columns.map((column, index) => index === 1 ? { ...column, text: "Linke Seite" } : column),
   } : pairs;
+  const drivenPairs: ParameterGroupLayout = { ...pairs,
+    columns: pairs.columns.map((column, index) => index === 1 ? { ...column, text: "Kitchen",
+      textParameterRefId: "P-4_R-1", textFill: { template: "{{0}}", source: "StoredValue" } } : column) };
   const panel = (): ParameterPanel => ({ programId: "A-FICTIONAL", sourceLanguage: "en", tree: null, stale: [], diagnostics: [],
-    sections: [{ scope: null, groupLayouts: [projectedPairs, legacy, only], passiveLabels, fields: [
+    sections: [{ scope: null, groupLayouts: [driven ? drivenPairs : projectedPairs, legacy, only], passiveLabels, fields: [
       choice("A-left", state.aLeft, 1, 2), choice("A-right", "0", 1, 3),
       { ...base("B-left", "pairs", "Fictional pairs"), value: state.bLeft, cell: { row: 2, column: 2 } },
       { ...base("B-right", "pairs", "Fictional pairs"), cell: { row: 2, column: 3 } },
@@ -124,7 +127,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400])
   for (const theme of DENSITY_PALETTES) for (const density of ["compact", "comfortable"]) {
   test(`WP41 ${theme} ${density} ${language}: declared matrix identities and cells at ${width}px`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 1000 });
-    const state = await intercept(page, language, false, { theme, density });
+    const state = await intercept(page, language, false, false, { theme, density });
     await openParameters(page, language);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     await expect(page.locator("html")).toHaveAttribute("data-density", density);
@@ -302,6 +305,23 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     expect(state.unexpected).toEqual([]);
   });
 }
+
+// ADR-0177: a parameter-driven axis caption shows the resolved text with the same
+// fill-provenance tooltip as a separator label; a plain axis header gets no fill line.
+test("a parameter-driven axis caption keeps its fill provenance in the header tooltip", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const state = await intercept(page, "en", false, true);
+  await openParameters(page, "en");
+  const workspace = page.locator(".parameter-workspace");
+  await workspace.locator(".parameter-workspace-nav button").filter({ hasText: "Fictional pairs" }).click();
+  const matrix = workspace.locator('.parameter-workspace-rows[data-layout="matrix"]');
+  const headers = matrix.locator('.parameter-matrix-caption[data-caption="column"]');
+  await expect(headers).toHaveText(["Kitchen", "Right side"]);
+  await expect(headers.nth(0)).toHaveAttribute("title",
+    `${en["comTable.textFill.StoredValue"]}\n${en["comTable.textFill.template"].replace("{value}", "{{0}}")}`);
+  await expect(headers.nth(1)).not.toHaveAttribute("title", /{{0}}/);
+  expect(state.unexpected).toEqual([]);
+});
 
 // A browser commits a typed value when focus leaves it; next to a passive label that is
 // the existing row's one bound write, and the same editor survives area and search changes.

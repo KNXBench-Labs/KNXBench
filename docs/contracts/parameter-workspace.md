@@ -162,7 +162,10 @@ live-backend, native or hardware test.
   2026, WP-05, ADR-0177).** A declared row or column whose caption names a
   `TextParameter` renders that parameter's current value (via the existing
   caption-template fill, including its provenance marker `textFill` in the
-  wire DTO). Bounded to the literal program-owned axis translation; module-scoped,
+  wire DTO). Since 20 November 2026 (WP-05l) the matrix row/column headers carry
+  that same `textFill` into their tooltip, like separator labels in cells; an
+  axis without a fill renders its caption with no fill line. Bounded to the
+  literal program-owned axis translation; module-scoped,
   cross-target and `Rename` text-parameter captions remain open.
 - **Not reproduced.** Visual differences between `Table` and `Grid` (the
   referenced rules document is not available locally), buttons and nested

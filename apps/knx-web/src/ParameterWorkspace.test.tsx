@@ -300,6 +300,23 @@ describe("ParameterWorkspace declared grids", () => {
     expect(caption.title).toContain("{{0}}");
   });
 
+  it("keeps an axis caption's parameter-fill provenance in its matrix header tooltip", async () => {
+    // ADR-0177: a column whose caption resolved from its text parameter carries the fill;
+    // the header shows the resolved text with the same provenance tooltip as separator labels.
+    const driven = grid({ columns: [{ id: "C-1", text: "Kitchen", textParameterRefId: "P-4_R-1", width: "50%",
+      textFill: { template: "{{0}}", source: "StoredValue" } },
+      { id: "C-2", text: "Right", textParameterRefId: null, width: "50%" }] });
+    await mount(gridSections(driven));
+    await act(async () => nav("Pairs").click());
+    const header = host.querySelector<HTMLElement>('.parameter-matrix-caption[data-caption="column"]')!;
+    expect(header.textContent).toBe("Kitchen");
+    expect(header.title).toContain("{{0}}");
+    expect(header.title).toContain("Filled in from this device's value of the text parameter.");
+    const plain = [...host.querySelectorAll<HTMLElement>('.parameter-matrix-caption[data-caption="column"]')][1];
+    expect(plain.textContent).toBe("Right");
+    expect(plain.title ?? "").not.toContain("{{0}}");
+  });
+
   it("starts closed and renders a matrix only after an area with a declared grid is chosen", async () => {
     await mount(gridSections());
     expect(rowsParent().getAttribute("data-layout")).toBeNull();

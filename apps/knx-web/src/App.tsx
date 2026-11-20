@@ -1731,7 +1731,6 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
         <button className="command-entry" onClick={() => setPaletteOpen(true)}>{t("toolbar.commands")}</button>
         <button ref={saveButtonRef} data-crt-surface="save" className="primary-action" onClick={saveProject} disabled={!tree}>{t("toolbar.save")}</button>
         <button onClick={() => requestHelpTopic(DEFAULT_HELP_TOPIC_ID)} title={t("toolbar.help")} aria-label={t("toolbar.help")}><QuestionIcon /></button>
-        <button onClick={openSettings} title={t("toolbar.settings")} aria-label={t("toolbar.settings")}><GearIcon /></button>
       </header>
       <div className="workbench-panel-controls">
         <button aria-expanded={navigationOpen} onClick={toggleNavigation}><WorkbenchIcon name="panel" />{t("workbench.navigation")}</button>

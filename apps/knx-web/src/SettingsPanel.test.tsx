@@ -145,7 +145,7 @@ describe("SettingsPanel", () => {
     expect(layout).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)/);
     expect(layout).toMatch(/width:\s*100%/);
     const input = css.match(/\.settings-field input:not\(\[type="checkbox"\]\) \{([^}]*)\}/)?.[1] ?? "";
-    expect(input).toMatch(/width:\s*100%/);
+    expect(input).toMatch(/width:\s*min\(100%, var\(--workspace-text-width\)\)/);
     expect(input).toMatch(/box-sizing:\s*border-box/);
     const checkbox = css.match(/\.settings-workspace input\[type="checkbox"\] \{([^}]*)\}/)?.[1] ?? "";
     expect(checkbox).toMatch(/width:\s*1rem/);

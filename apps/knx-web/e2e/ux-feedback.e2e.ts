@@ -65,7 +65,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await page.goto("/");
     await expect(page.locator("html")).toHaveAttribute("lang", language);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-    await page.locator(".workbench-toolbar").getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
+    await page.locator(".settings-navigation").getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
     for (const [category, value] of [["toasts", "off"], ["achievements", "subtle"], ["flow", "off"]]) {
       await page.locator(`[data-motion-category="${category}"]`).selectOption(value);
     }
@@ -80,7 +80,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(page.locator("html")).toHaveAttribute("data-motion-toasts", "off");
     await expect(page.locator("html")).toHaveAttribute("data-motion-achievements", "subtle");
     await expect(page.locator("html")).toHaveAttribute("data-motion-flow", "off");
-    await page.locator(".workbench-toolbar").getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
+    await page.locator(".settings-navigation").getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
     await expect(page.locator('[data-motion-category="achievements"]')).toHaveValue("subtle");
     const globalMotion = page.getByRole("combobox", { name: m["settings.motionLevel"], exact: true });
     await globalMotion.selectOption("off");
@@ -121,7 +121,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/explorer-findings-${language}-${width}.png` });
 
     // Toasts=Subtle caps the card's entry at the Subtle duration.
-    await page.locator(".workbench-toolbar").getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
+    await page.locator(".settings-navigation").getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
     await page.locator('[data-motion-category="toasts"]').selectOption("subtle");
     await expect.poll(() => settings.motionToasts).toBe("subtle");
     await page.locator('[data-motion-category="toasts"]').focus(); await page.keyboard.press("Escape");

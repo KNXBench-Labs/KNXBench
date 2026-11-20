@@ -872,7 +872,7 @@ installing, and lists backups you can restore after confirming
 [limits](../KNOWN_LIMITATIONS.md#catalogue-updates-come-only-from-files-you-supply-2026-10-12)).
 That supplied-file workflow is included in Alpha.10. The released workflow
 described here does not fetch an online catalogue. A separate owner-authorized
-[Reko branch workflow](user-guide/05-devices-and-products.md#reko-online-catalogue-branch-wip)
+[Reko branch workflow](user-guide/05-devices-and-products.md#reko-online-catalogue)
 is WIP as of 16 November 2026, not accepted, published or included in Alpha 22.
 
 ## Checked parameter editors (12 October 2026 source)

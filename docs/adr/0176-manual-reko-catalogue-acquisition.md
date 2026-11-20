@@ -1,7 +1,7 @@
 # ADR 0176: Reko supplies files; the existing catalogue importer still decides
 
 Date: 2026-11-16
-Status: Accepted implementation direction (owner); branch WIP, not software-accepted or released
+Status: Accepted implementation direction (owner); delivered on main 16 November 2026 as `c079ec8d6`; not in Alpha 22, release/deployment remain separate
 Session: Reko catalogue
 Scope: LS-02 / FUTURE-05, Reko acquisition for the shared web/native backend
 
@@ -125,7 +125,7 @@ The Docker source sets `XDG_DATA_HOME=/data/.knxbench-share` and
 or name `/config` and reattach that same storage when replacing the container;
 a Docker-created anonymous volume is not automatically reattached to a new one.
 Back up the key/configuration independently from `/data`.
-[Paths, replacement and recovery](../manual/user-guide/11-web-and-docker.md#reko-configuration-and-key-persistence-branch-wip).
+[Paths, replacement and recovery](../manual/user-guide/11-web-and-docker.md#reko-configuration-and-key-persistence).
 
 ### 7. Certificate-root data has a package-scoped licence exception
 

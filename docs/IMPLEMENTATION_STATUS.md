@@ -12,6 +12,22 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Group-address last-download marks delivered (20 November 2026; WP-37, PR !104)
+
+The group-address views (tree, columns, atlas, matrix) now carry the amber
+last-download link mark on rows and group headings whose address the server's
+per-device link comparison names in a sending-direction difference, plus a
+summary line above the views; delivered web-only via PR !104 (`aa14a7329` on
+main, source `cae0621ef`), reusing `DeviceDetail.last_download` per ADR-0174 §5
+with no new baseline, API or schema. Change-scoped package gate success=True,
+receipt `1795199079555335506` (11/11 stages; web-gate 34; vitest 5947/5947
+including 12 new unit + 7 new e2e ga-last-download tests; browser 1481 =
+1384 + 97, 0 unexpected/flaky). With this, all WP-37 slices are on main:
+steps 1–4 (Alpha 21), module-scoped baseline values (17 November 2026,
+schema 22, ADR-0177) and the image-builder module admission (PR !60,
+`b4d141288`, 18 November 2026). Simulator and intercepted-browser tests only;
+no hardware run.
+
 ## Alpha 22 pre-release (source cutoff 15 November 2026)
 
 **Delivered, not in Alpha 22:** the owner-authorized Reko online catalogue

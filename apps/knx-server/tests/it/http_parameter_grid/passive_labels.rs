@@ -288,6 +288,52 @@ async fn a_button_text_parameter_ref_fills_the_passive_label() {
         json!("Open Attic"),
         "product default fills the placeholder"
     );
+    // WP-05m `button-label-fill-provenance-v1`: the positional fill travels with the label.
+    assert_eq!(
+        button["textFill"],
+        json!({ "template": "Open {{0}}", "source": "ProductDefault" })
+    );
+}
+
+#[tokio::test]
+async fn a_translated_button_label_carries_the_overlay_fill() {
+    // button-text-overlay-v1 (WP-05g) with a requested language: the Button's own
+    // program-scoped `Text` translation overlays the literal, and WP-05m
+    // `button-label-fill-provenance-v1` retains that overlay as the label's fill.
+    let (_dir, state) = state_with(
+        ONLY,
+        Some(
+            "INSERT INTO translation (scope,scope_id,language,ref_id,attribute_name,text) VALUES
+         ('Program','A-FIX','de-DE','B-ONLY','Text','Fiktives Quell-Label übersetzt')",
+        ),
+    );
+    let dto = panel_at(&state, &format!("{PARAMETERS}?language=de-DE")).await;
+    let button = device_section(&dto)["passiveLabels"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|l| l["elementId"] == "B-ONLY")
+        .expect("button label present");
+    assert_eq!(button["text"], json!("Fiktives Quell-Label übersetzt"));
+    assert_eq!(
+        button["textFill"],
+        json!({ "template": "Fiktives Quell-Label übersetzt", "source": "StoredValue" })
+    );
+}
+
+#[tokio::test]
+async fn an_untranslated_button_label_keeps_no_fill() {
+    // No requested language: the literal source text stays and carries no
+    // provenance overlay, so no fill is sent.
+    let dto = panel(EN).await;
+    let button = device_section(&dto)["passiveLabels"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|l| l["elementId"] == "B-ONLY")
+        .expect("button label present");
+    assert_eq!(button["text"], json!("Fictional source label"));
+    assert!(button.get("textFill").is_none() || button["textFill"].is_null());
 }
 
 #[tokio::test]

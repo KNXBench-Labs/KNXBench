@@ -52,9 +52,11 @@ feature at a time, never inferred manufacturer behaviour.
 - Button actions inside grid cells (`EventHandler*`, online callbacks, own
   `Access`, module-scoped Buttons). A Button `@Text` placeholder filled from
   the Button's own `@TextParameterRefId` and a requested language's own `Text`
-  translation overlaying the literal are delivered since 19 November 2026
-  (`button-text-parameter-ref-v1`, `button-text-overlay-v1`); the action itself
-  is still never run.
+  translation overlaying the literal are delivered since 19 November 2026 (`button-text-parameter-ref-v1`,
+  `button-text-overlay-v1`); the action itself
+  is still never run. Since 20 November 2026
+  (`button-label-fill-provenance-v1`, WP-05m) the passive label also carries
+  its `textFill` provenance on the wire and in the matrix tooltip.
   Admitted literal in-cell text alone is delivered as passive labels. The
   [WP05-B clarification](../contracts/alpha16-parameter-layout.md#passive-source-button-labels-button-literal-passive-v1)
   (14 November 2026) records the unchanged reporting policy for a reached

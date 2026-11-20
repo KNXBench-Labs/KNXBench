@@ -143,6 +143,13 @@ describe("passive source labels (button-literal-passive-v1)", () => {
     expect(plan.columnHeaders).toEqual([]);
     expect(plan.rowHeaders).toEqual([]);
   });
+
+  it("carries a passive label's textFill through to the planned caption (WP-05m)", () => {
+    const plan = planParameterMatrix(mixed, [],
+      [{ key: "passive:B-MIX", text: "Open Attic", textFill: { template: "Open {{0}}", source: "StoredValue" }, cell: { row: 1, column: 2 } }]);
+    expect(plan.labels).toEqual([{ key: "label:0", text: "Fictional separator", textFill: undefined, passive: undefined, area: { row: 2, rowSpan: 1, column: 3, columnSpan: 1 } },
+      { key: "passive:B-MIX", text: "Open Attic", textFill: { template: "Open {{0}}", source: "StoredValue" }, passive: true, area: { row: 3, rowSpan: 1, column: 3, columnSpan: 1 } }]);
+  });
 });
 
 describe("Row/@CollapseIfEmpty (WP-05, preserved attribute now applied)", () => {

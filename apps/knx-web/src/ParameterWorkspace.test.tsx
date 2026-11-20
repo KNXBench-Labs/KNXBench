@@ -483,6 +483,24 @@ describe("ParameterWorkspace declared grids", () => {
   const passiveSpan = (id: string) => host.querySelector<HTMLElement>(`[data-passive-label="${id}"]`);
   const placement = (node: HTMLElement | null) => node && { gridRow: node.style.gridRow, gridColumn: node.style.gridColumn };
 
+  it("shows a passive label's fill provenance in its matrix tooltip (WP-05m)", async () => {
+    saveUiLanguage(settingsStorage, "en"); resetUiLanguageForTests();
+    const data = passiveSections();
+    data[0].passiveLabels = [passive("B-ONLY", "Open Attic", "PB-ONLY", null),
+      { ...passive("B-MIX", "Fictional mixed label", "PB-MIX", "Fictional mixed grid"),
+        textFill: { template: "Fictional mixed label", source: "StoredValue" } }];
+    await mount(data);
+    await act(async () => nav("Parameter group 3").click());
+    const only = passiveSpan("B-ONLY")!;
+    expect(only.title ?? "").not.toContain("{{");
+    expect(only.title ?? "").not.toContain("Product text");
+    await act(async () => nav("Fictional mixed grid").click());
+    const mix = passiveSpan("B-MIX")!;
+    expect(mix.querySelector(".parameter-matrix-passive-text")!.textContent).toBe("Fictional mixed label");
+    expect(mix.title).toContain("Fictional mixed label");
+    expect(mix.title).toContain("Filled in from this device's value of the text parameter.");
+  });
+
   it.each([["en", "Parameter group 3", "Source button label – action unsupported", "Button B-ONLY: label shown; its action is not supported"],
     ["de", "Parametergruppe 3", "Beschriftung einer Quell-Schaltfläche – Aktion nicht unterstützt",
       "Button B-ONLY: Beschriftung angezeigt; ihre Aktion wird nicht unterstützt"]] as const)(

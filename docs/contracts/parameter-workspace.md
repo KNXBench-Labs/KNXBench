@@ -167,6 +167,14 @@ live-backend, native or hardware test.
   axis without a fill renders its caption with no fill line. Bounded to the
   literal program-owned axis translation; module-scoped,
   cross-target and `Rename` text-parameter captions remain open.
+- **Passive source Button labels.** An admitted `button-literal-passive-v1`
+  label carries `textFill` like any caption: the overlay translation's own
+  fill when a requested language translated the Button's `Text`, or the
+  positional fill when its placeholder was filled from `@TextParameterRefId`
+  (since 20 November 2026, WP-05m `button-label-fill-provenance-v1`). A plain
+  literal carries no fill. The label stays a plain `span` with no role, tab
+  stop or handler; the fill appears only in the tooltip, like separator labels
+  in cells.
 - **Not reproduced.** Visual differences between `Table` and `Grid` (the
   referenced rules document is not available locally), buttons and nested
   blocks in cells, and module placeholders inside row/column captions. They are

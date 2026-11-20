@@ -2,8 +2,8 @@
 
 **Status:** Catalogue **accepted by owner decision 20 November 2026** — recorded
 as [ADR-0178](../adr/0178-rel01-catalogue-defines-the-beta-exit.md); version
-scheme decided (standard SemVer, see B-01); B-11 decided (ETS 5.7 supported for
-beta). This file stays the living checklist. Listed in
+scheme decided (standard SemVer, see B-01); B-11, B-06, B-05/B-08 and B-18
+decided (see the cells). This file stays the living checklist. Listed in
 [OPEN_WORK](../OPEN_WORK.md).
 
 ## Why this exists
@@ -53,10 +53,10 @@ recorded owner decision. Each row ends with what the owner has to decide, if any
 
 | ID | Level | Criterion → acceptance | Current state |
 | --- | --- | --- | --- |
-| B-05 | Must | **Declared family list**: the release notes and the manual name the masks, procedures and programs that may be downloaded, each with its evidence (simulator only, or field report). Everything outside the list is refused with a reason. | The fail-closed fallback exists ([SAFE-01](../status/LEDGER.md#snapshot-ids)), and field evidence exists for named 0701h programs ([KL-136](../KNOWN_LIMITATIONS.md#catalogue-kl-136)). No single declared list exists; Alpha 20's download types are *untested* on hardware. *Decide:* which families go on the list. |
-| B-06 | Must | **System-2 (#22/#30)**: either the allocation-mismatch cause is found and fixed and a reporter run confirms it, or System-2 programming is marked experimental in the beta with its own consent text. | The #30 mismatch is accounted for by the firmware-cleared `Download_Flag` octet (observed on the reporter's device; clear time unknown); its tolerance ships in Alpha 20, and one reporter run on 8 November finished verified 27/27 ([S2-05](S2-05-result-and-settlement.md#field-run-8-november-2026)); #30 closed. S2-02 and S2-04 closed 15 November without a proven original cause. One device and configuration only. The web UI already titles it "System-2 — experimental configured download" with its own risk text and phrase confirmation (`apps/knx-web/src/messages/en.ts`). *Decide:* fix first, or ship as experimental. |
+| B-05 | Must | **Declared family list**: the release notes and the manual name the masks, procedures and programs that may be downloaded, each with its evidence (simulator only, or field report). Everything outside the list is refused with a reason. | The fail-closed fallback exists ([SAFE-01](../status/LEDGER.md#snapshot-ids)), and field evidence exists for named 0701h programs ([KL-136](../KNOWN_LIMITATIONS.md#catalogue-kl-136)). No single declared list exists; Alpha 20's download types are *untested* on hardware. **Decided 20 November 2026: the declared list may include families whose evidence is simulator/loopback only; each family's evidence class is named beside it** (B-05/B-08, [OWN-01](OWN-01-owner-decisions.md#decision-recorded--20-november-2026)). |
+| B-06 | Must | **System-2 (#22/#30)**: either the allocation-mismatch cause is found and fixed and a reporter run confirms it, or System-2 programming is marked experimental in the beta with its own consent text. | The #30 mismatch is accounted for by the firmware-cleared `Download_Flag` octet (observed on the reporter's device; clear time unknown); its tolerance ships in Alpha 20, and one reporter run on 8 November finished verified 27/27 ([S2-05](S2-05-result-and-settlement.md#field-run-8-november-2026)); #30 closed. S2-02 and S2-04 closed 15 November without a proven original cause. One device and configuration only. The web UI already titles it "System-2 — experimental configured download" with its own risk text and phrase confirmation (`apps/knx-web/src/messages/en.ts`). **Decided 20 November 2026: ship as experimental with its own consent text** — the current UI behaviour stands ([OWN-01](OWN-01-owner-decisions.md#decision-recorded--20-november-2026)). |
 | B-07 | Must | **Recovery-gated address writes stay gated** (KL-116, KL-139, KL-140, SAFE-01): the beta keeps the current fail-closed behaviour, and the manual says so. Lifting them needs hardware evidence and is not a beta requirement. | Accepted boundaries since 5 October; public writes fail closed without recovery. Manual wording for beta is *unverified*. |
-| B-08 | Should | **Field evidence for the declared families** under operation-specific consent ([WP-12](WP-12-field-evidence-and-owner-acceptance.md)); the Hager 0701 report set completed ([WP-33](WP-33-hager-0701-download-evidence.md)). | WP-12 is blocked on consent. WP-33 closed 13 November: complete, parameters-only and parameters+GA reports recorded for the Hager 0701 push button; group addresses only was not run. *Decide:* consents, or a list that only contains families with existing evidence. |
+| B-08 | Should | **Field evidence for the declared families** under operation-specific consent ([WP-12](WP-12-field-evidence-and-owner-acceptance.md)); the Hager 0701 report set completed ([WP-33](WP-33-hager-0701-download-evidence.md)). | WP-12 is blocked on consent. WP-33 closed 13 November: complete, parameters-only and parameters+GA reports recorded for the Hager 0701 push button; group addresses only was not run. **Decided 20 November 2026: simulator-only evidence is accepted for the declared list** (with B-05); WP-12 operation-specific consents stay blocked — a blanket "all devices, all actions" is not a consent ([OWN-01](OWN-01-owner-decisions.md#decision-recorded--20-november-2026)). |
 | B-09 | Should | **Non-Secure programming gaps** that affect declared families are closed or listed ([PRG-01](PRG-01-programming-gaps.md)). | In progress; bounded increments shipped in Alpha 19. |
 
 ### Known blockers in the core workflows
@@ -81,7 +81,7 @@ recorded owner decision. Each row ends with what the owner has to decide, if any
 | --- | --- | --- | --- |
 | B-16 | Must | **Full gate is reliable**: `run_package_gate.py --full` passes twice in a row without a historical timeout ([GATE-01](GATE-01-test-gate-follow-ups.md)). | Parked until release preparation by owner decision (8 November). |
 | B-17 | Must | **Stage-aware texts are checked**: the beta consent sentence (ADR-0040), the first-run guide (ADR-0084), About and update hints show "beta" on a real beta build. | The stage parsing has unit tests; a real beta build was never run. |
-| B-18 | Must | **Docker channel decided**: where beta images go (proposal: `next`) and what `latest` means during beta ([OWN-01](OWN-01-owner-decisions.md)). | Prerelease channel name is still open. *Decide:* channel name. |
+| B-18 | Must | **Docker channel decided**: where beta images go (proposal: `next`) and what `latest` means during beta ([OWN-01](OWN-01-owner-decisions.md)). | **Decided 20 November 2026: the prerelease channel is `next`; `latest` semantics stay unchanged during beta** ([OWN-01](OWN-01-owner-decisions.md#decision-recorded--20-november-2026)). |
 | B-19 | Should | **Docs current for beta**: manual stage wording, limitations summary review, a beta upgrade section; the website/Evolution Story privacy copy if the website announces the beta. | Manual describes alpha releases; privacy copy is pending in OWN-01. |
 
 ## Not required for beta
@@ -103,9 +103,13 @@ These stay open, documented and visible, but do not block the stage change:
 2. ~~ETS 5.7 import: before beta, or declared unsupported (B-11).~~ **Decided
    20 November 2026: schema 20's public-sample evidence suffices; ETS 5.7 is
    declared supported for beta (ADR-0178).**
-3. System-2: fix first, or ship it as experimental (B-06).
-4. The declared family list, and whether it may include families with simulator evidence only (B-05, B-08).
-5. Docker prerelease channel name (B-18).
+3. ~~System-2: fix first, or ship it as experimental (B-06).~~ **Decided
+   20 November 2026: ship as experimental with its own consent text.**
+4. ~~The declared family list, and whether it may include families with simulator evidence only (B-05, B-08).~~
+   **Decided 20 November 2026: yes, simulator/loopback-only evidence is
+   accepted for the declared list; each family's evidence class is named.**
+5. ~~Docker prerelease channel name (B-18).~~ **Decided 20 November 2026:
+   `next`; `latest` unchanged during beta.**
 
 ## History
 
@@ -117,4 +121,9 @@ These stay open, documented and visible, but do not block the stage change:
   (ETS 5.7 supported for beta); recorded in
   [ADR-0178](../adr/0178-rel01-catalogue-defines-the-beta-exit.md) and
   [OWN-01](OWN-01-owner-decisions.md#decision-recorded--20-november-2026).
-  B-06, B-05/B-08 and B-18 remain pending.
+- 20 November 2026 (second round): B-06 (System-2 experimental with own consent
+  text), B-05/B-08 (simulator-only evidence accepted for the declared list) and
+  B-18 (Docker prerelease channel `next`) decided; all five REL-01 owner
+  decisions are now recorded. Docker image signing design approved for before
+  the first stable release. See
+  [OWN-01](OWN-01-owner-decisions.md#decision-recorded--20-november-2026).

@@ -443,6 +443,22 @@ privacy copy, KL-186 and WP-12 consents. Not claimed: any bus/device write,
 release or deployment authority; tagging `0.1.0-beta.1` additionally requires
 the Must cells of REL-01 to hold.
 
+## REL-01 decisions complete; Docker signing approved (20 November 2026, second round)
+
+Owner decisions recorded in
+[OWN-01](../open-work/OWN-01-owner-decisions.md#decision-recorded--20-november-2026-second-round):
+**B-06** System-2 ships in the beta as experimental with its own consent text;
+**B-05/B-08** the declared family list may include simulator/loopback-only
+evidence (evidence class named per family); **B-18** the Docker prerelease
+channel is `next`, `latest` unchanged during beta. All five REL-01 owner
+decisions are now recorded. The bounded Docker image-signing design
+([2026-10-27](../research/2026-10-27-docker-image-signing-design.md)) is
+approved for implementation before the first stable release. Kept pending:
+website privacy copy, KL-186, SmartSensor bootloader follow-up. WP-12 stays
+blocked: the owner's blanket answer "all devices that need a manufacturer
+plugin, all actions" is not a named device-and-operation consent and grants no
+bus/device write authority. Not claimed: any release or deployment authority.
+
 ## Reconciliation record (AR14D D2, 2026-10-04)
 
 The ledger was built from the routing table in `alpha-release-goal.md` §7–§8

@@ -1,6 +1,9 @@
 # WP-12 — Field evidence and owner acceptance (incl. issue #22)
 
-**Status:** Blocked: consent. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** Blocked: consent — **owner decision 20 November 2026 (third round):
+no further consents will be granted**; reopens only on a new, specifically
+named consent (device + operation). Listed in [OPEN_WORK](../OPEN_WORK.md);
+per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Task
 

@@ -184,3 +184,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0176](0176-manual-reko-catalogue-acquisition.md) | Reko supplies files; the existing catalogue importer still decides | Delivered on main `c079ec8d6`; not in Alpha 22 | 2026-11-16 |
 | [0177](0177-accepted-wp07-mapping-is-the-module-instance-authority.md) | The accepted WP-07 mapping is the module-instance authority | Proposed | 2026-11-17 |
 | [0178](0178-rel01-catalogue-defines-the-beta-exit.md) | The REL-01 catalogue defines the beta exit | Accepted | 2026-11-20 |
+| [0180](0180-exact-0702h-run-state-observation.md) | Exact `0702h` joins the descriptor-qualified run-state observation | Accepted | 2026-11-20 |

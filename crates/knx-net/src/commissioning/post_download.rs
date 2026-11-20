@@ -51,10 +51,13 @@
 //!   every `CompareProperty` the plan declares (the hardware type only if
 //!   declared); it does not say it is the same physical exemplar.
 //! - Whether the application *runs* is observed only by the bounded
-//!   continuation: for masks `0700h`/`0701h`/`0705h`, after identity matched and every
-//!   load state was read, candidate object 3 is validated (type, then a strict
-//!   application reread) and its `PID_RUN_STATE_CONTROL` read once. Exact `0700h`
-//!   additionally requires independent qualifying description evidence first. That is
+//!   continuation: for masks `0700h`/`0701h`/`0702h`/`0705h`, after identity
+//!   matched and every load state was read, candidate object 3 is validated
+//!   (type, then a strict application reread) and its `PID_RUN_STATE_CONTROL`
+//!   read once. Exact `0700h` and `0702h` additionally require independent
+//!   qualifying description evidence first (Resources footnote 94 grants the
+//!   legacy datatype only to `0020h`/`0701h`, so `0702h` is source-backed
+//!   `PDT_CONTROL`). That is
 //!   the reported property of that object, not device health, a unique
 //!   instance or download success. `Loaded` is a load state, not a run state;
 //!   any other mask or failure leaves the run state unobserved.
@@ -155,7 +158,7 @@ pub enum RunStateObservation {
 /// Why no run-state frame was sent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunStateNotRead {
-    /// The mask is not exact `0700h`, `0701h` or `0705h`.
+    /// The mask is not exact `0700h`, `0701h`, `0702h` or `0705h`.
     UnsupportedMask,
     /// A load-state read before it failed or was skipped.
     LoadReadFailed,
@@ -170,7 +173,7 @@ pub enum CandidateMismatch {
     Application,
 }
 
-/// Which continuation read failed, including exact0700's description exchange.
+/// Which continuation read failed, including exact0700/0702's description exchange.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunStateStep {
     ObjectType,
@@ -179,7 +182,11 @@ pub enum RunStateStep {
     RunState,
 }
 
-/// Conservative exact-0700 descriptor qualification; no absence or access inference.
+/// Conservative exact-0700/0702 descriptor qualification; no absence or access inference.
+///
+/// Resources footnote 94 grants the `PDT_UNSIGNED_CHAR` legacy exception only
+/// to masks `0020h` and `0701h`, so exact `0702h` is `PDT_CONTROL` by source,
+/// and exact `0700h` by policy; both share this path.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunStateNotQualified {
     UnqualifiedElements,
@@ -615,7 +622,7 @@ async fn read_run_state<T: ManagementTransport>(
     application: [u8; 5],
     load_states: &[LoadStateReading],
 ) -> RunStateObservation {
-    if !matches!(plan.mask.0, 0x0700 | 0x0701 | 0x0705) {
+    if !matches!(plan.mask.0, 0x0700 | 0x0701 | 0x0702 | 0x0705) {
         return RunStateObservation::NotRead(RunStateNotRead::UnsupportedMask);
     }
     if load_states
@@ -641,7 +648,10 @@ async fn read_run_state<T: ManagementTransport>(
     if found != application {
         return RunStateObservation::CandidateMismatch(CandidateMismatch::Application);
     }
-    if plan.mask.0 == 0x0700 {
+    if matches!(plan.mask.0, 0x0700 | 0x0702) {
+        // Exact 0700 is qualified by conservative policy; exact 0702 is
+        // PDT_CONTROL by Resources footnote 94 (the legacy datatype exception
+        // names only 0020h and 0701h). Both share the description step.
         let description = session
             .read_property_description(
                 RUN_STATE_CANDIDATE,

@@ -261,7 +261,7 @@ async fn exact0700_load_failure_blocks_candidate_but_differing_success_continues
 }
 
 #[derive(Clone, Copy)]
-enum Fault {
+pub(super) enum Fault {
     Pass,
     Send,
     Release,
@@ -272,14 +272,14 @@ enum Fault {
 }
 
 /// Serializes both directions and forwards synchronously: no task or detached receiver.
-struct Wire<'a> {
+pub(super) struct Wire<'a> {
     d: &'a SimulatedDevice,
     fault: Fault,
     events: broadcast::Sender<TunnelEvent>,
-    frames: Mutex<Vec<LDataFrame>>,
+    pub(super) frames: Mutex<Vec<LDataFrame>>,
 }
 impl<'a> Wire<'a> {
-    fn new(d: &'a SimulatedDevice, fault: Fault) -> Self {
+    pub(super) fn new(d: &'a SimulatedDevice, fault: Fault) -> Self {
         Self {
             d,
             fault,

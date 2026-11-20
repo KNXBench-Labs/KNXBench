@@ -242,12 +242,26 @@ binding is claimed. This is not fresh current-main or hardware acceptance.
 do not prove retention through Unload, allocation, task control or Restart.
 Broader inactive/default/Union/customer-write rules and PRG-01 remain open.
 
+## Software-accepted bounded increment — descriptor-qualified exact 0702 property state
+
+The [admitted contract](../contracts/post-download-run-state-0702.md), the
+[original-source investigation](../research/2026-11-20-property-run-state-observation-0702.md)
+and [ADR-0180](../adr/0180-exact-0702h-run-state-observation.md) extend the
+bounded optional-property observation to exact `0702h` with the same shape as
+exact `0700h`: Resources footnote 94 grants the legacy `PDT_UNSIGNED_CHAR`
+datatype only to masks `0020h`/`0701h`, so `0702h` is `PDT_CONTROL` and needs
+the same independent qualifying PID 6 property description before one strict
+`PID_RUN_STATE_CONTROL` read. Schedule, gates and serialized bytes for
+`0700h`/`0701h`/`0705h` are unchanged; other `070nh` masks still report
+`UnsupportedMask`. Simulator/loopback evidence only
+([software acceptance](../status/2026-11-20-descriptor-qualified-0702-run-state.md)).
+
 ## Open
 
 - Broader target/exemplar identity and runtime-state observation beyond the
   bounded property contracts (`0701h`/`0705h`, plus descriptor-qualified exact
-  `0700h` whose bounded software acceptance is recorded above). Other object layouts,
-  memory encoding and physical function remain unproved.
+  `0700h` and `0702h` whose bounded software acceptance is recorded above).
+  Other object layouts, memory encoding and physical function remain unproved.
 - Parameter policies beyond the bounded whole-byte transfer contract: physical
   inactive-byte survival, broader inactive/default semantics, editable Dynamic,
   `Union` and customer-write rules remain unresolved.

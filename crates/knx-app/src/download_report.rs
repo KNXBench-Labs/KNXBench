@@ -18,7 +18,7 @@ use std::fmt::Write as _;
 
 use knx_productdb::query::program_identity;
 use knx_productdb::{Connection, ProductDbError};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::commissioning_activity::{Restart, Written};
 use crate::device_download::PreparedDownload;
@@ -41,12 +41,14 @@ pub const REPOSITORY: &str = "https://github.com/KNXBench-Labs/KNXBench";
 /// The issue form, `.github/ISSUE_TEMPLATE/download-report.yml`.
 pub const ISSUE_TEMPLATE: &str = "download-report.yml";
 
-/// One download's report.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+/// One download's report. Serialises to and parses from the `--report` file:
+/// `kind` and `format` are validated on read, every other field is carried
+/// as the wire format carries it (ADR-0179).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DownloadReport {
     /// Always [`REPORT_KIND`].
-    pub kind: &'static str,
+    pub kind: String,
     /// Always [`REPORT_FORMAT`].
     pub format: u32,
     /// The KNXBench build that planned and ran the download.
@@ -55,9 +57,9 @@ pub struct DownloadReport {
     pub program: ReportedProgram,
     /// `complete`, `partial-parameters`, `partial-group-addresses` or
     /// `partial-both`, as in the verified-download evidence.
-    pub scope: &'static str,
+    pub scope: String,
     /// The support level the plan had: `verified` or `untested`.
-    pub support: &'static str,
+    pub support: String,
     /// The inferences the plan rested on (ADR-0086).
     pub inferences: Vec<String>,
     /// The plan's warnings (ADR-0120).
@@ -80,7 +82,7 @@ pub struct DownloadReport {
 }
 
 /// The program a report is about.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReportedProgram {
     /// `ApplicationProgram/@Id`.
@@ -99,7 +101,7 @@ pub struct ReportedProgram {
 }
 
 /// The size of the plan a report is about.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReportedPlan {
     /// Steps of the plan.
@@ -111,7 +113,7 @@ pub struct ReportedPlan {
 }
 
 /// How a run ended, as witnessed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReportedOutcome {
     /// Whether the run reached its end (`true`) or stopped (`false`).
@@ -184,7 +186,7 @@ pub fn prepare_report(
         _ => Vec::new(),
     };
     Ok(DownloadReport {
-        kind: REPORT_KIND,
+        kind: REPORT_KIND.into(),
         format: REPORT_FORMAT,
         knxbench_version: knxbench_version.to_string(),
         program: ReportedProgram {
@@ -197,8 +199,8 @@ pub fn prepare_report(
             manufacturer: format!("{:04X}", prepared.plan.manufacturer),
             mask: format!("{:04X}", prepared.plan.mask.0),
         },
-        scope: scope_code(prepared.partial.as_ref().map(|(parts, _)| *parts)),
-        support: level.code(),
+        scope: scope_code(prepared.partial.as_ref().map(|(parts, _)| *parts)).into(),
+        support: level.code().into(),
         inferences,
         warnings: prepared.warnings.iter().map(ToString::to_string).collect(),
         plan: ReportedPlan {
@@ -375,7 +377,7 @@ mod tests {
 
     fn report() -> DownloadReport {
         DownloadReport {
-            kind: REPORT_KIND,
+            kind: REPORT_KIND.into(),
             format: REPORT_FORMAT,
             knxbench_version: "0.1.0-alpha.10+gabc".into(),
             program: ReportedProgram {
@@ -386,8 +388,8 @@ mod tests {
                 manufacturer: "0083".into(),
                 mask: "0701".into(),
             },
-            scope: "complete",
-            support: "untested",
+            scope: "complete".into(),
+            support: "untested".into(),
             inferences: vec![],
             warnings: vec![
                 "base-image-low-octet-first: the program … (KNOWN_LIMITATIONS §170, ADR-0120)"

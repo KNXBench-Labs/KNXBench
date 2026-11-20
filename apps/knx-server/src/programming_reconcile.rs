@@ -1,72 +1,38 @@
-//! #50: reconcile an external CLI download with the server's project state.
+//! #50: reconcile an external CLI download report with the server's marks (ADR-0179).
 //!
-//! `POST /api/device/{id}/programming/reconcile` accepts a CLI download
-//! report (as `--report` writes it) and clears only the pending parts the
-//! report proves: a completed run whose program identity, plan size and
-//! scope match the current project state. Anything stale, mismatched or
-//! incomplete clears nothing; the run is a bound, undoable, logged command
-//! exactly like a manual mark (ADR-0129/ADR-0173), never a blind "all done".
+//! `POST /api/device/{id}/programming/reconcile` accepts the report a CLI
+//! `--report` file holds plus the target address the run was started for.
+//! Marks change only when all four matchings hold: the report names the
+//! device's catalogue program and its source hash, the offline-recomputed
+//! plan for that address and scope equals the report's plan, the target
+//! resolves to exactly this device, and the snapshot binding is current —
+//! and the run completed and its read-only post-download check matches the
+//! plan. Anything stale, mismatched or incomplete clears nothing. The clear
+//! is a bound, undoable, logged command like a manual mark (ADR-0129/
+//! ADR-0173); no bus access and no extra download ever happens here.
 
 use axum::extract::{Path, State};
 use axum::routing::post;
 use axum::{Json, Router};
+use knx_app::commissioning_activity::{Restart, Written};
+use knx_app::download_report::{DownloadReport, REPORT_FORMAT, REPORT_KIND};
+use knx_app::post_download_check::{IdentityCheck, Observation, PlanLoadVerdict, ReachCheck};
 use knx_core::commissioning::partial_memory_download::PartialDownloadParts;
 use knx_core::commissioning::pending::{ProgrammingChange, ProgrammingParts};
-use knx_core::{Command, DeviceId};
+use knx_core::{Command, DeviceId, IndividualAddress};
 use serde::Deserialize;
 
 use crate::domain::{self, BoundCommandError, SnapshotBinding};
 use crate::errors::ApiError;
 use crate::{AppState, SharedState};
 
-/// One field of the accepted report, bounds-checked like the receipt parser.
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-// Fields are parsed for diagnostics, not read by reconciliation.
-#[allow(dead_code)]
-pub(crate) struct ReportProgram {
-    id: String,
-    source_sha256: Option<String>,
-    // Retained although unread today: the report format forwards these and
-    // the reconciliation log prints the raw report; dropping them would
-    // silently discard diagnostic data (never silently discard information).
-    #[serde(default)]
-    application_version: Option<String>,
-    #[serde(default)]
-    manufacturer: Option<String>,
-    #[serde(default)]
-    mask: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub(crate) struct ReportPlan {
-    steps: usize,
-    data_octets: usize,
-    group_links: usize,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct ReportOutcome {
-    completed: bool,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub(crate) struct Report {
-    kind: String,
-    format: u32,
-    scope: String,
-    plan: ReportPlan,
-    outcome: Option<ReportOutcome>,
-    program: ReportProgram,
-}
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct ReconcileRequest {
-    report: Report,
+    report: DownloadReport,
+    /// The individual address the CLI run was started for
+    /// (`knx device download <target>`); the report file itself carries none.
+    target: String,
     server_incarnation: String,
     project_incarnation: u64,
     snapshot_revision: u64,
@@ -83,7 +49,11 @@ async fn reconcile(
             project_incarnation: request.project_incarnation,
             snapshot_revision: request.snapshot_revision,
         };
-        reconcile_device(&state, &binding, DeviceId(id), request.report)
+        let target = request
+            .target
+            .parse::<IndividualAddress>()
+            .map_err(|error| ApiError::bad_request(error.to_string()))?;
+        reconcile_device(&state, &binding, DeviceId(id), target, request.report)
             .map(Json)
             .map_err(|error| match error {
                 BoundCommandError::NoProject => ApiError::bad_request("No project open"),
@@ -107,7 +77,10 @@ pub fn reconcile_router() -> Router<SharedState> {
 }
 
 /// The parts a scope's completed run proves, and the report's bounds.
-pub(crate) fn reconcile_parts(scope: &str, plan: &ReportPlan) -> Result<ProgrammingParts, String> {
+pub(crate) fn reconcile_parts(
+    scope: &str,
+    plan: &knx_app::download_report::ReportedPlan,
+) -> Result<ProgrammingParts, String> {
     if plan.steps == 0 || plan.steps > u32::MAX as usize || plan.data_octets > u32::MAX as usize {
         return Err("the report's plan size is out of range".into());
     }
@@ -135,13 +108,47 @@ pub(crate) fn reconcile_parts(scope: &str, plan: &ReportPlan) -> Result<Programm
     })
 }
 
-/// The program id the project resolves for `program_ref`, its hash and the
-/// device's target address, in one catalogue lease.
+/// Whether the report's own read-only check proves the reached device holds
+/// the plan — the same rule the server's batch applies (ADR-0172 `doubt`):
+/// written yes, restart settled, identity match, load states match the plan.
+pub(crate) fn check_proves_run(report: &DownloadReport) -> Result<(), String> {
+    let Some(outcome) = &report.outcome else {
+        return Err("the report has no outcome; nothing was reconciled".into());
+    };
+    if !outcome.completed {
+        return Err("the reported run did not complete; nothing was reconciled".into());
+    }
+    if outcome.written != Written::Yes {
+        return Err("the reported run did not write everything; nothing was reconciled".into());
+    }
+    if !matches!(
+        outcome.restart,
+        Some(Restart::Acknowledged) | Some(Restart::NotInPlan)
+    ) {
+        return Err("the reported run's restart was not confirmed; nothing was reconciled".into());
+    }
+    let Some(check) = &report.post_download_check else {
+        return Err("the report has no post-download check; an unchecked run is not proof".into());
+    };
+    match &check.observation {
+        Observation::Attempted {
+            reach: ReachCheck::Reached {
+                identity: IdentityCheck::Match(matched),
+            },
+        } if matched.plan_load_verdict() == PlanLoadVerdict::MatchesPlan => Ok(()),
+        other => Err(format!(
+            "the report's post-download check does not prove the plan ({other:?}); nothing was reconciled"
+        )),
+    }
+}
+
+/// The program id the project resolves for the device, its source hash and
+/// the device's own address, in one catalogue lease.
 fn project_program(
     state: &AppState,
     project: &knx_core::Project,
     device: DeviceId,
-) -> Result<(String, String, knx_core::IndividualAddress), String> {
+) -> Result<(String, String, IndividualAddress), String> {
     let instance = project
         .devices
         .get(device)
@@ -169,29 +176,22 @@ fn project_program(
 }
 
 /// Reconciles one device with one external report: clears exactly the
-/// pending parts a completed, matching run proves. Bound to the snapshot.
+/// pending parts a completed, checked, matching run proves. Bound to the
+/// snapshot; every mismatch refuses before any mark is touched.
 pub(crate) fn reconcile_device(
     state: &AppState,
     binding: &SnapshotBinding,
     device: DeviceId,
-    report: Report,
+    target: IndividualAddress,
+    report: DownloadReport,
 ) -> Result<knx_projection::ProjectTree, BoundCommandError> {
     // Validate the report's shape before touching the project.
-    if report.kind != "knxbench-download-report" || report.format != 1 {
-        return Err(BoundCommandError::Refused(
-            "not a KNXBench download report (format 1)".into(),
-        ));
+    if report.kind != REPORT_KIND || report.format != REPORT_FORMAT {
+        return Err(BoundCommandError::Refused(format!(
+            "not a KNXBench download report (format {REPORT_FORMAT})"
+        )));
     }
-    let Some(outcome) = &report.outcome else {
-        return Err(BoundCommandError::Refused(
-            "the report has no outcome; nothing was reconciled".into(),
-        ));
-    };
-    if !outcome.completed {
-        return Err(BoundCommandError::Refused(
-            "the reported run did not complete; nothing was reconciled".into(),
-        ));
-    }
+    check_proves_run(&report).map_err(BoundCommandError::Refused)?;
     let parts = reconcile_parts(&report.scope, &report.plan).map_err(BoundCommandError::Refused)?;
     let program_id = report.program.id.clone();
     let source_sha256 = report.program.source_sha256.clone();
@@ -207,9 +207,23 @@ pub(crate) fn reconcile_device(
         ) {
             return Err(BoundCommandError::Stale);
         }
-        let program_match =
+        // Device match: the run's target address must resolve to exactly
+        // this device — a report from a run against another device (or no
+        // device) never reconciles.
+        let sole = knx_app::programming_state::sole_device_at(project, target);
+        if sole != Some(device) {
+            return Err(BoundCommandError::Refused(format!(
+                "the run's target address {target} does not resolve to this device in the project; nothing was reconciled"
+            )));
+        }
+        let (expected_id, expected_hash, device_address) =
             project_program(state, project, device).map_err(BoundCommandError::Refused)?;
-        let (expected_id, expected_hash, target) = program_match;
+        if device_address != target {
+            return Err(BoundCommandError::Refused(
+                "the device's project address differs from the run's target; nothing was reconciled".into(),
+            ));
+        }
+        // Source match: program id and ingested-file hash against the catalogue.
         if program_id != expected_id {
             return Err(BoundCommandError::Refused(format!(
                 "the report names program {program_id:?}, the project uses {expected_id:?}; nothing was reconciled"
@@ -221,8 +235,9 @@ pub(crate) fn reconcile_device(
                     .into(),
             ));
         }
-        // Plan shape of the current request, recomputed offline: same counts
-        // the CLI's plan had when it ran.
+        // Plan match: recompute the current request's plan shape offline, in
+        // the report's scope, for the run's target — the same counts the
+        // CLI's plan had when it ran.
         let expected = plan_shape(state, project, target, &report.scope)
             .map_err(BoundCommandError::Refused)?;
         if expected
@@ -261,7 +276,7 @@ pub(crate) fn reconcile_device(
 fn plan_shape(
     state: &AppState,
     project: &knx_core::Project,
-    target: knx_core::IndividualAddress,
+    target: IndividualAddress,
     scope: &str,
 ) -> Result<(usize, usize, usize), String> {
     let partial = match scope {
@@ -293,20 +308,11 @@ fn plan_shape(
             if let Some(parts) = partial {
                 prepared = prepared.into_partial(parts).map_err(|e| e.to_string())?;
             }
-            let steps = prepared.plan.steps.len();
-            let data_octets = prepared
-                .plan
-                .steps
-                .iter()
-                .filter_map(|step| match step {
-                    knx_core::commissioning::memory_download::MemoryDownloadStep::WriteMemory {
-                        octets,
-                        ..
-                    } => Some(octets.len()),
-                    _ => None,
-                })
-                .sum();
-            Ok((steps, data_octets, prepared.request.links.len()))
+            Ok((
+                prepared.plan.steps.len(),
+                prepared.plan.data_octets(),
+                prepared.request.links.len(),
+            ))
         })
         .map_err(|_| "the product database is unavailable".to_string())?
 }

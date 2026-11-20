@@ -8,7 +8,7 @@ fn a_prior_partial_run_keeps_its_scope_but_never_parameters_or_free_text() {
         DownloadReport, ReportedOutcome, ReportedPlan, ReportedProgram,
     };
     let prior = DownloadReport {
-        kind: "knxbench-download-report",
+        kind: "knxbench-download-report".into(),
         format: 1,
         knxbench_version: "old".into(),
         program: ReportedProgram {
@@ -19,8 +19,8 @@ fn a_prior_partial_run_keeps_its_scope_but_never_parameters_or_free_text() {
             manufacturer: "0001".into(),
             mask: "0025".into(),
         },
-        scope: "partial-parameters",
-        support: "untested",
+        scope: "partial-parameters".into(),
+        support: "untested".into(),
         inferences: vec!["PRIVATE_INFERENCE".into()],
         warnings: vec!["PRIVATE_WARNING".into()],
         plan: ReportedPlan {

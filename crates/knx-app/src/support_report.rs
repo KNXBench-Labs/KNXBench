@@ -68,7 +68,7 @@ pub struct SupportReport {
     pub missing_evidence: Vec<String>,
     pub withheld: Vec<String>,
     pub prior_run: Option<crate::download_report::ReportedOutcome>,
-    pub prior_run_scope: Option<&'static str>,
+    pub prior_run_scope: Option<String>,
 }
 
 impl SupportReport {
@@ -84,7 +84,7 @@ impl SupportReport {
     /// No parameter values, free-text warnings or installation metadata cross over.
     pub fn prior_run(&mut self, report: &crate::download_report::DownloadReport) {
         self.prior_run = report.outcome;
-        self.prior_run_scope = self.prior_run.map(|_| report.scope);
+        self.prior_run_scope = self.prior_run.map(|_| report.scope.clone());
         let functional_check = self.facts.iter().any(|f| {
             f.field == "functionalCheck"
                 && matches!(
@@ -116,7 +116,7 @@ impl SupportReport {
         if let Some(run) = self.prior_run {
             s.push_str(&format!(
                 "Prior run ({}): {}\nTransport completion is not a functional test.\n",
-                self.prior_run_scope.unwrap_or("unknown"),
+                self.prior_run_scope.as_deref().unwrap_or("unknown"),
                 run.line()
             ));
         }

@@ -190,6 +190,12 @@ Button behaviour, handler support or Table/Grid visual equivalence.
   entity content, malformed or out-of-range cells, list/invalid/nested-list
   blocks) shows no label. The grid's existing `unshownContent` issue for a
   `Button` stays only when it declares a `Cell` and enters grid cell settlement.
+  Since 20 November 2026 (`button-label-fill-provenance-v1`, WP-05m) the wire
+  label carries the shown text's provenance `textFill` — the overlay
+  translation's own fill (`button-text-overlay-v1`) or the positional fill of
+  a filled `@TextParameterRefId` placeholder — and the matrix cell shows it in
+  its tooltip like any other caption; a plain literal sends no fill. The label
+  itself stays a plain `span`: no role, tab stop or handler.
 - **Absent Cell (WP05-B clarification, 14 November 2026).** A reached,
   program-owned `Button` without `Cell` inside a valid Table/Grid block has no
   defined table position: it receives neither a passive label nor an additional

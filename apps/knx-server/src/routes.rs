@@ -471,7 +471,8 @@ pub(crate) struct ParameterPassiveLabelDto {
     /// `Button/@Id`, verbatim. Empty for `InlineHeading` (no element id is claimed).
     pub(crate) element_id: String,
     pub(crate) text: String,
-    /// Inline headings carry their provenance fill like any caption.
+    /// Inline headings carry their provenance fill like any caption; since
+    /// WP-05m `button-label-fill-provenance-v1` Button literals do too.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) text_fill: Option<knx_projection::TextFill>,
     /// `None` for `InlineHeading`, which has no grid cell.

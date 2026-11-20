@@ -7422,7 +7422,10 @@ fn assemble_parameter_panel_for_project(
                 // WP-05 `button-text-parameter-ref-v1`: a placeholder in the button's
                 // `@Text` fills from the text parameter its `@TextParameterRefId` names,
                 // resolved in the button's own scope, through the shared budget.
-                let text = match &literal.text_parameter_ref {
+                // WP-05m `button-label-fill-provenance-v1`: the shown text's provenance
+                // fill travels with the label: the overlay translation's own fill, or
+                // the positional fill's when a placeholder was filled.
+                let (text, text_fill) = match &literal.text_parameter_ref {
                     Some(reference) if literal.text.contains("{{") => {
                         // WP-05 `button-text-parameter-ref-v1`: fill the placeholder
                         // from the named text parameter through the shared budget.
@@ -7460,7 +7463,16 @@ fn assemble_parameter_panel_for_project(
                         caption_fills
                             .admit_copy(&value.text)
                             .map_err(|e| e.to_string())?;
-                        value.text
+                        let fill = crate::com_object_activation::text_fill(
+                            value.source,
+                            &literal.text,
+                        );
+                        if let Some(fill) = &fill {
+                            caption_fills
+                                .admit_copy(&fill.template)
+                                .map_err(|e| e.to_string())?;
+                        }
+                        (value.text, fill)
                     }
                     // button-text-overlay-v1 (WP-05g): a requested language's own
                     // `Text` translation for the Button's identity overlays the
@@ -7470,16 +7482,16 @@ fn assemble_parameter_panel_for_project(
                             None,
                             button.node_id,
                         ));
-                        caption_fills
-                            .copy_text(Some(translated.as_deref().unwrap_or(&literal.text)))?
-                            .expect("present literal")
+                        let (text, fill) = caption_fills
+                            .copy((None, button.node_id), Some(translated.as_deref().unwrap_or(&literal.text)))?;
+                        (text.expect("present literal"), fill)
                     }
                 };
                 Ok(crate::routes::ParameterPassiveLabelDto {
                     kind: crate::routes::ParameterPassiveLabelKindDto::ButtonLiteral,
                     element_id: literal.element_id.clone(),
                     text,
-                    text_fill: None,
+                    text_fill,
                     cell: Some(crate::parameter_grid::cell_dto(literal.cell)),
                     group: group_dto(literal.group.clone(), &mut caption_fills)?,
                     block_access: button.block_access.clone(),

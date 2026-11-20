@@ -1,8 +1,17 @@
 # WP-47 — WebUI feedback 19 Nov 2026: dropdowns, table headers, settings layout
 
 Origin: owner UI feedback, 19 November 2026 (WebUI session, four
-screenshots). Documentation-only intake; **no implementation in this
-session**. Not tied to a GitHub issue.
+screenshots). Intake PR !79 (`64c752286`) was documentation-only; all three
+bounded packages were implemented and merged afterwards (see Delivery below).
+Not tied to a GitHub issue.
+
+## Delivery status (20 Nov 2026, all on `origin/main`)
+
+| Package | PR | Merge commit | Covers |
+| --- | --- | --- | --- |
+| WP-47.1 bus monitor destination dropdown (scalar slot, single-line marquee rows) | !81 | `23b27720b` | Points 1, 2, 3, 8 |
+| WP-47.2 sticky bold header + free column sorting on the bus monitor table | !83 | `72eaa7eca` | Points 4, 5, 6 |
+| WP-47.3 settings layout, redundant header gear removed, fields capped at 25–30 ch | !89 | `f97b75914` | Points 7, 9, 10 |
 
 ## Requested outcome (owner points 1–10, verbatim grouping)
 

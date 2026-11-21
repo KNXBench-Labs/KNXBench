@@ -242,6 +242,15 @@ binding is claimed. This is not fresh current-main or hardware acceptance.
 do not prove retention through Unload, allocation, task control or Restart.
 Broader inactive/default/Union/customer-write rules and PRG-01 remain open.
 
+## Scoping record — PRG-01-N4 (21 November 2026)
+
+Remaining 070nh masks, other object layouts and memory run-state encoding have no
+source evidence; only their refusal is simulator-verifiable and is now pinned
+([research](../research/2026-11-21-run-state-remaining-masks-and-layouts.md),
+[contract](../contracts/post-download-run-state-unadmitted-masks.md),
+[ADR-0182](../adr/0182-unadmitted-run-state-masks-stay-refused.md),
+[record](../status/2026-11-21-unadmitted-run-state-masks.md)).
+
 ## Open
 
 - Broader target/exemplar identity and runtime-state observation beyond the

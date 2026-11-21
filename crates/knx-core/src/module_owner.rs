@@ -16,8 +16,9 @@ pub enum ModuleOwner<'a> {
     Resolved(&'a ModuleInstance),
     /// No instance's `RefId` ends the id on a component boundary.
     NoMatch,
-    /// The id carries an `_MI-` tail that is not all ASCII digits (or overflows).
-    MalformedModuleId,
+    /// The id carries an `_MI-` tail that is not all ASCII digits (or overflows); holds the
+    /// instances whose `RefId` ends the id before that tail (the refused set, sorted).
+    MalformedModuleId(Vec<ModuleInstanceId>),
     /// A candidate's own `instance_ets_id` does not decompose as `<RefId>_MI-<digits>`.
     MalformedInstance(Vec<ModuleInstanceId>),
     /// Several instances with different `RefId`s match the same id.
@@ -63,7 +64,14 @@ pub fn resolve_module_owner<'a>(
     instances: &'a [ModuleInstance],
 ) -> ModuleOwner<'a> {
     let Ok((base, counter)) = split_counter(module_id) else {
-        return ModuleOwner::MalformedModuleId;
+        let base = module_id
+            .rfind("_MI-")
+            .map_or(module_id, |i| &module_id[..i]);
+        let found: Vec<&ModuleInstance> = instances
+            .iter()
+            .filter(|m| ends_with_component(base, &m.source.ets_id))
+            .collect();
+        return ModuleOwner::MalformedModuleId(sorted_ids(&found));
     };
     let candidates: Vec<&ModuleInstance> = instances
         .iter()
@@ -237,7 +245,7 @@ mod tests {
         ] {
             assert_eq!(
                 resolve_module_owner(bad, &one),
-                ModuleOwner::MalformedModuleId,
+                ModuleOwner::MalformedModuleId(vec![ModuleInstanceId(1)]),
                 "{bad}"
             );
         }

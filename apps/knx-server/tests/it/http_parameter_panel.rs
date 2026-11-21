@@ -978,6 +978,126 @@ async fn module_owner_refusals_leave_ids_state_and_history_untouched() {
     }
 }
 
+/// F01: ownership is the only variable. The represented module com object hangs on
+/// instance 1 (`MOD-1_M-1`); the edit is accepted only when the program-side module id
+/// resolves to exactly that instance, and refused when the resolver finds another or no owner.
+#[tokio::test]
+async fn module_owner_decides_whether_represented_module_objects_are_present() {
+    let base = WRITE_PROGRAM.replace(
+        "</Static>\n<Dynamic>\n  <ParameterRefRef RefId=\"MOD-1_P-1_R-1\" />",
+        "<ComObjectTable><ComObject Id=\"MOD-O-1\" Number=\"1\" ObjectSize=\"1 Bit\" /></ComObjectTable><ComObjectRefs><ComObjectRef Id=\"MOD-O-1_R-1\" RefId=\"MOD-O-1\" /></ComObjectRefs></Static>\n<Dynamic>\n<ComObjectRefRef RefId=\"MOD-O-1_R-1\" />\n  <ParameterRefRef RefId=\"MOD-1_P-1_R-1\" />",
+    );
+    assert_ne!(base, WRITE_PROGRAM);
+    // (case, program-side Module/@Id, instances, accepted)
+    type OwnerCase<'a> = (&'a str, &'a str, Vec<(&'a str, &'a str)>, bool);
+    let cases: [OwnerCase; 5] = [
+        (
+            "positive control",
+            "A-1_MOD-1_M-1",
+            vec![("MOD-1_M-1", "MOD-1_M-1_MI-1")],
+            true,
+        ),
+        (
+            "duplicate owners",
+            "A-1_MOD-1_M-1",
+            vec![
+                ("MOD-1_M-1", "MOD-1_M-1_MI-1"),
+                ("MOD-1_M-1", "MOD-1_M-1_MI-1"),
+            ],
+            false,
+        ),
+        (
+            "neighbouring RefId owns the id",
+            "A-1_MOD-1_M-11",
+            vec![
+                ("MOD-1_M-1", "MOD-1_M-1_MI-1"),
+                ("MOD-1_M-11", "MOD-1_M-11_MI-1"),
+            ],
+            false,
+        ),
+        (
+            "lone neighbour: M-1 does not own ..._M-11",
+            "A-1_MOD-1_M-11",
+            vec![("MOD-1_M-1", "MOD-1_M-1_MI-1")],
+            false,
+        ),
+        (
+            "counter mismatch",
+            "A-1_MOD-1_M-1_MI-1",
+            vec![("MOD-1_M-1", "MOD-1_M-1_MI-2")],
+            false,
+        ),
+    ];
+    for (case, module_id, instances, accepted) in cases {
+        let program = base.replace(
+            "<Module Id=\"MOD-1_M-1\"",
+            &format!("<Module Id=\"{module_id}\""),
+        );
+        assert!(program.contains(module_id), "{case}");
+        let (_dir, products) = temp_product_db(&program);
+        let state = Arc::new(state_with_device_and_modules(products, vec![], instances));
+        {
+            let mut guard = state.project.lock().unwrap();
+            let p = guard.as_mut().unwrap();
+            let object = knx_core::ComObjectInstance {
+                priority_edit: None,
+                saved_instance_priority: Default::default(),
+                id: knx_core::ComObjectInstanceId(1),
+                device: DeviceId(1),
+                number: 1,
+                source: SourceRef {
+                    path: "device-1".into(),
+                    ets_id: "MOD-O-1_R-1".into(),
+                },
+                text: knx_core::Override::Absent,
+                description: knx_core::Override::Absent,
+                dpt: knx_core::Override::Absent,
+                flags: knx_core::ResolvedFlags::none(),
+                size: None,
+                is_active: true,
+                links: vec![],
+                module_instance: Some(knx_core::ModuleInstanceId(1)),
+            };
+            p.devices.insert_com_object(object.clone());
+            p.devices
+                .get_mut(DeviceId(1))
+                .unwrap()
+                .com_objects
+                .push(object.id);
+            p.ids = knx_core::project::IdAllocators::from_counts(1, 0, 0, 1, 0, 0, 0, 0, 0);
+        }
+        let before = state.project.lock().unwrap().clone().unwrap();
+        let history = state.command_stack.lock().unwrap().history_lengths();
+        let app = knx_server::app(Arc::clone(&state), None);
+        let (status, result) = post_panel(app, 1, "P-2_R-1", "1").await;
+        let after = state.project.lock().unwrap().clone().unwrap();
+        if accepted {
+            assert_eq!(status, StatusCode::OK, "{case}: {result}");
+            assert_eq!(
+                after.devices.com_objects().count(),
+                before.devices.com_objects().count(),
+                "{case}: no AddComObjects expected"
+            );
+        } else {
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{case}: {result}");
+            assert!(
+                result["error"]
+                    .as_str()
+                    .unwrap()
+                    .contains("whose instance/number mapping is not supported"),
+                "{case}: {result}"
+            );
+            assert_eq!(after, before, "{case}: project changed");
+            assert_eq!(after.ids, before.ids, "{case}: ids were allocated");
+            assert_eq!(
+                state.command_stack.lock().unwrap().history_lengths(),
+                history,
+                "{case}: native history changed"
+            );
+        }
+    }
+}
+
 #[tokio::test]
 async fn object_addition_preserves_preexisting_links_and_instance_overrides() {
     let (_dir, products) = temp_product_db(&configured_object_program());

@@ -164,24 +164,9 @@ pub fn resolve_mi_authority(
                 .map_or(MiAuthority::NoMatch, |m| malformed_of(m))
         }
         // A malformed program-side id has no structural owner; report every
-        // instance whose RefId it ends with as the refused set.
-        ModuleOwner::MalformedModuleId => {
-            let base = module_id
-                .rfind("_MI-")
-                .map_or(module_id, |i| &module_id[..i]);
-            let found: Vec<_> = instances
-                .iter()
-                .filter(|m| {
-                    base.strip_suffix(m.source.ets_id.as_str())
-                        .is_some_and(|h| h.ends_with('_'))
-                })
-                .collect();
-            if found.is_empty() {
-                MiAuthority::NoMatch
-            } else {
-                ambiguous(found)
-            }
-        }
+        // instance whose RefId ends it as the refused set.
+        ModuleOwner::MalformedModuleId(ids) if ids.is_empty() => MiAuthority::NoMatch,
+        ModuleOwner::MalformedModuleId(ids) => ambiguous(describe(&ids)),
         ModuleOwner::ConflictingRefs(ids)
         | ModuleOwner::CounterMismatch(ids)
         | ModuleOwner::Ambiguous(ids) => ambiguous(describe(&ids)),

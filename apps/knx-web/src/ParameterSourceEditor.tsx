@@ -34,6 +34,12 @@ export interface ParameterSourceEditorProps {
   /** Product language of the parameter panel, passed through to the write. */
   language: string | null;
   label: string;
+  /**
+   * WP-37 S2: id of the row's always-visible last-download caption, linked as
+   * the editor controls' accessible description while it is open; absent when
+   * no value differs, so no editor control carries a stale description.
+   */
+  describedBy?: string;
   onUpdated: (panel: ParameterPanel) => void;
   onValueApplied: (tree: ProjectTree) => void;
   onClose: () => void;
@@ -118,7 +124,9 @@ export default function ParameterSourceEditor(props: ParameterSourceEditorProps)
     {projected !== null && <ParameterEditor field={editorField(field)} source={source}
       context={{ programId, sourceSha256: source?.sourceSha256 ?? "", moduleScoped: scope !== null }}
       selectionKey={parameterSelectionKey(snapshot, deviceId, scope)} revision={revision} label={props.label}
+      describedBy={props.describedBy}
       suffix={field.suffixText} locale={uiLanguage === "de" ? "de" : "en"} onApply={onApply} appliedReceipt={appliedReceipt} onApplied={onApplied} />}
-    <button type="button" className="parameter-checked-close" onClick={props.onClose}>{t("parameters.checked.close")}</button>
+    <button type="button" className="parameter-checked-close" onClick={props.onClose}
+      aria-describedby={props.describedBy}>{t("parameters.checked.close")}</button>
   </div>;
 }

@@ -138,6 +138,8 @@ function ParameterFieldRow(props: {
 }) {
   const { field, moduleScoped, deviceId, language, sourceLanguage, onUpdated, onValueApplied, binding, onConflict, checked, downloaded } = props;
   const t = useTranslate();
+  // Hooks run before the display-only early return below, so the id exists on
+  // every render of this row and the hook order never changes.
   const downloadNoteId = useId();
   // ADR-0173: the refs a write of this row touches, for the kept comparison.
   // A module-scoped row shares its etsId with the unscoped ref but never its value.
@@ -268,7 +270,12 @@ function ParameterFieldRow(props: {
 
   // The checked editor brings its own label and controls, so it replaces the
   // row instead of nesting interactive elements inside this `<label>`. The
-  // downloaded value stays visible beside it while editing (ADR-0173).
+  // downloaded value stays visible beside it while editing (ADR-0173), and
+  // that caption is the editor's controls' accessible description (WP-37 S2):
+  // the editor gets the note's id, never its text, so no name changes. It is
+  // offered wherever the row renders with the project identity — the
+  // Parameters workbench and the Manufacturer fields sections alike; a
+  // read-only row's editor shows the restricted notice instead of a write.
   const offerChecked = checked !== null && isSourceEditorCandidate(field.kind);
   if (offerChecked && checkedOpen) {
     return <>
@@ -276,9 +283,10 @@ function ParameterFieldRow(props: {
         data-differs-from-download={downloadNote ? "true" : undefined}>
         <ParameterSourceEditor deviceId={deviceId} field={field} scope={checked.scope} programId={checked.programId}
           snapshot={checked.snapshot} writeBinding={checked.writeBinding} onConflict={onConflict} language={language} label={label}
+          describedBy={downloadNote ? downloadNoteId : undefined}
           onUpdated={onRowUpdated} onValueApplied={onValueApplied} onClose={() => setCheckedOpen(false)} />
       </div>
-      {downloadNote && <span className="parameter-field-caption parameter-download-note">
+      {downloadNote && <span id={downloadNoteId} className="parameter-field-caption parameter-download-note">
         <span className="parameter-download-mark" aria-hidden="true" />{downloadNote}</span>}
     </>;
   }
@@ -869,7 +877,8 @@ export function ParameterPanelContent(props: ParameterPanelProps & {
           onValueApplied={onValueApplied}
           binding={snapshot}
           onConflict={onConflict}
-          checked={null}
+          checked={props.snapshot && snapshot && panel.programId !== null
+            ? { programId: panel.programId, snapshot: props.snapshot, writeBinding: snapshot } : null}
           differing={differing}
           scopedDiffering={scopedDiffering}
         />

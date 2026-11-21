@@ -15,6 +15,12 @@ export interface ParameterEditorProps<T> {
   /** Host-owned server/project/snapshot identity, not an optimistic counter. */
   revision: string;
   label: string;
+  /**
+   * WP-37 S2: id of an always-visible element (the row's last-download
+   * caption) linked as these controls' accessible description; absent when
+   * nothing differs. Never part of the accessible name.
+   */
+  describedBy?: string;
   /** Presentation unit shown beside the value; never part of the draft, the
    * value or its codec. Absent or empty adds nothing. */
   suffix?: string | null;
@@ -107,6 +113,9 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
   // A suffix needs a value to stand beside; "no value is present" gets none.
   const withSuffix = (value: ReactElement, scalar = false) => props.suffix
     ? <div className={`${styles.value}${scalar ? ` ${styles.scalarValue}` : ""}`}>{value}<span className={styles.suffix}>{props.suffix}</span></div> : value;
+  // WP-37 S2: the host's last-download caption id describes every control of
+  // the editor (input, slider, both buttons); the label stays the only name.
+  const describedBy = props.describedBy;
   if (plan.kind === "fallback") {
     return <section className={styles.panel} aria-label={props.label}>
       <h4>{props.label}</h4><p role="status" className={styles.notice}>{copy.fallback[plan.reason]}</p>
@@ -125,7 +134,7 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
     </>}
     {withSuffix(<input id={id} type="text" inputMode={textLiteral ? "text" : "numeric"} className={styles.input} value={draft}
       disabled={restricted || pending || accepted} aria-invalid={!unchanged && issue !== null}
-      aria-describedby={textLiteral ? `${id}-format ${id}-status` : `${id}-status`}
+      aria-describedby={[textLiteral ? `${id}-format` : null, `${id}-status`, describedBy].filter(Boolean).join(" ") || undefined}
       onPaste={!textLiteral ? undefined : event => {
         // Native single-line inputs strip pasted newlines. Keep the exact draft so
         // malformed input is refused visibly instead of becoming a different value.
@@ -147,6 +156,7 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
     {plan.kind === "integer-slider" && <input type="range" className={styles.slider} aria-label={`${props.label}: ${copy.slider}`}
       min={plan.min} max={plan.max} step={plan.step} value={issue === null ? Number(draft) : Number(field.value)}
       disabled={restricted || pending || accepted || stale || issue !== null}
+      aria-describedby={describedBy}
       onChange={event => { setDraft(event.target.value); setFailure(null); setSettled(false); }} />}
     <div id={`${id}-status`} className={styles.messages}>
       {restricted && <p className={styles.notice}>{copy.restricted}</p>}
@@ -158,8 +168,10 @@ function ParameterDraft<T>(props: ParameterEditorProps<T>) {
       {settled && <p role="status">{copy.settled}</p>}
     </div>
     <div className={styles.actions}>
-      <button type="button" disabled={pending || accepted || stale || restricted || unchanged || issue !== null} onClick={() => { void apply(); }}>{pending ? copy.busy : copy.apply}</button>
-      <button type="button" className={unchanged ? undefined : "danger-action"} disabled={pending} onClick={() => { setDraft(field.value ?? ""); setBaseline(field.value); setLoadedRevision(revision); loadedSignature.current = fieldSignature; blockedRevision.current = null; setFailure(null); setAccepted(false); setSettled(false); }}>{copy.reset}</button>
+      <button type="button" disabled={pending || accepted || stale || restricted || unchanged || issue !== null} onClick={() => { void apply(); }}
+        aria-describedby={describedBy}>{pending ? copy.busy : copy.apply}</button>
+      <button type="button" className={unchanged ? undefined : "danger-action"} disabled={pending} onClick={() => { setDraft(field.value ?? ""); setBaseline(field.value); setLoadedRevision(revision); loadedSignature.current = fieldSignature; blockedRevision.current = null; setFailure(null); setAccepted(false); setSettled(false); }}
+        aria-describedby={describedBy}>{copy.reset}</button>
     </div>
   </section>;
 }

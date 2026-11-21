@@ -644,3 +644,96 @@ fn f3_modelled_presentation_and_branch_identity_attributes_keep_positive_selecti
         ]
     );
 }
+
+fn the_u1_when() -> String {
+    format!("<when test=\"1\"><ParameterRefRef RefId=\"{PROGRAM_ID}_P-U1_R-U1\" /></when>")
+}
+
+/// A malformed choose/when shape the evaluator accepts must not reach the omission proof:
+/// the regular plan stands (PRG-01-N10, contract "Program-wide failures omit nothing").
+#[test]
+fn malformed_choose_when_shapes_omit_nothing_and_write_the_regular_plan() {
+    let u1 = format!("<ParameterRefRef RefId=\"{PROGRAM_ID}_P-U1_R-U1\" />");
+    let when = the_u1_when();
+    let shapes = [
+        // Two default branches: the default is ambiguous.
+        when.replace("test=\"1\"", "isDefault=\"true\"") + "<when isDefault=\"true\" />",
+        // A default branch that also carries a test.
+        when.replace("test=\"1\"", "isDefault=\"true\" test=\"1\""),
+        // A reference without its RefId.
+        "<when test=\"1\"><ParameterRefRef /></when>".to_owned(),
+        // A choose without any branch, next to the real one.
+        String::new(),
+    ];
+    for (n, replacement) in shapes.iter().enumerate() {
+        let xml = if n == 3 {
+            let open = format!("<choose ParamRefId=\"{PROGRAM_ID}_P-Mode_R-Mode\">");
+            source(1).replace(
+                &open,
+                &format!("<choose ParamRefId=\"{PROGRAM_ID}_P-Mode_R-Mode\"></choose>{open}"),
+            )
+        } else {
+            source(1).replace(&when, replacement)
+        };
+        assert_ne!(xml, source(1), "shape {n} must change the source");
+        falls_back(&xml);
+    }
+    assert!(source(1).contains(&u1));
+}
+
+/// A reference listed twice in one active branch changes no ownership: the same byte is omitted.
+#[test]
+fn a_duplicate_reference_in_one_branch_keeps_the_positive_selection_unchanged() {
+    let plan_of = |xml: &str| {
+        let (_dir, conn) = catalogue(xml);
+        let prepared = prepare_device_download(&conn, &project(), TARGET.parse().unwrap()).unwrap();
+        (writes(&prepared.plan), prepared.write_selection)
+    };
+    let baseline = plan_of(&source(1));
+    assert_eq!(
+        baseline.1,
+        knx_app::device_backup::WriteSelection::SourceDefaultInactiveWholeBytesV1
+    );
+    let u1 = format!("<ParameterRefRef RefId=\"{PROGRAM_ID}_P-U1_R-U1\" />");
+    let doubled = source(1).replace(&the_u1_when(), &format!("<when test=\"1\">{u1}{u1}</when>"));
+    assert_ne!(doubled, source(1));
+    assert_eq!(plan_of(&doubled), baseline);
+    assert!(!covers(&baseline.0, 0x4401), "4401h stays omitted");
+}
+
+/// A choose whose controller reference does not exist is refused, never guessed.
+#[test]
+fn an_unknown_choose_controller_is_refused_in_every_consumer() {
+    let xml = source(1).replace("<choose ParamRefId=\"", "<choose ParamRefId=\"X");
+    let (_dir, conn) = catalogue(&xml);
+    let unresolved = |error: ImageError| {
+        let ImageError::Evaluation(diagnostics) = error else {
+            panic!("expected an evaluation refusal, got {error:?}");
+        };
+        assert!(
+            diagnostics.iter().any(|d| matches!(&d.diagnostic,
+                Diagnostic::UnresolvedParamRef { param_ref: Some(r), .. } if r.contains("XM-FFF6"))),
+            "{diagnostics:?}"
+        );
+    };
+    let request = ImageRequest {
+        program_id: PROGRAM_ID.into(),
+        individual_address: TARGET.parse().unwrap(),
+        values: Default::default(),
+        links: vec![],
+        flag_overrides: Default::default(),
+        priority_statements: Default::default(),
+    };
+    unresolved(knx_productdb::image::build_download_image(&conn, &request).unwrap_err());
+    for result in [
+        prepare_device_download(&conn, &project(), TARGET.parse().unwrap()),
+        prepare_device_download_for_reading(&conn, &project(), TARGET.parse().unwrap()),
+    ] {
+        let PrepareError::Image(error) = result.unwrap_err() else {
+            panic!("expected an image refusal");
+        };
+        unresolved(error);
+    }
+    let (category, _) = offline_plan(&conn, PROGRAM_ID).unwrap_err();
+    assert_eq!(category, UnsupportedCategory::ParameterEvaluation);
+}

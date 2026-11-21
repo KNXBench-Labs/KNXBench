@@ -30,6 +30,19 @@ memory-refusal boundary stay unchanged. The package must include actual
 CLI/HTTP/history/report/web consumers and semantic RED before GREEN, not stop
 at a codec primitive. Physical function and overall PRG-01 remain open.
 
+## Software-accepted bounded increment — descriptor-qualified exact 0702 property state
+
+The [admitted contract](../contracts/post-download-run-state-0702.md), the
+[original-source investigation](../research/2026-11-20-property-run-state-observation-0702.md)
+and [ADR-0180](../adr/0180-exact-0702h-run-state-observation.md) extend the
+bounded optional-property observation to exact `0702h` with the same
+shape as exact `0700h`: Resources footnote 94 grants the legacy
+`PDT_UNSIGNED_CHAR` datatype only to masks `0020h`/`0701h`, so `0702h` is
+`PDT_CONTROL` and needs the same independent qualifying PID 6 property
+description before one `PID_RUN_STATE_CONTROL` read. Schedule, gates and
+serialized bytes for `0700h`/`0701h`/`0705h` are unchanged; other `070nh`
+masks still report `UnsupportedMask`.
+
 ## Software-accepted bounded increment — regular restore exemplar binding
 
 The [source-reviewed contract](../contracts/regular-restore-exemplar-binding.md)
@@ -242,6 +255,20 @@ binding is claimed. This is not fresh current-main or hardware acceptance.
 do not prove retention through Unload, allocation, task control or Restart.
 Broader inactive/default/Union/customer-write rules and PRG-01 remain open.
 
+## Bounded increment — PRG-01-N3: module-local Options admission (2026-11-20)
+
+The [N3 contract](../contracts/customer-adjustable-module-options.md), the
+[evidence note](../research/2026-11-20-module-local-options-admission.md) and
+[ADR-0181](../adr/0181-module-local-options-customer-adjustable.md) admit
+`CustomerAdjustableParameters` on a module definition's own `Static/Options`
+(new closed context class `ModuleOptions`); the parser walk is unchanged. The public writer refusal category
+`customer-adjustable-parameters` gains a `module Options` count; read-only
+preparation is unchanged. Acceptance record:
+[2026-11-20 module-local-options admission](../status/2026-11-20-module-local-options-admission.md).
+Wrapper, `Dynamic`/`Extension`, extra-`Static` and foreign-prefixed shapes stay
+excluded matcher limits. This is not hardware acceptance, not ETS
+customer-write semantics and not a closure of PRG-01.
+
 ## Scoping record — PRG-01-N4 (21 November 2026)
 
 Remaining 070nh masks, other object layouts and memory run-state encoding have no
@@ -255,11 +282,13 @@ source evidence; only their refusal is simulator-verifiable and is now pinned
 
 - Broader target/exemplar identity and runtime-state observation beyond the
   bounded property contracts (`0701h`/`0705h`, plus descriptor-qualified exact
-  `0700h` whose bounded software acceptance is recorded above). Other object layouts,
-  memory encoding and physical function remain unproved.
+  `0700h` and `0702h` whose bounded software acceptance is recorded above).
+  Other object layouts, memory encoding and physical function remain unproved.
 - Parameter policies beyond the bounded whole-byte transfer contract: physical
   inactive-byte survival, broader inactive/default semantics, editable Dynamic,
-  `Union` and customer-write rules remain unresolved.
+  `Union` and customer-write rules remain unresolved (module-local Options are
+  now an admitted refusal context per PRG-01-N3; the remaining excluded
+  customer-adjustable shapes stay matcher limits).
 - Complete mutation effects and whole-mutation recovery contracts.
 
 PRG-01-N5 (21 November 2026) inventoried these remaining parameter-policy items
@@ -276,6 +305,26 @@ because a restart may rewrite octets. It names the missing evidence
 ([research](../research/2026-11-21-prg01-n6-mutation-effects-observation.md),
 [scope contract](../contracts/prg01-mutation-effects-observation-scope.md),
 [ADR-0184](../adr/0184-prg01-mutation-effects-observation-scope.md)). No code changed.
+
+PRG-01-N8 (21 November 2026) reconciled this file, the OPEN_WORK row and the
+ledger with the increments still queued on PR branches; see the
+[reconciliation](../status/2026-11-21-prg01-n8-queue-reconciliation.md). Docs only.
+
+PRG-01-N9 (21 November 2026) audited the post-download check across CLI, history,
+web and report: one drift fixed (the report summary now keeps the run-state reason)
+and the report file pinned against the shared admission table
+([ADR-0186](../adr/0186-report-summary-keeps-the-run-state-reason.md),
+[record](../status/2026-11-21-prg01-n9-report-consumer-consistency.md)).
+Simulator/fixture evidence only.
+
+PRG-01-N10 (21 November 2026) pinned malformed choose/when input for inactive
+whole-byte selection ([acceptance](../status/2026-11-21-prg01-n10-malformed-choose-when-pins.md)).
+Test-only; no behaviour change, no new policy.
+
+PRG-01-N11 (21 November 2026) hardened the backup file reader: signed or padded hex text
+(for example region octets `+5`) is refused as malformed instead of being read as a number
+([acceptance](../status/2026-11-21-prg01-n11-backup-hex-refusal.md)). Offline pin only; no
+format, consumer or hardware change.
 
 PRG-01-N12 (21 November 2026) pinned consumer consistency: the web's per-category
 reason and action tables must name exactly the server's refusal categories, so a
@@ -298,6 +347,13 @@ as `product-data`. No parser guard was relaxed and no hardware support added.
 This resolves only the pin-maintenance debt. The original selection is still
 unreconstructed; the new baseline is explicitly not an independent semantic
 oracle. The broader PRG-01 requirements above and KL-006 remain open.
+
+## Refusal reason codes pinned — 21 November 2026 (N7)
+
+`plan_category`/`image_category` are now exhaustive and every plan refusal's
+code is pinned ([contract](../contracts/download-refusal-reason-codes.md),
+[ADR-0185](../adr/0185-download-refusal-classifiers-are-exhaustive.md),
+[status](../status/2026-11-21-prg01-n7-refusal-code-pin.md)). No behaviour change.
 
 ## Boundaries
 

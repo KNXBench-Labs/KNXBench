@@ -322,6 +322,13 @@ This resolves only the pin-maintenance debt. The original selection is still
 unreconstructed; the new baseline is explicitly not an independent semantic
 oracle. The broader PRG-01 requirements above and KL-006 remain open.
 
+## Refusal reason codes pinned — 21 November 2026 (N7)
+
+`plan_category`/`image_category` are now exhaustive and every plan refusal's
+code is pinned ([contract](../contracts/download-refusal-reason-codes.md),
+[ADR-0185](../adr/0185-download-refusal-classifiers-are-exhaustive.md),
+[status](../status/2026-11-21-prg01-n7-refusal-code-pin.md)). No behaviour change.
+
 ## Boundaries
 
 KNX Secure is excluded. Existing family and recovery gates stay in force; a

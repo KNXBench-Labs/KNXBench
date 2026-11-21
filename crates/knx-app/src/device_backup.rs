@@ -230,7 +230,8 @@ fn hex(octets: &[u8]) -> String {
 }
 
 fn unhex(text: &str) -> Result<Vec<u8>, BackupFileError> {
-    if !text.len().is_multiple_of(2) || !text.is_ascii() {
+    // `from_str_radix` also takes a leading `+`, so every character is checked as a hex digit.
+    if !text.len().is_multiple_of(2) || !text.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         return Err(BackupFileError::Malformed(format!("octets {text:?}")));
     }
     (0..text.len())
@@ -263,7 +264,7 @@ fn serial_from(text: &str) -> Result<ExemplarSerial, BackupFileError> {
 }
 
 fn hex16(text: &str, what: &str) -> Result<u16, BackupFileError> {
-    if text.len() != 4 {
+    if text.len() != 4 || !text.bytes().all(|byte| byte.is_ascii_hexdigit()) {
         return Err(BackupFileError::Malformed(format!("{what} {text:?}")));
     }
     u16::from_str_radix(text, 16)
@@ -1092,5 +1093,26 @@ mod tests {
             from_json(&null_serial),
             Err(BackupFileError::Malformed(_))
         ));
+    }
+
+    #[test]
+    fn signed_or_padded_hex_is_malformed_never_read_as_a_number() {
+        // `+` is accepted by integer parsing, so "+5" would silently read as octet 05.
+        let good = to_json(&stored());
+        for bad in [
+            good.replace("\"00ABFF\"", "\"+0ABFF\""),
+            good.replace("\"00ABFF\"", "\"00AB+F\""),
+            good.replace("\"4400\"", "\"+400\""),
+            good.replace("\"0701\"", "\"+701\""),
+            good.replace("\"0083\"", "\"+083\""),
+            good.replace("\"0701\"", "\" 701\""),
+            good.replace("\"00ABFF\"", "\"00AB F\""),
+        ] {
+            assert!(
+                matches!(from_json(&bad), Err(BackupFileError::Malformed(_))),
+                "{bad}"
+            );
+        }
+        assert!(from_json(&good).is_ok());
     }
 }

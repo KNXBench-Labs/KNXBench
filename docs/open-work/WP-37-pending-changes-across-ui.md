@@ -7,6 +7,14 @@ External report by the issue reporter, 10 November 2026; triaged 11 November 202
 module-scoped parameters shipped 17 November 2026 as the first WP-07-authority
 consumer (native schema 22, ADR-0177 key; see "Module-scoped parameters" below);
 the other exclusions below remain outside this closure. [Reporter evidence](../status/2026-11-14-issues36-48-reporter-closure.md).
+**Status update — 20 November 2026:** the group-address views' last-download
+link marks (tree/columns/atlas/matrix) are delivered via PR !104
+(`aa14a7329` on main, web-only, reusing `DeviceDetail.last_download` per
+ADR-0174 §5, no new schema), and the module-scoped image-builder admission is
+on main via PR !60 (`b4d141288`, 18 November 2026). All WP-37 slices are now
+delivered on main; the remaining "Not covered" items below are documented
+boundaries, not open work. Simulator and intercepted-browser tests only, no
+hardware run.
 
 Historical implementation status: **step 1 implemented (11 November 2026, main only); step 2 implemented
 (server part 11 November, parameter-editor UI 12 November 2026, main only) per
@@ -314,11 +322,13 @@ description after the name.
 ## Not covered
 
 - ~~Group-address views carry no last-download marks (ADR-0174 §5)~~
-  **delivered 20 November 2026**: tree, columns, atlas and matrix rows and group
+  **delivered 20 November 2026 via PR !104 (`aa14a7329`)**: tree, columns,
+  atlas and matrix rows and group
   headings carry the amber last-download mark when the server's per-device link
   comparison (`DeviceDetail.last_download`, native schema 21) names the address's
   raw value in a sending-direction difference; a summary line above the views
-  reports the count and the links state. Web-only change in `apps/knx-web`.
+  reports the count and the links state. Web-only change in `apps/knx-web`;
+  no new baseline, API or schema.
 - Differences on object numbers without a selected project row are counted in
   the communication-object summary, not listed.
 - ~~Module-scoped parameters (no baseline until module downloads exist)~~

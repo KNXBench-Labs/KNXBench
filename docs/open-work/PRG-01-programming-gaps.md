@@ -322,6 +322,12 @@ This resolves only the pin-maintenance debt. The original selection is still
 unreconstructed; the new baseline is explicitly not an independent semantic
 oracle. The broader PRG-01 requirements above and KL-006 remain open.
 
+## Consumer-consistency pin — PRG-01-N13
+
+A shared vocabulary file pins the post-download run-state wire strings between
+the Rust serializer and the web admission/message tables, test-only
+([acceptance](../status/2026-11-21-prg01-n13-run-state-vocabulary-pin.md)).
+
 ## Boundaries
 
 KNX Secure is excluded. Existing family and recovery gates stay in force; a

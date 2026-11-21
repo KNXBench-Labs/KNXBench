@@ -487,6 +487,10 @@ No behaviour, KL row or hardware claim changes; PRG-01 stays open.
 
 Scoping slice on `work/prg01-n14-20261121` off `origin/main`: inventory of the recovery axis plus a test-only exhaustive restore-coverage pin ([acceptance](2026-11-21-prg01-n14-recovery-scope.md), [ADR-0188](../adr/0188-prg01-whole-mutation-recovery-scope.md)). No behaviour, KL row or hardware claim changes; PRG-01 stays open.
 
+## PRG-01-N15: evidence-wall consolidation (21 November 2026)
+
+Docs-only: the PRG-01 [detail file](../open-work/PRG-01-programming-gaps.md#evidence-wall--prg-01-paused-21-november-2026) now tabulates the four open axes (N4/N5/N6/N14) with the evidence and consent each would need; OPEN_WORK row and restart snapshot refreshed. PRG-01 pauses until the owner supplies evidence or decides. No behaviour, KL row or hardware claim changes.
+
 ## REL-01 decisions complete; Docker signing approved (20 November 2026, second round)
 
 Owner decisions recorded in

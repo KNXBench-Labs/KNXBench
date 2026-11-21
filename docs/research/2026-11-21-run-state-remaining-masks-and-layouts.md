@@ -7,7 +7,7 @@ further run-state observation simulator-verifiable without inventing semantics?
 
 ## Evidence reused (not re-inspected)
 
-All facts come from the [0702h source review](2026-11-20-property-run-state-observation-0702.md)
+All facts come from the 0702h source review (`2026-11-20-property-run-state-observation-0702.md`, on the unmerged PRG-01-N1/N2 branches)
 and the [0700h investigation](2026-10-29-property-description-run-state-0700.md) of the
 original KNX Standard v3.0.0 PDFs; licensed extracts stay private.
 

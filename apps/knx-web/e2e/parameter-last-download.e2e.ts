@@ -62,10 +62,20 @@ const objectsUsable: ObjectLastDownload = { links: { state: "usable", at }, flag
   differing: [linkChange, flagChange, { number: 9, instance_id: null, links: [], flags: { downloaded: flagChange.flags!.current, current: null } }],
   instances: { 21: linkChange, 22: flagChange }, differing_objects: 3, no_selected_row: 1 };
 
-async function intercept(page: Page, language: "en" | "de", lastDownload: LastDownload, objectLastDownload?: ObjectLastDownload) {
-  const state = { unexpected: [] as string[], posts: 0, projectOpen: false };
+async function intercept(page: Page, language: "en" | "de", lastDownload: LastDownload, objectLastDownload?: ObjectLastDownload,
+  options: { writable?: boolean } = {}) {
+  const state = { unexpected: [] as string[], posts: 0, projectOpen: false, wroteDelay: false, revision: 1 };
   const panel = (): ParameterPanel => ({ programId: "A-FICTIONAL", sourceLanguage: "en", tree: null, stale: [], diagnostics: [],
-    lastDownload, sections: [{ scope: null, fields }] });
+    lastDownload: state.wroteDelay
+      ? { state: "usable", at, differing: usable.differing!.filter(d => d.refId !== "P-Delay") }
+      : lastDownload, sections: [{ scope: null, fields }] });
+  const source = (etsId: string, device = 1) => ({
+    device, parameterRefId: etsId, serverIncarnation: "baseline-browser", projectIncarnation: 1, snapshotRevision: state.revision,
+    evidence: { status: "declared", source: { sourceSha256: "a".repeat(64), programId: "A-FICTIONAL", parameterTypeId: "PT-1", schema: 21,
+      child: `Type${fields.find(f => f.etsId === etsId)!.kind}`,
+      attributes: { Type: "unsignedInt", UIHint: "Slider", minInclusive: "0", maxInclusive: "600" },
+      parentAttributes: { Id: "PT-1", Name: "Fictional type" } } },
+  });
   await page.route("**/api/**", (route) => {
     const url = new URL(route.request().url()); const path = url.pathname; const method = route.request().method();
     let body: unknown; let status = 200;
@@ -88,7 +98,19 @@ async function intercept(page: Page, language: "en" | "de", lastDownload: LastDo
     else if (path === "/api/device/1" && method === "GET") body = { ...device, com_objects: objectLastDownload ? comObjects : [],
       product: { resolution: "NoReference", product_ref: null, program_ref: null, catalog: null }, last_download: objectLastDownload };
     else if (path === "/api/device/1/parameters" && method === "GET") body = panel();
-    else if (path === "/api/device/1/parameters" && method === "POST") { state.posts += 1; status = 500; body = { error: "no writes in this fixture" }; }
+    else if (path === "/api/device/1/parameters" && method === "POST") {
+      state.posts += 1;
+      if (options.writable) {
+        // An accepted write of P-Delay: the response carries no comparison; the
+        // follow-up GET then answers without the written ref (state.wroteDelay).
+        state.wroteDelay = true;
+        state.revision = 2;
+        body = { ...panel(), tree: { ...tree, snapshot_revision: 2 } };
+      } else { status = 500; body = { error: "no writes in this fixture" }; }
+    }
+    else if (path === "/api/device/1/parameter-editor-source" && method === "GET") {
+      body = source(url.searchParams.get("etsId") ?? "");
+    }
     else if (path === "/api/bus/monitor/telegrams" && method === "GET") body = { sessionId: 1, serverIncarnation: "baseline-browser", contextStatus: "current",
       projectOpen: true, status: "active", nextSince: 0, droppedBefore: 0, telegrams: [] };
     else if (path === "/api/device-readiness" && method === "GET") body = { devices: [], counts: {} };
@@ -235,10 +257,93 @@ for (const language of ["en", "de"] as const) {
     await page.locator(".parameter-workspace-nav button").filter({ hasText: "General" }).click();
     await expect(page.locator(".parameter-download-mark")).toHaveCount(0);
     await expect(page.getByRole("spinbutton", { name: fields[0].text!, exact: true })).toHaveAccessibleDescription("");
+    // Unusable state: opening the checked editor links nothing either (WP-37 S2).
+    await page.locator('[data-checked-for="P-Delay"]').click();
+    const editorInput = page.locator('[data-ets-id="P-Delay"] input[type="text"]');
+    await expect(editorInput).toBeVisible();
+    await expect(page.locator('[data-ets-id="P-Delay"] + .parameter-download-note')).toHaveCount(0);
+    await expect(editorInput).toHaveAccessibleDescription("");
     expect(await noOverflow(page)).toBeLessThanOrEqual(1);
     expect(state.unexpected).toEqual([]);
   });
 }
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} links the caption as the open checked editor's accessible description at ${width}px (WP-37 S2)`, async ({ page }) => {
+    const m = language === "de" ? de : en;
+    await page.setViewportSize({ width, height: 1000 });
+    const state = await intercept(page, language, usable, undefined, { writable: true });
+    await openParameters(page, language);
+    const workspace = page.locator(".parameter-workspace");
+    await workspace.locator(".parameter-workspace-nav button").filter({ hasText: "General" }).click();
+    const value = (shown: string) => m["parameters.lastDownload.value"].replace("{value}", shown);
+    // Closed row: the plain control is described by the caption, unchanged name.
+    const delay = workspace.getByRole("spinbutton", { name: fields[0].text!, exact: true });
+    await expect(delay).toHaveAccessibleDescription(value("10"));
+    // Open the checked editor: the caption stays visible beside it and becomes
+    // the editor controls' accessible description.
+    await workspace.locator('[data-checked-for="P-Delay"]').click();
+    const note = workspace.locator('[data-ets-id="P-Delay"] + .parameter-download-note');
+    await expect(note).toBeVisible();
+    const noteId = (await note.getAttribute("id"))!;
+    expect(noteId).not.toBe("");
+    await expect(note).toHaveText(value("10"));
+    const editorInput = workspace.locator('[data-ets-id="P-Delay"] input[type="text"]');
+    await expect(editorInput).toBeVisible();
+    // The accessible name is still the field's caption; the description is the caption text.
+    await expect(editorInput).toHaveAccessibleName(fields[0].text!);
+    await expect(editorInput).toHaveAccessibleDescription(value("10"));
+    // The slider control carries the same description.
+    const slider = workspace.locator('[data-ets-id="P-Delay"] input[type="range"]');
+    await expect(slider).toHaveAccessibleDescription(value("10"));
+    const apply = workspace.locator('[data-ets-id="P-Delay"]').getByRole("button", { name: language === "de" ? "Wert übernehmen" : "Apply value", exact: true });
+    await expect(apply).toHaveAccessibleDescription(value("10"));
+    const close = workspace.locator('[data-ets-id="P-Delay"]').getByRole("button", { name: m["parameters.checked.close"], exact: true });
+    await expect(close).toHaveAccessibleName(m["parameters.checked.close"]);
+    await expect(close).toHaveAccessibleDescription(value("10"));
+    // No layout shift: the caption was already there, so focus moves nothing.
+    const row = workspace.locator('[data-ets-id="P-Delay"]');
+    const boxBefore = (await row.boundingBox())!;
+    await editorInput.focus();
+    const boxAfter = (await row.boundingBox())!;
+    expect(boxAfter.y).toBe(boxBefore.y);
+    expect(await noOverflow(page)).toBeLessThanOrEqual(1);
+    // An accepted write drops the ref: the caption and with it the link go at
+    // once (the input's remaining description is only its own status line).
+    await editorInput.fill("10");
+    await apply.click();
+    await expect(workspace.locator('[data-ets-id="P-Delay"] + .parameter-download-note')).toHaveCount(0);
+    const describedBy = await editorInput.getAttribute("aria-describedby");
+    expect(describedBy ?? "").not.toContain(noteId);
+    await expect(editorInput).not.toHaveAccessibleDescription(value("10"));
+    expect(state.posts).toBe(1);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+
+test("en 1440: the Manufacturer fields tab links the caption of an open checked editor there too (WP-37 S2)", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const state = await intercept(page, "en", usable, undefined, { writable: true });
+  await openParameters(page, "en");
+  await page.getByRole("tab", { name: en["parameters.restrictedTab"], exact: true }).click();
+  const section = page.locator('[role="tabpanel"]:not([hidden]) details.parameter-section');
+  await expect(section).toHaveCount(1);
+  await section.locator("summary").click();
+  await section.getByRole("button", { name: "General" }).click();
+  const factory = page.locator('[data-ets-id="P-Factory"]');
+  await expect(factory).toBeVisible();
+  const factoryNote = page.locator('[data-ets-id="P-Factory"] + .parameter-download-note');
+  await expect(factoryNote).toHaveText(en["parameters.lastDownload.value"].replace("{value}", "12"));
+  await page.locator('[data-checked-for="P-Factory"]').click();
+  await expect(factoryNote).toBeVisible();
+  const editorInput = factory.locator("input[type=\"text\"]");
+  await expect(editorInput).toBeVisible();
+  await expect(editorInput).toHaveAccessibleName("Factory calibration");
+  // The read-only editor's own notice comes first; the caption is appended to it.
+  await expect(editorInput).toHaveAccessibleDescription(/^.+ Value at last download: 12$/);
+  expect(await noOverflow(page)).toBeLessThanOrEqual(1);
+  expect(state.unexpected).toEqual([]);
+});
 
 test("keeps the row, area and summary dots painted under forced colours", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });

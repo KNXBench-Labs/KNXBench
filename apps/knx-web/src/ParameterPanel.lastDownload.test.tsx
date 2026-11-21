@@ -362,4 +362,88 @@ describe("ParameterPanel last download (ADR-0173)", () => {
     expect(summary()).toBeNull();
     expect(marks()).toHaveLength(0);
   });
+
+  it("links the caption as the open checked editor's accessible description, in English and German (WP-37 S2)", async () => {
+    const time = field("P1", { kind: "Time" });
+    const withSource = panel(usable([{ refId: "P1", downloaded: "4", current: "5" }]));
+    withSource.sections[0].fields[0] = time;
+    apiMock.deviceParameters.mockResolvedValueOnce(withSource);
+    // A declared checked source so the real editor renders its input.
+    apiMock.parameterEditorSource.mockImplementation(async (_device: number, etsId: string) => ({
+      device: 1, parameterRefId: etsId, serverIncarnation: "srv-ld", projectIncarnation: 1, snapshotRevision: 2,
+      evidence: { status: "declared", source: { sourceSha256: "c".repeat(64), programId: "PROG-1", parameterTypeId: "PT", schema: 21,
+        child: "TypeTime", attributes: { minInclusive: "0", maxInclusive: "10", Unit: "Seconds" }, parentAttributes: { Id: "PT" } } },
+    }));
+    host = document.createElement("div"); document.body.appendChild(host); root = createRoot(host);
+    await act(async () => root!.render(<ParameterPanel deviceId={1} refreshKey={tree(2)}
+      snapshot={{ serverIncarnation: "srv-ld", projectIncarnation: 1, snapshotRevision: 2 }} onValueApplied={() => {}} />));
+    const open = host!.querySelector<HTMLButtonElement>('[data-checked-for="P1"]')!;
+    expect(open).not.toBeNull();
+    await act(async () => open.click());
+    const note = host!.querySelector<HTMLElement>(".parameter-download-note")!;
+    expect(note.textContent).toBe("Value at last download: 4");
+    expect(note.hidden).toBe(false);
+    const input = host!.querySelector<HTMLInputElement>("[data-ets-id=\"P1\"] input")!;
+    expect(input).not.toBeNull();
+    // The caption id is part of the input's description; its name stays the label.
+    expect(input.getAttribute("aria-describedby")).toContain(note.id);
+    expect(input.getAttribute("aria-label")).toBeNull();
+    expect(host!.querySelector("[data-ets-id=\"P1\"] label")!.textContent).toBe("Field P1");
+    for (const button of Array.from(host!.querySelectorAll<HTMLButtonElement>("[data-ets-id=\"P1\"] button"))) {
+      expect(button.getAttribute("aria-describedby")).toBe(note.id);
+    }
+    // German wording flows into the same linked caption.
+    await act(async () => setSetting(UI_LANGUAGE_STORAGE_KEY, "de"));
+    const deNote = host!.querySelector<HTMLElement>(".parameter-download-note")!;
+    expect(deNote.textContent).toBe("Wert beim letzten Programmieren: 4");
+    expect(input.getAttribute("aria-describedby")).toContain(deNote.id);
+    // An accepted write drops the ref: the caption and every link go at once.
+    const written = panel(undefined);
+    written.sections[0].fields[0] = field("P1", { kind: "Time", value: "4" });
+    written.tree = tree(3);
+    apiMock.setParameterValue.mockResolvedValue(written);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!.call(input, "4");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      const apply = Array.from(host!.querySelectorAll<HTMLButtonElement>("[data-ets-id=\"P1\"] button"))
+        .find(b => b.textContent === "Apply value" || b.textContent === "Wert übernehmen")!;
+      apply.click();
+      await Promise.resolve();
+    });
+    expect(host!.querySelector(".parameter-download-note")).toBeNull();
+    expect(host!.querySelector<HTMLInputElement>("[data-ets-id=\"P1\"] input")!.getAttribute("aria-describedby") ?? "")
+      .not.toContain(note.id);
+  });
+
+  it("carries no description link over to another device's open editor (WP-37 S2)", async () => {
+    const time = field("P1", { kind: "Time" });
+    const withSource = panel(usable([{ refId: "P1", downloaded: "4", current: "5" }]));
+    withSource.sections[0].fields[0] = time;
+    apiMock.deviceParameters.mockResolvedValueOnce(withSource);
+    apiMock.parameterEditorSource.mockImplementation(async (_device: number, etsId: string) => ({
+      device: 1, parameterRefId: etsId, serverIncarnation: "srv-ld", projectIncarnation: 1, snapshotRevision: 2,
+      evidence: { status: "declared", source: { sourceSha256: "c".repeat(64), programId: "PROG-1", parameterTypeId: "PT", schema: 21,
+        child: "TypeTime", attributes: { minInclusive: "0", maxInclusive: "10", Unit: "Seconds" }, parentAttributes: { Id: "PT" } } },
+    }));
+    host = document.createElement("div"); document.body.appendChild(host); root = createRoot(host);
+    const snapshot = { serverIncarnation: "srv-ld", projectIncarnation: 1, snapshotRevision: 2 };
+    await act(async () => root!.render(<ParameterPanel deviceId={1} refreshKey={tree(2)} snapshot={snapshot} onValueApplied={() => {}} />));
+    await act(async () => host!.querySelector<HTMLButtonElement>('[data-checked-for="P1"]')!.click());
+    expect(host!.querySelector(".parameter-download-note")).not.toBeNull();
+    // Device 2 has no comparison of its own: nothing to link, no carry-over.
+    const other = panel(undefined);
+    other.sections[0].fields[0] = field("P1", { kind: "Time", value: "9" });
+    apiMock.deviceParameters.mockResolvedValueOnce(other);
+    apiMock.parameterEditorSource.mockImplementation(async (_device: number, etsId: string) => ({
+      device: 2, parameterRefId: etsId, serverIncarnation: "srv-ld", projectIncarnation: 1, snapshotRevision: 2,
+      evidence: { status: "declared", source: { sourceSha256: "c".repeat(64), programId: "PROG-1", parameterTypeId: "PT", schema: 21,
+        child: "TypeTime", attributes: { minInclusive: "0", maxInclusive: "10", Unit: "Seconds" }, parentAttributes: { Id: "PT" } } },
+    }));
+    await act(async () => root!.render(<ParameterPanel deviceId={2} refreshKey={tree(2)} snapshot={snapshot} onValueApplied={() => {}} />));
+    expect(host!.querySelector(".parameter-download-note")).toBeNull();
+    const input = host!.querySelector<HTMLInputElement>("[data-ets-id=\"P1\"] input");
+    expect(input === null || !(input.getAttribute("aria-describedby") ?? "").includes(":")).toBe(true);
+    expect(summary()).toBeNull();
+    expect(marks()).toHaveLength(0);
+  });
 });

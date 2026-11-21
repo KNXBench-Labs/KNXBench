@@ -335,8 +335,24 @@ description after the name.
   `work/wp37-modules-fix-20261118`), so module-scoped baseline rows can now
   also come from an offline image plan; no module download to a device exists
   yet.
-- The caption beside an open checked editor is visible but not linked to the
-  editor's controls as their description.
+- ~~The caption beside an open checked editor is visible but not linked to the
+  editor's controls as their description~~ **delivered 21 November 2026**
+  (WP-37 S2, web only): while a checked editor is open on a row that carries the
+  last-download caption, the caption's id is the `aria-describedby` of the
+  editor's text input, slider, Apply/Reset buttons and the close button. The
+  accessible name stays the field's label, the caption stays always visible
+  (nothing moves on focus), and the link goes with the caption after an accepted
+  write; an unusable comparison or a row that does not differ links nothing, and
+  nothing carries over to another device's editor. The Manufacturer fields view
+  now offers the checked editor too when the project identity is known (its
+  read-only editor shows the restricted notice, then the caption). Tests:
+  `ParameterPanel.lastDownload.test.tsx` (links the caption; no link without a
+  difference; unusable comparison; no carry-over across devices),
+  `ParameterPanel.checked.test.tsx` (Manufacturer fields view with and without
+  identity), `ParameterEditor.test.tsx` (`describedBy` on input, slider and both
+  buttons, never in the name) and `parameter-last-download.e2e.ts`
+  (`links the caption as the open checked editor's accessible description`, en/de
+  at 1440 and 400 px, and the Manufacturer fields case).
 - Devices imported, programmed by the System-2 path or marked by hand show only
   the pending marks until their next completed regular download.
 - Device identity is source, product and program reference within one project

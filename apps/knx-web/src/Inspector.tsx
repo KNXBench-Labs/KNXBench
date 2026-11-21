@@ -1139,7 +1139,8 @@ export function DeviceWorkspace(props: {
       <ParameterPanelContent deviceId={detail.id} state={parameterState} view="diagnostics" onValueApplied={onApplied} />
     </div>
     <div role="tabpanel" id={`device-panel-${detail.id}-4`} aria-labelledby={`device-tab-${detail.id}-4`} hidden={tab !== 4} tabIndex={0}>
-      <ParameterPanelContent deviceId={detail.id} state={parameterState} view="restricted" onValueApplied={onApplied} />
+      <ParameterPanelContent deviceId={detail.id} state={parameterState} view="restricted" onValueApplied={onApplied}
+        snapshot={snapshotContextFromTree(tree)} />
     </div>
     <div role="tabpanel" id={`device-panel-${detail.id}-${instructionsTab}`} aria-labelledby={`device-tab-${detail.id}-${instructionsTab}`} hidden={tab !== instructionsTab} tabIndex={0}>
       {(instructionsOpened || tab === instructionsTab) && <DeviceInstructionsPanel deviceId={detail.id} tree={tree}

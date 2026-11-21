@@ -12,6 +12,20 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## The open checked editor's accessible description is the last-download caption (21 November 2026; WP-37 S2)
+
+While a checked parameter editor is open on a row with the last-download caption
+("Value at last download: …" / "Wert beim letzten Programmieren: …"), the
+caption is now the accessible description of the editor's input, slider, Apply,
+Reset and close controls (`aria-describedby`), in the Parameters and the
+Manufacturer fields views, English and German. Names are unchanged, the caption
+stays visible, nothing moves on focus, forced colours are untouched, and the
+link ends with the caption after an accepted write. Web only; no server, bus or
+hardware. Tests: component tests in `ParameterPanel.lastDownload.test.tsx`,
+`ParameterPanel.checked.test.tsx` and `ParameterEditor.test.tsx`, and browser
+cases in `parameter-last-download.e2e.ts` (en/de, 1440/400 px, plus the
+Manufacturer fields view). See [WP-37](open-work/WP-37-pending-changes-across-ui.md).
+
 ## Alpha 22 pre-release (source cutoff 15 November 2026)
 
 **Delivered, not in Alpha 22:** the owner-authorized Reko online catalogue

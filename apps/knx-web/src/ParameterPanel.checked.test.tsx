@@ -7,8 +7,8 @@ import type { ParameterField, ParameterPanel as ParameterPanelDto } from "./api"
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { ParameterSourceEditorProps } from "./ParameterSourceEditor";
 import { resetProductLanguageForTests } from "./productLanguage";
-import { resetUiLanguageForTests } from "./uiLanguage";
-import { resetSettingsForTests } from "./settingsStore";
+import { UI_LANGUAGE_STORAGE_KEY, resetUiLanguageForTests } from "./uiLanguage";
+import { resetSettingsForTests, setSetting } from "./settingsStore";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -94,11 +94,33 @@ describe("checked parameter editor in the parameter rows", () => {
     expect(openButtons()).toHaveLength(0);
   });
 
-  it("offers nothing in the restricted view", async () => {
+  it("offers no checked editor in the Manufacturer fields view without the project identity", async () => {
+    // The Manufacturer fields tab shows only manufacturer-restricted rows;
+    // without the tree's complete identity no checked editor is offered there
+    // either (the same rule as the Parameters view). With identity, the row's
+    // caption link is covered by the lastDownload tests below.
     apiMock.deviceParameters.mockResolvedValue({ ...panel, sections: [{ scope: null, fields: [field("T9", "Time", { access: "Read", editable: false, writeEtsId: null })] }] });
-    await mount({ view: "restricted" });
+    await mount({ view: "restricted", snapshot: null });
     expect(row("T9")).not.toBeNull();
     expect(openButtons()).toHaveLength(0);
+  });
+
+  it("offers the checked editor in the Manufacturer fields view with the identity, and links its caption (WP-37 S2)", async () => {
+    const restricted = field("T9", "Time", { access: "Read", editable: false, writeEtsId: null });
+    apiMock.deviceParameters.mockResolvedValue({ ...panel, sections: [{ scope: null, fields: [restricted] }],
+      lastDownload: { state: "usable", at: "2026-01-05T08:09:10.000Z", differing: [{ refId: "T9", downloaded: "4", current: "5" }] } });
+    await mount({ view: "restricted" });
+    expect(row("T9")).not.toBeNull();
+    expect(openButtons().map(b => b.getAttribute("data-checked-for"))).toEqual(["T9"]);
+    await act(async () => openButtons()[0].click());
+    const note = host.querySelector<HTMLElement>(".parameter-download-note")!;
+    expect(note.textContent).toBe("Value at last download: 4");
+    expect(note.hidden).toBe(false);
+    expect(editorProps.last!.describedBy).toBe(note.id);
+    // German wording flows into the same caption.
+    await act(async () => setSetting(UI_LANGUAGE_STORAGE_KEY, "de"));
+    expect(host.querySelector(".parameter-download-note")!.textContent).toBe("Wert beim letzten Programmieren: 4");
+    expect(editorProps.last!.describedBy).toBe(host.querySelector<HTMLElement>(".parameter-download-note")!.id);
   });
 
   it("replaces the plain input with the checked editor and hands it the exact context", async () => {
@@ -133,6 +155,46 @@ describe("checked parameter editor in the parameter rows", () => {
     expect(note()).toBeNull();
     // It was the only differing value: only the next read may say none differs.
     expect(host.querySelector(".parameter-last-download")).toBeNull();
+  });
+
+  it("links the caption beside the open editor as the editor controls' description (WP-37 S2)", async () => {
+    const date = field("D1", "Date", { value: "1899-12-31", min: null, max: null, writeEtsId: "D-WRITE" });
+    apiMock.deviceParameters.mockResolvedValue({ ...panel, sections: [{ scope: null, fields: [date] }],
+      lastDownload: { state: "usable", at: "2026-01-05T08:09:10.000Z", differing: [{ refId: "D1", downloaded: "1899-12-30", current: "1899-12-31" }] } });
+    await mount();
+    // Closed row: the plain control carries the description, the editor does not exist yet.
+    expect(editorProps.last).toBeNull();
+    await act(async () => openButtons()[0].click());
+    const note = host.querySelector<HTMLElement>(".parameter-download-note")!;
+    expect(note).not.toBeNull();
+    expect(note.id).not.toBe("");
+    // The caption stays always visible beside the open editor — never focus-only.
+    expect(note.hidden).toBe(false);
+    // The editor host received the caption's id, so its controls describe themselves with it.
+    expect(editorProps.last!.describedBy).toBe(note.id);
+    expect(document.getElementById(note.id)).toBe(note);
+    // The write drops the ref: the caption and with it the link go at once.
+    await act(async () => editorProps.last!.onUpdated({ ...panel, sections: [{ scope: null, fields: [date] }], tree: tree(21) }));
+    expect(host.querySelector(".parameter-download-note")).toBeNull();
+    expect(editorProps.last!.describedBy).toBeUndefined();
+  });
+
+  it("offers no description link when the row does not differ (WP-37 S2)", async () => {
+    apiMock.deviceParameters.mockResolvedValue({ ...panel, sections: [{ scope: null, fields: [field("T1", "Time")] }],
+      lastDownload: { state: "usable", at: "2026-01-05T08:09:10.000Z", differing: [{ refId: "OTHER", downloaded: "1", current: "5" }] } });
+    await mount();
+    await act(async () => openButtons()[0].click());
+    expect(host.querySelector(".parameter-download-note")).toBeNull();
+    expect(editorProps.last!.describedBy).toBeUndefined();
+  });
+
+  it("shows nothing to link for an unusable comparison (WP-37 S2)", async () => {
+    apiMock.deviceParameters.mockResolvedValue({ ...panel, sections: [{ scope: null, fields: [field("T1", "Time")] }],
+      lastDownload: { state: "otherProgram" } });
+    await mount();
+    await act(async () => openButtons()[0].click());
+    expect(host.querySelector(".parameter-download-note")).toBeNull();
+    expect(editorProps.last!.describedBy).toBeUndefined();
   });
 
   it("passes the module scope through for scoped rows", async () => {

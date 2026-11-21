@@ -477,4 +477,27 @@ describe("isolated parameter editor", () => {
     expect(host.textContent).not.toContain("Decimal count");
     expect(props.onApply).not.toHaveBeenCalled();
   });
+  it("WP-37 S2: links the host's describedBy id on the input, slider and both buttons, never in the name", async () => {
+    const describedBy = "download-note-1";
+    const { host } = await mount({ describedBy });
+    const input = host.querySelector<HTMLInputElement>('input[type="text"]')!;
+    expect(input.getAttribute("aria-describedby")).toContain(describedBy);
+    // The existing status description is kept alongside the new id.
+    expect(input.getAttribute("aria-describedby")).toContain("-status");
+    // The accessible name stays the label; the section's aria-label is untouched.
+    expect(host.querySelector("section")!.getAttribute("aria-label")).toBe("Delay");
+    expect(input.getAttribute("aria-label")).toBeNull();
+    for (const button of Array.from(host.querySelectorAll("button"))) {
+      expect(button.getAttribute("aria-describedby")).toBe(describedBy);
+    }
+    // Slider plan: the range input carries the id too.
+    const sliderSource = { ...base.source!, child: "TypeNumber", attributes: { Type: "unsignedInt", UIHint: "Slider", minInclusive: "0", maxInclusive: "100" } };
+    const sliderField = { ...base.field, kind: "Number", min: "0", max: "100" };
+    const slider = await mount({ field: sliderField, source: sliderSource, describedBy });
+    const range = slider.host.querySelector<HTMLInputElement>('input[type="range"]')!;
+    expect(range.getAttribute("aria-describedby")).toBe(describedBy);
+    // Without describedBy nothing is added.
+    const plain = await mount({});
+    expect(plain.host.querySelector<HTMLInputElement>('input[type="text"]')!.getAttribute("aria-describedby")).not.toContain(describedBy);
+  });
 });

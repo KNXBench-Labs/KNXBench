@@ -191,3 +191,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0182](0182-unadmitted-run-state-masks-stay-refused.md) | Unadmitted run-state masks stay refused until a source admits them | Proposed | 2026-11-21 |
 | [0183](0183-prg01-remaining-parameter-policies-need-evidence.md) | Remaining PRG-01 parameter policies wait for evidence, not simulators | Accepted | 2026-11-21 |
 | [0184](0184-prg01-mutation-effects-observation-scope.md) | Mutation-effects observation stays closed until restart-stability evidence exists | Accepted | 2026-11-21 |
+| [0187](0187-download-refusal-categories-have-a-drift-pin.md) | Download refusal categories have a cross-layer drift pin | Accepted | 2026-11-21 |

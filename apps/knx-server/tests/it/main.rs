@@ -8,6 +8,7 @@ mod command_dispatch;
 mod coupler_address;
 mod csv_installation_scope;
 mod device_detail;
+mod download_category_drift;
 mod healthz;
 mod http_achievements;
 mod http_activity_history;

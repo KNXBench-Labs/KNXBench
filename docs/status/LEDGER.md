@@ -476,6 +476,13 @@ new limitation — it is KNX-compatible, hardware-untested. PRG-01 open list
 updated (still open: other object layouts, memory encoding, physical
 function).
 
+## PRG-01-N13: run-state wire-vocabulary drift pin (21 November 2026)
+
+Test-only pin on `work/prg01-n13-20261121` off `origin/main`: a shared
+vocabulary file ties the Rust run-state serializer to the web admission and
+EN/DE message tables ([acceptance](../status/2026-11-21-prg01-n13-run-state-vocabulary-pin.md)).
+No behaviour, KL row or hardware claim changes; PRG-01 stays open.
+
 ## REL-01 decisions complete; Docker signing approved (20 November 2026, second round)
 
 Owner decisions recorded in

@@ -522,3 +522,76 @@ fn an_observed_state_beside_a_differing_machine_is_produced_and_admitted() {
     let admitted: PostDownloadCheck = serde_json::from_value(shared.clone()).unwrap();
     assert_eq!(json_of(&admitted), shared);
 }
+
+/// Every closed run-state vocabulary, matched without wildcards so a new variant fails to compile
+/// here until the shared web vocabulary file and its consumers are updated too.
+fn wire_vocabulary() -> serde_json::Value {
+    fn names<T: Serialize>(values: &[T]) -> Vec<serde_json::Value> {
+        values
+            .iter()
+            .map(|value| serde_json::to_value(value).unwrap())
+            .collect()
+    }
+    use CandidateMismatchKind as Kind;
+    use QualificationReason as Reason;
+    use RunStateCauseCode as Cause;
+    use RunStateCode as Code;
+    use RunStateNotReadReason as NotRead;
+    use RunStateStepCode as Step;
+    let all_code = |code: Code| match code {
+        Code::Halted | Code::Running | Code::Ready => (),
+        Code::Terminated | Code::Starting | Code::ShuttingDown => (),
+    };
+    let all_step = |step: Step| match step {
+        Step::ObjectType | Step::Application | Step::Description | Step::RunState => (),
+    };
+    let all_cause = |cause: Cause| match cause {
+        Cause::Refused
+        | Cause::Malformed
+        | Cause::NoCorrelatedAnswer
+        | Cause::ConnectionLost
+        | Cause::ReadFailed => (),
+    };
+    let all_not_read = |reason: NotRead| match reason {
+        NotRead::UnsupportedMask | NotRead::LoadReadFailed => (),
+    };
+    let all_kind = |kind: Kind| match kind {
+        Kind::ObjectType | Kind::Application => (),
+    };
+    let all_reason = |reason: Reason| match reason {
+        Reason::UnqualifiedElements
+        | Reason::DescriptionProblem
+        | Reason::IndeterminateMetadata
+        | Reason::UnsupportedDatatype => (),
+    };
+    let all_mask = |mask: RunStateMask| match mask {
+        RunStateMask::Exact0700 | RunStateMask::Exact0702 => (),
+    };
+    all_code(Code::Halted);
+    all_step(Step::ObjectType);
+    all_cause(Cause::Refused);
+    all_not_read(NotRead::LoadReadFailed);
+    all_kind(Kind::Application);
+    all_reason(Reason::UnsupportedDatatype);
+    all_mask(RunStateMask::Exact0700);
+    serde_json::json!({
+        "runState": names(&[Code::Halted, Code::Running, Code::Ready, Code::Terminated, Code::Starting, Code::ShuttingDown]),
+        "step": names(&[Step::ObjectType, Step::Application, Step::Description, Step::RunState]),
+        "cause": names(&[Cause::Refused, Cause::Malformed, Cause::NoCorrelatedAnswer, Cause::ConnectionLost, Cause::ReadFailed]),
+        "notReadReason": names(&[NotRead::UnsupportedMask, NotRead::LoadReadFailed]),
+        "candidateMismatchKind": names(&[Kind::ObjectType, Kind::Application]),
+        "qualificationReason": names(&[Reason::UnqualifiedElements, Reason::DescriptionProblem, Reason::IndeterminateMetadata, Reason::UnsupportedDatatype]),
+        "runStateMask": names(&[RunStateMask::Exact0700, RunStateMask::Exact0702]),
+    })
+}
+
+/// The serializer's run-state wire strings equal the shared file the web admission and message
+/// tests iterate, so a renamed or added code cannot reach the web unannounced.
+#[test]
+fn the_run_state_wire_vocabulary_matches_the_shared_web_file() {
+    let shared: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../apps/knx-web/src/postDownloadCheck.vocabulary.json"
+    ))
+    .unwrap();
+    assert_eq!(wire_vocabulary(), shared);
+}

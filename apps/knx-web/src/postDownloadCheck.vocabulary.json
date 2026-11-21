@@ -1,0 +1,9 @@
+{
+  "runState": ["halted", "running", "ready", "terminated", "starting", "shuttingDown"],
+  "step": ["objectType", "application", "description", "runState"],
+  "cause": ["refused", "malformed", "noCorrelatedAnswer", "connectionLost", "readFailed"],
+  "notReadReason": ["unsupportedMask", "loadReadFailed"],
+  "candidateMismatchKind": ["objectType", "application"],
+  "qualificationReason": ["unqualifiedElements", "descriptionProblem", "indeterminateMetadata", "unsupportedDatatype"],
+  "runStateMask": ["0700", "0702"]
+}

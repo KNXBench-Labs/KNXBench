@@ -355,6 +355,12 @@ code is pinned ([contract](../contracts/download-refusal-reason-codes.md),
 [ADR-0185](../adr/0185-download-refusal-classifiers-are-exhaustive.md),
 [status](../status/2026-11-21-prg01-n7-refusal-code-pin.md)). No behaviour change.
 
+## Consumer-consistency pin — PRG-01-N13
+
+A shared vocabulary file pins the post-download run-state wire strings between
+the Rust serializer and the web admission/message tables, test-only
+([acceptance](../status/2026-11-21-prg01-n13-run-state-vocabulary-pin.md)).
+
 ## Boundaries
 
 KNX Secure is excluded. Existing family and recovery gates stay in force; a

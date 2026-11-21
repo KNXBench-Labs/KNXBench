@@ -277,6 +277,11 @@ because a restart may rewrite octets. It names the missing evidence
 [scope contract](../contracts/prg01-mutation-effects-observation-scope.md),
 [ADR-0184](../adr/0184-prg01-mutation-effects-observation-scope.md)). No code changed.
 
+PRG-01-N11 (21 November 2026) hardened the backup file reader: signed or padded hex text
+(for example region octets `+5`) is refused as malformed instead of being read as a number
+([acceptance](../status/2026-11-21-prg01-n11-backup-hex-refusal.md)). Offline pin only; no
+format, consumer or hardware change.
+
 ## Full-product coverage pin debt resolved — 8 November 2026
 
 The owner authorised a new documented characterisation baseline rather than

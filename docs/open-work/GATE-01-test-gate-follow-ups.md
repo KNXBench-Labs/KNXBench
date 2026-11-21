@@ -196,6 +196,15 @@ existing sleep-polled 180 s `settled_slow` budget with all assertions unchanged
 `settled` callers keep 10 s. This closes this flake's deadline question, not the
 scheduler and historical items above.
 
+## C49 test failed in every clean checkout — 21 November 2026
+
+`c49_partial_group_addresses` was a plain `#[test]` that required the env var `C49_PROGRAM_XML`, so
+`rust-tests` exited 101 wherever the private program XML was absent. The hash-pinned program XML is a
+member of a private project container in the local corpus, so the test is now an `OriginalData` corpus
+test (`#[ignore = "requires OriginalData ..."]`) that reads it through
+`knx_testsupport::find_corpus_file`; without the corpus it is reported ignored, and
+`tools/run_corpus_tests.py` selects it and fails loudly if the input is missing. The env var is gone.
+
 ## Known boundary
 
 Killing the stage supervisor with SIGKILL can still orphan children; see the

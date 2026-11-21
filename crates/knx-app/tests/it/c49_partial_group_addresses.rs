@@ -5,13 +5,28 @@ use knx_core::commissioning::partial_memory_download::{derive_partial_plan, Part
 
 const PROGRAM_ID: &str = "M-0006_A-E052-12-3406";
 
+/// Member of the private example project that holds the hash-pinned program XML.
+const PROJECT_FILE: &str = "private example 001.knxproj";
+const PROGRAM_MEMBER: &str = "M-0006/M-0006_A-E052-12-3406.xml";
+
+/// The program XML is private; it is read from the corpus project, never embedded.
 #[test]
+#[ignore = "requires OriginalData private DemoProjects corpus (issue #49 program XML); no hardware"]
 fn the_49_report_plan_reproduces_offline() {
-    let xml_path = std::env::var("C49_PROGRAM_XML").expect("C49_PROGRAM_XML path");
-    let xml = std::fs::read(&xml_path).expect("read program xml");
+    let root = knx_testsupport::workspace_root().join("OriginalData/DemoProjects");
+    let project = knx_testsupport::find_corpus_file(&root, PROJECT_FILE)
+        .expect("private issue #49 project must exist for this ignored test");
+    let file = std::fs::File::open(project).expect("readable private project");
+    let mut archive = zip::ZipArchive::new(file).expect("project container");
+    let mut xml = Vec::new();
+    std::io::Read::read_to_end(
+        &mut archive.by_name(PROGRAM_MEMBER).expect("program XML member"),
+        &mut xml,
+    )
+    .expect("read program xml");
     let dir = tempfile::tempdir().unwrap();
     let conn = knx_productdb::open_and_migrate(&dir.path().join("p.sqlite")).unwrap();
-    knx_productdb::ingest_file(&conn, "M-0006/M-0006_A-E052-12-3406.xml", &xml).unwrap();
+    knx_productdb::ingest_file(&conn, PROGRAM_MEMBER, &xml).unwrap();
     let identity = knx_productdb::query::program_identity(&conn, PROGRAM_ID)
         .unwrap()
         .expect("program identity");

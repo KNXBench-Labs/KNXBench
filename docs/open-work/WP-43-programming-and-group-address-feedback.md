@@ -48,7 +48,9 @@ was bound to the program file `M-0006_A-E052-12-3406.xml`
 (sha256 `3cd53544…`, re-verified against the corpus copy, 6156008 bytes) and its
 plan independently reproduced offline: the partial-group-addresses plan is
 exactly 24 steps and 1020 data octets, no warnings or inferences
-(`crates/knx-app/tests/it/c49_partial_group_addresses.rs`). Tester confirmed the
+(`crates/knx-app/tests/it/c49_partial_group_addresses.rs`, an `OriginalData` corpus test run by
+`python3 tools/run_corpus_tests.py --package knx-app`; it reads the program XML from the private project
+container and is ignored without the corpus). Tester confirmed the
 device works as configured (LED on the new group address, read-only compare
 clean); the unconfirmed restart stays an explicit limitation. Recorded in
 `docs/evidence/tester-report-hager-0701-2026-11-17.json` and added

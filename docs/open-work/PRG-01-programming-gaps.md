@@ -277,6 +277,10 @@ because a restart may rewrite octets. It names the missing evidence
 [scope contract](../contracts/prg01-mutation-effects-observation-scope.md),
 [ADR-0184](../adr/0184-prg01-mutation-effects-observation-scope.md)). No code changed.
 
+PRG-01-N10 (21 November 2026) pinned malformed choose/when input for inactive
+whole-byte selection ([acceptance](../status/2026-11-21-prg01-n10-malformed-choose-when-pins.md)).
+Test-only; no behaviour change, no new policy.
+
 ## Full-product coverage pin debt resolved — 8 November 2026
 
 The owner authorised a new documented characterisation baseline rather than

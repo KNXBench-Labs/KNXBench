@@ -473,16 +473,20 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                         axis_candidate = Some(id.to_owned());
                     }
                 }
-                // WP-05n: a refused axis (Repeat-scoped, placeholder text, a
-                // declared `TextParameterRefId`, unknown attribute, child
-                // content) refuses its whole scope for translation, mirroring
-                // the literal program-tree rule: a sentinel node is appended
-                // to that scope's counted tree, so the source/stored
-                // correspondence check below always fails and no axis of the
-                // scope ever translates. `TextParameterRefId` axes stay
-                // admitted as caption hosts above (ADR-0177); they only
-                // refuse translation, as the query layer would exclude them
-                // anyway.
+                // WP-05n: a refused axis (Repeat-scoped, placeholder text, an
+                // unknown attribute, child content) refuses its whole scope
+                // for translation, mirroring the literal program-tree rule: a
+                // sentinel node is appended to that scope's counted tree, so
+                // the source/stored correspondence check below always fails
+                // and no axis of the scope ever translates. A declared
+                // `TextParameterRefId` alone does NOT refuse the program tree:
+                // ADR-0177 (grid-axis captions) keeps such an axis a bound
+                // caption host there (it resolves from the referenced
+                // parameter), and the query
+                // layer already excludes it from translation candidates, so
+                // sibling axes without a reference still translate. In a
+                // module tree, where no ADR-0177 resolution exists, a ref
+                // axis refuses the scope's translation as before.
                 let axis_refusal = matches!(kind.as_str(), "Row" | "Column")
                     && matches!(
                         parent.map(|p| p.role),
@@ -492,7 +496,8 @@ fn read_grids_within(bytes: &[u8], program: &str, budget: usize) -> Option<Sourc
                         || attr
                             .evidence_value("Text")
                             .is_some_and(|t| !literal_caption(t))
-                        || attr.evidence_value("TextParameterRefId").is_some()
+                        || (attr.evidence_value("TextParameterRefId").is_some()
+                            && !parser_scope.is_empty())
                         || !attr.names().all(|name| {
                             name == "xmlns"
                                 || name.starts_with("xmlns:")

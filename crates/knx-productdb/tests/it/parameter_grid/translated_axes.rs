@@ -730,3 +730,40 @@ fn module_scoped_axis_drift_refuses_only_that_scope() {
     );
     println!("WP05_CELL|pdb|scoped-drift|complete");
 }
+
+/// WP-05n: a `TextParameterRefId` axis is a bound caption host in the program tree
+/// (siblings still translate), but refuses its whole scope in a module tree.
+#[test]
+fn text_parameter_ref_axis_refuses_module_scope_only() {
+    let program_ref = AXES.replace(
+        "Text=\"North\"",
+        "Text=\"North\" TextParameterRefId=\"P-1_R-1\"",
+    );
+    let fixture = ingest(&program_ref, MODULE_AXES);
+    translation(&fixture.conn, "A-1", "AX-R2", "de-DE", "Sued");
+    translation(&fixture.conn, "A-1", "AX-R9", "de-DE", "Nord");
+    let program = project_scope(&fixture.conn, "", Some("de-DE"));
+    // The ref-bearing axis is never a translation candidate; its sibling is.
+    assert_eq!(
+        program.texts,
+        std::collections::HashMap::from([(("".to_owned(), "AX-R2".to_owned()), "Sued".to_owned())])
+    );
+
+    let module_ref = MODULE_AXES.replace(
+        "Text=\"Module north\"",
+        "Text=\"Module north\" TextParameterRefId=\"MD-1_P-1_R-1\"",
+    );
+    let fixture = ingest(AXES, &module_ref);
+    module_translation(&fixture.conn, "A-1", "MD-1_AX-C8", "de-DE", "Modul eingang");
+    translation(&fixture.conn, "A-1", "AX-R2", "de-DE", "Sued");
+    // Module scope: the sentinel refuses every axis of that scope, siblings included.
+    assert!(project_scope(&fixture.conn, "MD-1", Some("de-DE"))
+        .texts
+        .is_empty());
+    // The refusal never leaks into the program tree.
+    assert_eq!(
+        project_scope(&fixture.conn, "", Some("de-DE")).texts,
+        std::collections::HashMap::from([(("".to_owned(), "AX-R2".to_owned()), "Sued".to_owned())])
+    );
+    println!("WP05_CELL|pdb|ref-axis-scope|complete");
+}

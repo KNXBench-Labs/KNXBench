@@ -149,4 +149,3 @@ snapshot binding then let it clear newer pending parts. The matching in §3 is t
 - Scope: parameters or links a partial scope does not write are not part of that scope's
   digest; a change to them leaves that scope's report valid and those parts are not cleared by
   it anyway.
-

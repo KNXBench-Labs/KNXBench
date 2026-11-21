@@ -371,10 +371,15 @@ fn tcp_refused_memory_read_is_not_a_success_and_settles_without_replay() {
 #[test]
 fn refused_tcp_uses_a_reserved_port_and_never_falls_back_to_udp() {
     let fixture = fixture();
-    let reserved = tokio::net::TcpSocket::new_v4().unwrap();
-    reserved.bind((Ipv4Addr::LOCALHOST, 0).into()).unwrap();
+    let (reserved, udp) = knx_testsupport::with_udp_trap(
+        || {
+            let socket = tokio::net::TcpSocket::new_v4().unwrap();
+            socket.bind((Ipv4Addr::LOCALHOST, 0).into()).unwrap();
+            socket
+        },
+        |socket| socket.local_addr().unwrap(),
+    );
     let addr = reserved.local_addr().unwrap();
-    let udp = UdpSocket::bind(addr).unwrap();
     udp.set_nonblocking(true).unwrap();
     let output = collect(&mut command(&fixture, &addr.to_string(), Some("tcp")));
     failed(&output);
@@ -426,10 +431,9 @@ fn default_and_explicit_udp_select_udp_handshake_only_not_a_complete_comparison(
 #[test]
 fn malformed_transport_refuses_before_project_product_history_io_or_contact() {
     let fixture = fixture();
-    let tcp = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+    let (tcp, udp) = knx_testsupport::tcp_listener_with_udp_trap();
     let addr = tcp.local_addr().unwrap();
     tcp.set_nonblocking(true).unwrap();
-    let udp = UdpSocket::bind(addr).unwrap();
     udp.set_nonblocking(true).unwrap();
     for (flags, expected) in [
         (vec!["--tunnel-transport"], "needs a value"),

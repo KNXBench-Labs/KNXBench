@@ -604,12 +604,12 @@ async fn real_tcp_gateway_sees_the_exact_handshake_group_write_and_orderly_close
 #[tokio::test]
 async fn a_refused_tcp_connect_is_an_error_and_sends_nothing_over_udp() {
     // Take a free TCP port, then close it so nothing listens there.
-    let port = {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        listener.local_addr().unwrap().port()
-    };
-    // A UDP listener on the same port number sees any fallback datagram.
-    let udp = UdpSocket::bind(("127.0.0.1", port)).await.unwrap();
+    // A UDP trap on the same port number sees any fallback datagram.
+    let (listener, udp) = knx_testsupport::tcp_listener_with_udp_trap();
+    let port = listener.local_addr().unwrap().port();
+    drop(listener);
+    udp.set_nonblocking(true).unwrap();
+    let udp = UdpSocket::from_std(udp).unwrap();
     let state = Arc::new(AppState::default());
     let app = knx_server::app(state.clone(), None);
     let (status, body) = call(

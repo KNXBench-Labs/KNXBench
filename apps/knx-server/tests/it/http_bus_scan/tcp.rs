@@ -481,6 +481,17 @@ async fn dropped_start_and_shutdown_during_pending_connect_dispose_the_late_tunn
     }
 }
 
+/// A tokio TCP listener plus a same-port UDP trap that survives port collisions.
+fn tcp_gateway_with_udp_trap() -> (TcpListener, UdpSocket) {
+    let (listener, trap) = knx_testsupport::tcp_listener_with_udp_trap();
+    listener.set_nonblocking(true).unwrap();
+    trap.set_nonblocking(true).unwrap();
+    (
+        TcpListener::from_std(listener).unwrap(),
+        UdpSocket::from_std(trap).unwrap(),
+    )
+}
+
 async fn frame(stream: &mut TcpStream) -> Vec<u8> {
     let mut header = [0; 6];
     tokio::time::timeout(WAIT, stream.read_exact(&mut header))
@@ -569,9 +580,8 @@ async fn http(
 #[tokio::test]
 async fn real_http_recorded_tcp_dd0_exclusions_live_skips_cancel_and_confirmed_cleanup() {
     for cancel in [false, true] {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let (listener, trap) = tcp_gateway_with_udp_trap();
         let gateway = listener.local_addr().unwrap();
-        let trap = UdpSocket::bind(gateway).await.unwrap();
         let release = Arc::new(Notify::new());
         let ready = Arc::new(Notify::new());
         let peer_release = release.clone();
@@ -778,9 +788,8 @@ async fn real_http_recorded_tcp_dd0_exclusions_live_skips_cancel_and_confirmed_c
 #[tokio::test]
 async fn real_tcp_silence_is_vacant_confirmation_is_silent_and_bad_peers_retain_skips() {
     for mode in ["silence", "confirmation", "eof", "malformed"] {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let (listener, trap) = tcp_gateway_with_udp_trap();
         let gateway = listener.local_addr().unwrap();
-        let trap = UdpSocket::bind(gateway).await.unwrap();
         let peer = tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
             assert_eq!(frame(&mut stream).await, CONNECT);
@@ -855,9 +864,8 @@ async fn real_tcp_silence_is_vacant_confirmation_is_silent_and_bad_peers_retain_
 #[tokio::test]
 async fn real_tcp_refusal_handshake_eof_and_connect_refused_never_fall_back_to_udp() {
     for mode in ["refused", "eof", "no-listener"] {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let (listener, trap) = tcp_gateway_with_udp_trap();
         let gateway = listener.local_addr().unwrap();
-        let trap = UdpSocket::bind(gateway).await.unwrap();
         let peer = if mode == "no-listener" {
             drop(listener);
             None

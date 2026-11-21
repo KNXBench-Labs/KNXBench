@@ -205,6 +205,17 @@ test (`#[ignore = "requires OriginalData ..."]`) that reads it through
 `knx_testsupport::find_corpus_file`; without the corpus it is reported ignored, and
 `tools/run_corpus_tests.py` selects it and fails loudly if the input is missing. The env var is gone.
 
+## Simulated TCP gateway AddrInUse flake — 21 November 2026
+
+Simulated KNXnet/IP TCP gateways bound a TCP listener on an ephemeral port and then
+`UdpSocket::bind` the same port number as a trap for any UDP fallback. When another process or test
+already held that UDP port number, the `.unwrap()` panicked with `AddrInUse` (for example in the
+`cli_bus_tcp` probe peer) and the gate failed intermittently. All such fixtures in `knx-cli` and
+`knx-server` now use `knx_testsupport::tcp_listener_with_udp_trap` / `with_udp_trap`, which drop the
+TCP candidate and retry with a fresh port (64 attempts, then a clear panic). A unit test forces the
+collision path. Fixtures that already retried (`find_serial`, `scan`, `diagnostics` reserved-port
+cases) and the reverse-order UDP-first site in `compare.rs` are unchanged.
+
 ## Known boundary
 
 Killing the stage supervisor with SIGKILL can still orphan children; see the

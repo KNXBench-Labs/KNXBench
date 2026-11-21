@@ -4,7 +4,9 @@ use std::path::{Path, PathBuf};
 
 mod link_adoption;
 pub use link_adoption::{LINK_ADOPTION_HARDWARE_XML, LINK_ADOPTION_PROGRAM_XML};
+mod loopback;
 pub mod vendor_plugin;
+pub use loopback::{tcp_listener_with_udp_trap, with_udp_trap};
 
 /// Synthetic repeated Module fixture with canonical Dynamic ancestors (ADR-0107).
 pub const REPEATED_INSTANCE_PROGRAM_XML: &str = r#"<KNX xmlns="http://knx.org/xml/project/23">

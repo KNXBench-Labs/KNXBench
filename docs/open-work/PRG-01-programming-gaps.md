@@ -358,7 +358,8 @@ code, KL row or hardware claim changes in N15 (KNX-compatible, hardware-untested
 
 Cross-slice follow-up (not PRG-01 scope, not fixed here): the knx-cli test
 `cli_bus_tcp::system2_validation::admission::tcp_connection_refusal_never_falls_back_and_udp_controls_are_handshake_only`
-is flaky (AddrInUse in the probe peer helper; isolated reruns green).
+was flaky (AddrInUse in the probe peer helper); fixed by the shared
+loopback trap helper ([GATE-01](GATE-01-test-gate-follow-ups.md)).
 
 ## Full-product coverage pin debt resolved — 8 November 2026
 

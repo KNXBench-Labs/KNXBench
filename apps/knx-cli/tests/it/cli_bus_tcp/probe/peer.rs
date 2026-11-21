@@ -10,7 +10,7 @@ use knx_net::{
 };
 use std::{
     io::{Read, Write},
-    net::{Ipv4Addr, Shutdown, SocketAddr, TcpListener, TcpStream, UdpSocket},
+    net::{Shutdown, SocketAddr, TcpListener, TcpStream, UdpSocket},
     thread,
     time::{Duration, Instant},
 };
@@ -27,9 +27,8 @@ pub(in super::super) fn gateway(
     assigned: u8,
     script: impl FnOnce(&mut Peer) + Send + 'static,
 ) -> (SocketAddr, Joined<Wire>, Trap) {
-    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+    let (listener, udp) = knx_testsupport::tcp_listener_with_udp_trap();
     let addr = listener.local_addr().unwrap();
-    let udp = UdpSocket::bind(addr).unwrap();
     udp.set_nonblocking(true).unwrap();
     listener.set_nonblocking(true).unwrap();
     let trap = Trap {

@@ -14,7 +14,7 @@ use knx_app::system2_validation_preparation::{
 };
 use knx_net::commissioning::simulator::{Seen, SimulatedDevice};
 use std::{
-    net::{Ipv4Addr, TcpListener, UdpSocket},
+    net::{Ipv4Addr, TcpListener},
     path::PathBuf,
     process::Command,
     sync::Arc,
@@ -220,10 +220,9 @@ fn tcp_rejection_never_falls_back_and_udp_controls_are_handshake_only() {
 #[test]
 fn consent_and_overwrite_gates_hold_before_any_connection() {
     let f = inputs();
-    let tcp = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+    let (tcp, udp) = knx_testsupport::tcp_listener_with_udp_trap();
     tcp.set_nonblocking(true).unwrap();
     let addr = tcp.local_addr().unwrap();
-    let udp = UdpSocket::bind(addr).unwrap();
     udp.set_nonblocking(true).unwrap();
     let wrong = f.command(&addr.to_string(), Some("tcp"));
     let args: Vec<_> = wrong.get_args().map(|a| a.to_os_string()).collect();

@@ -255,6 +255,20 @@ binding is claimed. This is not fresh current-main or hardware acceptance.
 do not prove retention through Unload, allocation, task control or Restart.
 Broader inactive/default/Union/customer-write rules and PRG-01 remain open.
 
+## Bounded increment — PRG-01-N3: module-local Options admission (2026-11-20)
+
+The [N3 contract](../contracts/customer-adjustable-module-options.md), the
+[evidence note](../research/2026-11-20-module-local-options-admission.md) and
+[ADR-0181](../adr/0181-module-local-options-customer-adjustable.md) admit
+`CustomerAdjustableParameters` on a module definition's own `Static/Options`
+(new closed context class `ModuleOptions`); the parser walk is unchanged. The public writer refusal category
+`customer-adjustable-parameters` gains a `module Options` count; read-only
+preparation is unchanged. Acceptance record:
+[2026-11-20 module-local-options admission](../status/2026-11-20-module-local-options-admission.md).
+Wrapper, `Dynamic`/`Extension`, extra-`Static` and foreign-prefixed shapes stay
+excluded matcher limits. This is not hardware acceptance, not ETS
+customer-write semantics and not a closure of PRG-01.
+
 ## Scoping record — PRG-01-N4 (21 November 2026)
 
 Remaining 070nh masks, other object layouts and memory run-state encoding have no
@@ -272,7 +286,9 @@ source evidence; only their refusal is simulator-verifiable and is now pinned
   Other object layouts, memory encoding and physical function remain unproved.
 - Parameter policies beyond the bounded whole-byte transfer contract: physical
   inactive-byte survival, broader inactive/default semantics, editable Dynamic,
-  `Union` and customer-write rules remain unresolved.
+  `Union` and customer-write rules remain unresolved (module-local Options are
+  now an admitted refusal context per PRG-01-N3; the remaining excluded
+  customer-adjustable shapes stay matcher limits).
 - Complete mutation effects and whole-mutation recovery contracts.
 
 PRG-01-N5 (21 November 2026) inventoried these remaining parameter-policy items

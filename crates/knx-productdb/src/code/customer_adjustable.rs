@@ -18,8 +18,10 @@ pub enum CustomerAdjustableContext {
     ModuleParameter,
     /// A direct Union member in that module's own Static/Parameters.
     ModuleUnionParameter,
-    /// An own root Static/Options declaration (module Options are excluded).
+    /// An own root Static/Options declaration.
     RootOptions,
+    /// An Options declaration directly inside an explicitly entered module definition's own Static.
+    ModuleOptions,
 }
 
 /// Payload-free summary used by write refusal and its public consumers.
@@ -35,6 +37,8 @@ pub struct CustomerAdjustableCounts {
     pub module_union_parameters: usize,
     /// Root Options declarations.
     pub root_options: usize,
+    /// Module-local Options declarations.
+    pub module_options: usize,
 }
 
 impl CustomerAdjustableCounts {
@@ -45,6 +49,7 @@ impl CustomerAdjustableCounts {
             + self.module_parameters
             + self.module_union_parameters
             + self.root_options
+            + self.module_options
     }
 }
 
@@ -69,6 +74,7 @@ impl CustomerAdjustableDeclarations {
                     counts.module_union_parameters += 1
                 }
                 CustomerAdjustableContext::RootOptions => counts.root_options += 1,
+                CustomerAdjustableContext::ModuleOptions => counts.module_options += 1,
             }
         }
         counts
@@ -92,7 +98,10 @@ impl CustomerAdjustableDeclarations {
     }
 
     fn attribute(context: CustomerAdjustableContext) -> &'static str {
-        if context == CustomerAdjustableContext::RootOptions {
+        if matches!(
+            context,
+            CustomerAdjustableContext::RootOptions | CustomerAdjustableContext::ModuleOptions
+        ) {
             "CustomerAdjustableParameters"
         } else {
             "CustomerAdjustable"
@@ -270,6 +279,17 @@ impl Parser<'_> {
                 }
                 (ModuleScope::Static, "Parameters") => {
                     Some((ModuleScope::Parameters, Occurrence::Parameters(index)))
+                }
+                (ModuleScope::Static, "Options") => {
+                    // ADR-0181: a module-local Options declaration is an admitted
+                    // context, not a skipped sibling.
+                    code.customer_adjustable.observe_child(
+                        &child,
+                        CustomerAdjustableContext::ModuleOptions,
+                        *parent,
+                        Occurrence::Options(index),
+                    );
+                    None
                 }
                 (ModuleScope::Parameters, "Union") => {
                     Some((ModuleScope::Union, Occurrence::Union(index)))

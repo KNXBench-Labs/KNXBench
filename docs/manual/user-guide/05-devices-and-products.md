@@ -578,7 +578,7 @@ the dot too. Open the object to see the details above its editor: links added
 since, links removed since (struck through), changed directions, and the flags
 at that download. A line above the table counts the differing objects, says
 how many the current filters or collapsed groups hide and how many have no row
-in the table, and when links and flags were last compared, or why one of them
+in the table (a second line lists those object numbers, ten at most), and when links and flags were last compared, or why one of them
 cannot be compared. Links follow the Group addresses part, flags the
 Parameters part, so one can be comparable while the other is not. Limits as
 above: what the download wrote, not a device read; group address views show no

@@ -329,8 +329,13 @@ description after the name.
   raw value in a sending-direction difference; a summary line above the views
   reports the count and the links state. Web-only change in `apps/knx-web`;
   no new baseline, API or schema.
-- Differences on object numbers without a selected project row are counted in
-  the communication-object summary, not listed.
+- ~~Differences on object numbers without a selected project row were counted,
+  not listed~~ **shipped 21 November 2026 (S3)**: a second line under the
+  communication-object summary lists them from the server's `differing`
+  entries with `instance_id: null`: “Object numbers without a row: 12
+  (links), 17 (flags), 40 (links and flags)”; at most ten, then “+N more”.
+  Nothing is listed for an unusable comparison. Web only; the count sentence
+  is unchanged and no API or schema change.
 - ~~Module-scoped parameters (no baseline until module downloads exist)~~
   **shipped 17 November 2026**: a completed download's settlement now records
   the module-scoped values it wrote as `scoped_values` keyed

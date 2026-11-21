@@ -3,6 +3,8 @@
 use super::*;
 #[path = "device_download_check_0700_tests.rs"]
 mod exact0700;
+#[path = "device_download_check_0702_tests.rs"]
+mod exact0702;
 use std::future::Future;
 use std::pin::Pin;
 use std::time::Duration;

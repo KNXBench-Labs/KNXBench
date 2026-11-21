@@ -330,6 +330,56 @@
           "readFailed"
         ]
       ]
+    },
+    {
+      "name": "0702Marker_runStateRunning",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0702"
+        ]
+      ]
+    },
+    {
+      "name": "0702Marker_runStateUndefined",
+      "fixture": "runStateUndefined",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0702"
+        ]
+      ]
+    },
+    {
+      "name": "0702Marker_runStateCandidateMismatch",
+      "fixture": "runStateCandidateMismatch",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0702"
+        ]
+      ]
+    },
+    {
+      "name": "0702Marker_runStateLoadFailed",
+      "fixture": "runStateLoadFailed",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0702"
+        ]
+      ]
+    },
+    {
+      "name": "0702Description_connectionLost",
+      "fixture": "exact0702DescriptionUnavailable",
+      "set": [
+        [
+          "/observation/reach/identity/runState/cause",
+          "connectionLost"
+        ]
+      ]
     }
   ],
   "refused": [
@@ -1817,6 +1867,76 @@
             "reason": "unsupportedDatatype",
             "pdt": 2
           }
+        ]
+      ]
+    },
+    {
+      "name": "0702InvalidMarker_None",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          null
+        ]
+      ]
+    },
+    {
+      "name": "0702InvalidMarker_702_int",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          702
+        ]
+      ]
+    },
+    {
+      "name": "0702InvalidMarker_0701",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0701"
+        ]
+      ]
+    },
+    {
+      "name": "0702InvalidMarker_0705",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0705"
+        ]
+      ]
+    },
+    {
+      "name": "0702InvalidMarker_702_str",
+      "fixture": "runStateRunning",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "702"
+        ]
+      ]
+    },
+    {
+      "name": "0702MarkerUnsupportedMask",
+      "fixture": "runStateUnsupportedMask",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          "0702"
+        ]
+      ]
+    },
+    {
+      "name": "0702MissingMarker_descriptionProblem",
+      "fixture": "exact0702DescriptionProblem",
+      "set": [
+        [
+          "/observation/reach/identity/runStateMask",
+          null
         ]
       ]
     }

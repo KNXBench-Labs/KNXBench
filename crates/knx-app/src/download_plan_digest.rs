@@ -136,8 +136,10 @@ pub fn plan_content_digest(prepared: &PreparedDownload) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use knx_core::commissioning::load_control_memory::event_record;
     use knx_core::commissioning::load_control_memory::MemoryLoadStateMachine;
-    use knx_core::commissioning::load_state::MaskVersion;
+    use knx_core::commissioning::load_state::{LoadEvent, MaskVersion};
+    use knx_core::commissioning::memory_download::ExemplarSerial;
 
     fn plan(address: u16, octets: &[u8]) -> MemoryDownloadPlan {
         MemoryDownloadPlan {
@@ -219,6 +221,137 @@ mod tests {
         assert_ne!(
             plan_digest(&one, "P", "complete"),
             plan_digest(&two, "P", "complete")
+        );
+    }
+
+    fn step_digest(step: MemoryDownloadStep) -> String {
+        let plan = MemoryDownloadPlan {
+            mask: MaskVersion(0x0701),
+            manufacturer: 0xFFF6,
+            steps: vec![step],
+        };
+        plan_digest(&plan, "P", "complete")
+    }
+
+    fn distinct(kind: &str, variants: Vec<MemoryDownloadStep>) {
+        let count = variants.len();
+        let digests: std::collections::BTreeSet<_> =
+            variants.into_iter().map(step_digest).collect();
+        assert_eq!(
+            digests.len(),
+            count,
+            "{kind}: a hashed field did not change the digest"
+        );
+    }
+
+    #[test]
+    fn every_hashed_field_of_every_step_kind_changes_the_digest() {
+        use MemoryDownloadStep as S;
+        let record = |event| event_record(MemoryLoadStateMachine::AddressTable, event).unwrap();
+        distinct(
+            "Connect/Restart/Disconnect",
+            vec![S::Connect, S::Restart, S::Disconnect],
+        );
+        let cmp = |o, p, d: &[u8]| S::CompareProperty {
+            object_index: o,
+            property_id: p,
+            inline_data: d.to_vec(),
+        };
+        distinct(
+            "CompareProperty",
+            vec![
+                cmp(0, 1, &[1]),
+                cmp(1, 1, &[1]),
+                cmp(0, 2, &[1]),
+                cmp(0, 1, &[2]),
+                cmp(0, 1, &[1, 1]),
+            ],
+        );
+        distinct(
+            "Delay",
+            vec![S::Delay { milliseconds: 1 }, S::Delay { milliseconds: 2 }],
+        );
+        let wp = |o, p, d: &[u8]| S::WriteProperty {
+            object_index: o,
+            property_id: p,
+            inline_data: d.to_vec(),
+        };
+        distinct(
+            "WriteProperty",
+            vec![
+                wp(0, 1, &[1]),
+                wp(1, 1, &[1]),
+                wp(0, 2, &[1]),
+                wp(0, 1, &[2]),
+                wp(0, 1, &[1, 1]),
+            ],
+        );
+        let mr = |e, o, p, c| S::MasterResetCommand {
+            erase_code: e,
+            object_index: o,
+            property_id: p,
+            command: c,
+        };
+        distinct(
+            "MasterResetCommand",
+            vec![
+                mr(1, 2, 3, 4),
+                mr(9, 2, 3, 4),
+                mr(1, 9, 3, 4),
+                mr(1, 2, 9, 4),
+                mr(1, 2, 3, 9),
+            ],
+        );
+        let wpp = |o, p, e, oc: &[u8], ow: &[u8]| S::WritePropertyParameters {
+            object_index: o,
+            property_id: p,
+            elements: e,
+            octets: oc.to_vec(),
+            owned: ow.to_vec(),
+        };
+        distinct(
+            "WritePropertyParameters",
+            vec![
+                wpp(1, 2, 3, &[4], &[5]),
+                wpp(9, 2, 3, &[4], &[5]),
+                wpp(1, 9, 3, &[4], &[5]),
+                wpp(1, 2, 9, &[4], &[5]),
+                wpp(1, 2, 3, &[9], &[5]),
+                wpp(1, 2, 3, &[4], &[9]),
+            ],
+        );
+        distinct(
+            "LoadRecord",
+            vec![
+                S::LoadRecord(record(LoadEvent::Unload)),
+                S::LoadRecord(record(LoadEvent::StartLoading)),
+                S::LoadRecord(
+                    event_record(MemoryLoadStateMachine::PeiProgram, LoadEvent::Unload).unwrap(),
+                ),
+            ],
+        );
+        let wm = |a, o: &[u8]| S::WriteMemory {
+            address: a,
+            octets: o.to_vec(),
+        };
+        distinct("WriteMemory", vec![wm(1, &[1]), wm(2, &[1]), wm(1, &[2])]);
+        distinct(
+            "RequireLoaded",
+            MemoryLoadStateMachine::ALL
+                .iter()
+                .map(|m| S::RequireLoaded(*m))
+                .collect(),
+        );
+        let ex = |n: u8| S::RequireExemplar(ExemplarSerial::new([n, 2, 3, 4, 5, 6]));
+        let last = S::RequireExemplar(ExemplarSerial::new([1, 2, 3, 4, 5, 9]));
+        distinct("RequireExemplar", vec![ex(1), ex(2), last]);
+    }
+
+    #[test]
+    fn the_digest_of_a_small_fixed_plan_is_pinned() {
+        assert_eq!(
+            plan_digest(&plan(0x4000, &[1, 2, 3]), "P", "complete"),
+            "7b2865b60bd5188c678fb06d6607b9011159fe1b79120ee103bbab0946f30d56"
         );
     }
 }

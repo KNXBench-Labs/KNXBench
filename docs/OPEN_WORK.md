@@ -6,6 +6,7 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 
 | ID | Task | Status | Details |
 | --- | --- | --- | --- |
+| WP-48 | Recent-change correctness and regression-test audit (since 14 November 2026) | Planned: 16 source-confirmed findings (3 P1, 12 P2, 1 P3) and six verification-lead groups; nine bounded corrective slices, awaiting implementation Go; no runtime fix or hardware authorization | [WP-48](open-work/WP-48-recent-change-correctness-audit.md) |
 | WP-43 | Programming and group-address feedback (#49–#52) | COMPLETE on main: A1 (#52) PR !55; C (#49) evidence verified (`partial-group-addresses` verified for M-0006_A-E052-12-3406); B (#51) `2a5f122be` PR !55, issue closed; A2 (#50) `f6b14780f` PR !99 (ADR-0179), issue closed | [WP-43](open-work/WP-43-programming-and-group-address-feedback.md) |
 | WP-42 | Device configuration modules: declarative data packages for own-firmware device configuration | WP-42.1 format, engine and CLI delivered; WP-42.2 project storage and WP-42.3 editor not started | [WP-42](open-work/WP-42-device-configuration-modules.md) |
 | WP-26 | Bus-connection drop-up with connect button in the status bar | IP and Linux transparent TP-UART settings/footer/monitor and the explicit passive Linux USB-serial candidate listing ship in Alpha 20; the listing is not a complete USB census or compatibility check; the session-bound download-holder stop ships in Alpha 21; wider hardware and protocol limits remain open | [WP-26](open-work/WP-26-status-bar-bus-connection.md) |

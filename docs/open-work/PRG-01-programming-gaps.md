@@ -269,6 +269,14 @@ missing evidence per item ([research](../research/2026-11-21-prg01-n5-remaining-
 [ADR-0183](../adr/0183-prg01-remaining-parameter-policies-need-evidence.md)).
 No code or runtime claim changed.
 
+PRG-01-N6 (21 November 2026) examined the mutation-effects axis (post-restart memory
+comparison, further declared forms, other layouts) and found none simulator-verifiable
+without inventing semantics; the post-download check deliberately reads no memory
+because a restart may rewrite octets. It names the missing evidence
+([research](../research/2026-11-21-prg01-n6-mutation-effects-observation.md),
+[scope contract](../contracts/prg01-mutation-effects-observation-scope.md),
+[ADR-0184](../adr/0184-prg01-mutation-effects-observation-scope.md)). No code changed.
+
 ## Full-product coverage pin debt resolved — 8 November 2026
 
 The owner authorised a new documented characterisation baseline rather than

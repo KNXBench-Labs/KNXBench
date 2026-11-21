@@ -187,6 +187,7 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0178](0178-rel01-catalogue-defines-the-beta-exit.md) | The REL-01 catalogue defines the beta exit | Accepted | 2026-11-20 |
 | [0179](0179-external-cli-download-reconciliation.md) | An external CLI download report reconciles pending marks only on authoritative match | Proposed | 2026-11-20 |
 | [0180](0180-exact-0702h-run-state-observation.md) | Exact `0702h` joins the descriptor-qualified run-state observation | Accepted | 2026-11-20 |
+| [0181](0181-module-local-options-customer-adjustable.md) | Module-local Options joins the bounded customer-adjustable refusal | Proposed | 2026-11-20 |
 | [0182](0182-unadmitted-run-state-masks-stay-refused.md) | Unadmitted run-state masks stay refused until a source admits them | Proposed | 2026-11-21 |
 | [0183](0183-prg01-remaining-parameter-policies-need-evidence.md) | Remaining PRG-01 parameter policies wait for evidence, not simulators | Accepted | 2026-11-21 |
 | [0184](0184-prg01-mutation-effects-observation-scope.md) | Mutation-effects observation stays closed until restart-stability evidence exists | Accepted | 2026-11-21 |

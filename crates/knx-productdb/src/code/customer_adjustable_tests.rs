@@ -424,7 +424,7 @@ fn foreign_attributes_alone_never_match_and_unqualified_wins_both_orders() {
 }
 
 #[test]
-fn excluded_descendants_and_module_options_do_not_acquire_the_new_category() {
+fn excluded_descendants_still_do_not_acquire_the_new_category() {
     let parameter =
         r#"<Parameters><Parameter Id="p" CustomerAdjustable="privateSentinel" /></Parameters>"#;
     for body in [
@@ -434,14 +434,71 @@ fn excluded_descendants_and_module_options_do_not_acquire_the_new_category() {
         format!("<Static><Parameters><Wrapper>{parameter}</Wrapper></Parameters></Static>"),
         format!("<ModuleDefs><ModuleDef><Wrapper><Static>{parameter}</Static></Wrapper></ModuleDef></ModuleDefs>"),
         format!("<ModuleDefs><Wrapper><ModuleDef><Static>{parameter}</Static></ModuleDef></Wrapper></ModuleDefs>"),
-        r#"<ModuleDefs><ModuleDef><Static><Options CustomerAdjustableParameters="Sync" /></Static></ModuleDef></ModuleDefs>"#.into(),
+        // Still excluded: Options below a module's own Dynamic/Extension or
+        // behind a wrapper, and a root Options nested under anything but Static.
         format!("<ModuleDefs><ModuleDef><Dynamic>{parameter}</Dynamic><Static><Extension>{parameter}</Extension></Static></ModuleDef></ModuleDefs>"),
-        r#"<Options CustomerAdjustableParameters="Sync" />"#.into(),
+        r#"<ModuleDefs><ModuleDef><Dynamic><Options CustomerAdjustableParameters="Sync" /></Dynamic></ModuleDef></ModuleDefs>"#.to_string(),
+        r#"<ModuleDefs><ModuleDef><Static><Wrapper><Options CustomerAdjustableParameters="Sync" /></Wrapper></Static></ModuleDef></ModuleDefs>"#.to_string(),
+        r#"<ModuleDefs><ModuleDef><Extension><Options CustomerAdjustableParameters="Sync" /></Extension></ModuleDef></ModuleDefs>"#.to_string(),
+        r#"<Static><Wrapper><Options CustomerAdjustableParameters="Sync" /></Wrapper></Static>"#.to_string(),
+        // A Static nested inside a Static is never entered (ADR-0181 keeps the
+        // parser walk unchanged): neither its Options nor a ModuleDefs below it
+        // are observed, and an extra Static inside a module stays unobserved.
+        r#"<Static><Static><Options CustomerAdjustableParameters="Sync" /></Static></Static>"#.to_string(),
+        r#"<Static><Static><ModuleDefs><ModuleDef><Static><Options CustomerAdjustableParameters="Sync" /></Static></ModuleDef></ModuleDefs></Static></Static>"#.to_string(),
+        r#"<Static><Static><Parameters><Parameter Id="p" CustomerAdjustable="Sync" /></Parameters></Static></Static>"#.to_string(),
+        r#"<ModuleDefs><ModuleDef><Static><Static><Options CustomerAdjustableParameters="Sync" /></Static></Static></ModuleDef></ModuleDefs>"#.to_string(),
     ] {
         let code = parse(&body);
+        assert_eq!(code.customer_adjustable.counts().module_options, 0, "{body}");
         assert_eq!(code.customer_adjustable.counts().total(), 0, "{body}");
         assert!(check_customer_adjustable(&code).is_ok());
     }
+}
+
+#[test]
+fn module_local_options_are_an_admitted_context_in_both_anchors() {
+    let options = r#"<Options CustomerAdjustableParameters="privateSentinel" />"#;
+    for body in [
+        format!("<ModuleDefs><ModuleDef><Static>{options}</Static></ModuleDef></ModuleDefs>"),
+        format!("<Static><ModuleDefs><ModuleDef><Static>{options}</Static></ModuleDef></ModuleDefs></Static>"),
+        // Nested admitted ModuleDef edges keep the rule (ADR-0181).
+        format!("<ModuleDefs><ModuleDef><ModuleDefs><ModuleDef><Static>{options}</Static></ModuleDef></ModuleDefs></ModuleDef></ModuleDefs>"),
+        format!("<ModuleDefs><ModuleDef><Static><ModuleDefs><ModuleDef><Static>{options}</Static></ModuleDef></ModuleDefs></Static></ModuleDef></ModuleDefs>"),
+    ] {
+        let code = parse(&body);
+        let counts = code.customer_adjustable.counts();
+        assert_eq!(counts.module_options, 1, "{body}");
+        assert_eq!(counts.total(), 1, "{body}");
+        assert!(matches!(
+            check_customer_adjustable(&code),
+            Err(DownloadPlanError::CustomerAdjustableParameters(c)) if c.module_options == 1
+        ));
+    }
+    // Every present value refuses equally; the token stays private.
+    for value in ["", "false", "Sync", "true"] {
+        let body = format!(
+            "<ModuleDefs><ModuleDef><Static><Options CustomerAdjustableParameters=\"{value}\" /></Static></ModuleDef></ModuleDefs>"
+        );
+        let code = parse(&body);
+        assert_eq!(code.customer_adjustable.counts().module_options, 1);
+        let error = check_customer_adjustable(&code).unwrap_err();
+        let shown = format!("{error}");
+        assert!(shown.contains("module Options: 1"), "{shown}");
+        assert!(!shown.contains(value) || value.is_empty(), "{shown}");
+    }
+    // The unqualified key only; a foreign-prefixed attribute never matches.
+    let code = parse(
+        r#"<ModuleDefs><ModuleDef><Static><Options xmlns:x="urn:foreign" x:CustomerAdjustableParameters="Sync" /></Static></ModuleDef></ModuleDefs>"#,
+    );
+    assert_eq!(code.customer_adjustable.counts().total(), 0);
+    assert!(check_customer_adjustable(&code).is_ok());
+    // A markerless module Options next to a marker one does not erase it.
+    let code = parse(
+        r#"<ModuleDefs><ModuleDef><Static><Options CustomerAdjustableParameters="privateSentinel" /><Options /></Static></ModuleDef></ModuleDefs>"#,
+    );
+    assert_eq!(code.customer_adjustable.counts().module_options, 1);
+    assert!(check_customer_adjustable(&code).is_err());
 }
 
 #[test]

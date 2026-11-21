@@ -268,11 +268,13 @@ impl fmt::Display for DownloadPlanError {
                 f,
                 "customer-adjustable-parameters: {} uninterpreted declarations \
                  (root parameters: {}, root Union members: {}, module parameters: {}, \
-                 module Union members: {}, root Options: {}); no regular download scope is \
+                 module Union members: {}, root Options: {}, module Options: {}); \
+                 no regular download scope is \
                  offered because preservation semantics are not implemented. Read-only \
                  compare and diagnostics stay available",
                 counts.total(), counts.root_parameters, counts.root_union_parameters,
-                counts.module_parameters, counts.module_union_parameters, counts.root_options
+                counts.module_parameters, counts.module_union_parameters, counts.root_options,
+                counts.module_options
             ),
             DownloadPlanError::MasterReset {
                 erase_code,

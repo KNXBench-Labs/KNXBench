@@ -4,7 +4,7 @@ Status: **scoping contract, no code change**, 21 November 2026. Evidence:
 [research](../research/2026-11-21-prg01-n6-mutation-effects-observation.md);
 decision: [ADR-0184](../adr/0184-prg01-mutation-effects-observation-scope.md).
 Related: [post-download check](post-download-check.md),
-[remaining parameter-policy scope](prg01-remaining-parameter-policy-scope.md) (N5 branch).
+the PRG-01-N5 parameter-policy scope (separate PR; not linked until merged).
 
 ## Rules
 

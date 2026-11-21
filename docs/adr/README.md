@@ -185,3 +185,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0177](0177-accepted-wp07-mapping-is-the-module-instance-authority.md) | The accepted WP-07 mapping is the module-instance authority | Proposed | 2026-11-17 |
 | [0178](0178-rel01-catalogue-defines-the-beta-exit.md) | The REL-01 catalogue defines the beta exit | Accepted | 2026-11-20 |
 | [0179](0179-external-cli-download-reconciliation.md) | An external CLI download report reconciles pending marks only on authoritative match | Proposed | 2026-11-20 |
+| [0185](0185-download-refusal-classifiers-are-exhaustive.md) | Download refusal classifiers are exhaustive and pinned | Accepted | 2026-11-21 |

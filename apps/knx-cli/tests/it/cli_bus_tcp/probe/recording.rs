@@ -207,10 +207,9 @@ fn settled_read_refusal_and_eof_finalize_failed_recordings_without_temporary_dir
 #[test]
 fn existing_bundle_destination_refuses_before_contact_and_preserves_its_bytes() {
     let fixture = Fixture::new();
-    let tcp = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let (tcp, udp) = knx_testsupport::tcp_listener_with_udp_trap();
     tcp.set_nonblocking(true).unwrap();
     let addr = tcp.local_addr().unwrap();
-    let udp = std::net::UdpSocket::bind(addr).unwrap();
     udp.set_nonblocking(true).unwrap();
     let bundle = fixture.dir.path().join("existing.zip");
     std::fs::write(&bundle, b"preserve existing private report").unwrap();

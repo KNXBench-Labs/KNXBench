@@ -4,16 +4,14 @@ use super::*;
 
 #[test]
 fn tcp_recovery_phrases_refuse_before_io_then_skip_eof_retains_original_backup() {
-    use std::net::{Ipv4Addr, TcpListener, UdpSocket};
     let f = Fixture::new();
     let (failed, _) = f.run(false, false, true);
     exit(&failed, 1);
     let before = tree(&f.operation());
     let backup = f.store().recovery().unwrap().clone();
     let old = f.inputs.device.system2_snapshot();
-    let tcp = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+    let (tcp, udp) = knx_testsupport::tcp_listener_with_udp_trap();
     tcp.set_nonblocking(true).unwrap();
-    let udp = UdpSocket::bind(tcp.local_addr().unwrap()).unwrap();
     udp.set_nonblocking(true).unwrap();
     let command = f.command(&tcp.local_addr().unwrap().to_string(), Some("tcp"), true);
     for phrase in [

@@ -198,10 +198,15 @@ fn tcp_eof_reports_skips_once_and_never_retries() {
 
 /// Hold a bound TCP socket, not a released ephemeral port, through the fallback check.
 pub(super) fn rejected(mut cmd: impl FnMut(&str) -> Command) {
-    let socket = tokio::net::TcpSocket::new_v4().unwrap();
-    socket.bind((Ipv4Addr::LOCALHOST, 0).into()).unwrap();
+    let (socket, udp) = knx_testsupport::with_udp_trap(
+        || {
+            let socket = tokio::net::TcpSocket::new_v4().unwrap();
+            socket.bind((Ipv4Addr::LOCALHOST, 0).into()).unwrap();
+            socket
+        },
+        |socket| socket.local_addr().unwrap(),
+    );
     let addr = socket.local_addr().unwrap();
-    let udp = UdpSocket::bind(addr).unwrap();
     udp.set_nonblocking(true).unwrap();
     let output = collect(&mut cmd(&addr.to_string()));
     exit(&output, 1);

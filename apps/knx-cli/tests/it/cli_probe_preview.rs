@@ -122,10 +122,9 @@ fn explicit_udp_or_tcp_with_source_preview_refuses_without_contact_or_input_chan
     let (project, products) = fixture(dir.path());
     let project_before = std::fs::read(&project).unwrap();
     let products_before = std::fs::read(&products).unwrap();
-    let tcp = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let (tcp, udp) = knx_testsupport::tcp_listener_with_udp_trap();
     tcp.set_nonblocking(true).unwrap();
     let endpoint = tcp.local_addr().unwrap();
-    let udp = UdpSocket::bind(endpoint).unwrap();
     udp.set_nonblocking(true).unwrap();
     for transport in ["udp", "tcp"] {
         let result = Command::new(env!("CARGO_BIN_EXE_knx"))

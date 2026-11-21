@@ -12,7 +12,7 @@ use knx_core::{
     SourceRef, Topology,
 };
 use std::{
-    net::{Ipv4Addr, TcpListener, UdpSocket},
+    net::{Ipv4Addr, UdpSocket},
     path::PathBuf,
     process::{Command, Output},
     thread,
@@ -275,10 +275,9 @@ fn previews_name_only_an_explicit_tcp_and_contact_nothing() {
         (vec!["--tunnel-transport", "tcp"], " over TCP"),
     ] {
         let fixture = Fixture::new();
-        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let (listener, udp) = knx_testsupport::tcp_listener_with_udp_trap();
         listener.set_nonblocking(true).unwrap();
         let address = listener.local_addr().unwrap();
-        let udp = UdpSocket::bind(address).unwrap();
         udp.set_nonblocking(true).unwrap();
         let output = collect(&mut fixture.command(&address.to_string(), &extra));
         assert_eq!(output.status.code(), Some(0), "{}", stderr(&output));

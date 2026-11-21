@@ -1,7 +1,7 @@
 //! Pin strict transport parsing, no-I/O admission and durable backup refusal through the CLI.
 
 use super::*;
-use std::net::{Ipv4Addr, TcpListener, UdpSocket};
+use std::net::Ipv4Addr;
 
 fn replace(f: &Fixture, cmd: &Command, value: &std::ffi::OsStr, with: &str) -> Command {
     let mut result = f.inputs.bare();
@@ -84,9 +84,8 @@ fn strict_transport_preview_simulator_and_gateway_refuse_before_input_or_output_
 #[test]
 fn wrong_phrases_and_overwrite_refuse_without_socket_history_or_operation() {
     let f = Fixture::new();
-    let tcp = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+    let (tcp, udp) = knx_testsupport::tcp_listener_with_udp_trap();
     tcp.set_nonblocking(true).unwrap();
-    let udp = UdpSocket::bind(tcp.local_addr().unwrap()).unwrap();
     udp.set_nonblocking(true).unwrap();
     let cmd = f.command(&tcp.local_addr().unwrap().to_string(), Some("tcp"), false);
     for phrase in [
@@ -145,10 +144,15 @@ fn tcp_connection_refusal_never_falls_back_and_udp_controls_are_handshake_only()
             .build()
             .unwrap();
         let _entered = runtime.enter();
-        let socket = tokio::net::TcpSocket::new_v4().unwrap();
-        socket.bind((Ipv4Addr::LOCALHOST, 0).into()).unwrap();
+        let (socket, udp) = knx_testsupport::with_udp_trap(
+            || {
+                let socket = tokio::net::TcpSocket::new_v4().unwrap();
+                socket.bind((Ipv4Addr::LOCALHOST, 0).into()).unwrap();
+                socket
+            },
+            |socket| socket.local_addr().unwrap(),
+        );
         let addr = socket.local_addr().unwrap();
-        let udp = UdpSocket::bind(addr).unwrap();
         if transport == Some("tcp") {
             udp.set_nonblocking(true).unwrap();
             let out = collect(&mut f.command(&addr.to_string(), transport, recover));
@@ -218,9 +222,8 @@ fn recovery_wrong_source_binding_refuses_before_any_connection_and_preserves_ori
     exit(&out, 1);
     let before = tree(&f.operation());
     let old = f.inputs.device.system2_snapshot();
-    let tcp = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+    let (tcp, udp) = knx_testsupport::tcp_listener_with_udp_trap();
     tcp.set_nonblocking(true).unwrap();
-    let udp = UdpSocket::bind(tcp.local_addr().unwrap()).unwrap();
     udp.set_nonblocking(true).unwrap();
     let mut changed = f.bundle.clone();
     changed.binding.source_sha256 = "c".repeat(64);

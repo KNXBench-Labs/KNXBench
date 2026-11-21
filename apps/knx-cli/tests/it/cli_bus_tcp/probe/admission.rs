@@ -15,10 +15,9 @@ struct Trap {
 }
 impl Trap {
     fn new() -> Self {
-        let tcp = TcpListener::bind("127.0.0.1:0").unwrap();
+        let (tcp, udp) = knx_testsupport::tcp_listener_with_udp_trap();
         let addr = tcp.local_addr().unwrap();
         tcp.set_nonblocking(true).unwrap();
-        let udp = UdpSocket::bind(addr).unwrap();
         udp.set_nonblocking(true).unwrap();
         Self {
             tcp,
@@ -313,10 +312,9 @@ fn tcp_refusal_and_rejected_handshake_do_not_fallback_or_replay_and_keep_inputs(
     failed(&output, "could not connect");
     udp.set_nonblocking(true).unwrap();
     no_udp(&udp);
-    let tcp = TcpListener::bind("127.0.0.1:0").unwrap();
+    let (tcp, udp) = knx_testsupport::tcp_listener_with_udp_trap();
     let addr = tcp.local_addr().unwrap();
     tcp.set_nonblocking(true).unwrap();
-    let udp = UdpSocket::bind(addr).unwrap();
     udp.set_nonblocking(true).unwrap();
     let worker = std::thread::spawn(move || {
         use std::io::{Read, Write};

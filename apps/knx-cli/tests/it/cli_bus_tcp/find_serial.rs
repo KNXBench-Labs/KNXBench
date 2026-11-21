@@ -491,10 +491,9 @@ fn mid_read_eof_is_failed_history_not_no_match_or_send_success() {
 
 #[test]
 fn invalid_admission_refuses_before_tcp_udp_history_or_recording() {
-    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+    let (listener, trap) = knx_testsupport::tcp_listener_with_udp_trap();
     listener.set_nonblocking(true).unwrap();
     let endpoint = listener.local_addr().unwrap().to_string();
-    let trap = UdpSocket::bind(listener.local_addr().unwrap()).unwrap();
     let dir = tempfile::tempdir().unwrap();
     let history = dir.path().join("not-created.sqlite");
     let excluded = knx_core::EXCLUDED_INDIVIDUAL_ADDRESSES[0].to_string();
@@ -607,10 +606,9 @@ fn tcp_history_and_bundle_preflight_preserve_foreign_evidence_without_contact() 
             let dir = tempfile::tempdir().unwrap();
             let foreign = dir.path().join("foreign-evidence");
             std::fs::write(&foreign, b"preserve me").unwrap();
-            let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+            let (listener, trap) = knx_testsupport::tcp_listener_with_udp_trap();
             listener.set_nonblocking(true).unwrap();
             let endpoint = listener.local_addr().unwrap().to_string();
-            let trap = UdpSocket::bind(listener.local_addr().unwrap()).unwrap();
             let output = run_tcp(
                 &endpoint,
                 by_address,

@@ -194,3 +194,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0185](0185-download-refusal-classifiers-are-exhaustive.md) | Download refusal classifiers are exhaustive and pinned | Accepted | 2026-11-21 |
 | [0186](0186-report-summary-keeps-the-run-state-reason.md) | The download-report summary keeps the run-state reason | Accepted | 2026-11-21 |
 | [0187](0187-download-refusal-categories-have-a-drift-pin.md) | Download refusal categories have a cross-layer drift pin | Accepted | 2026-11-21 |
+| [0188](0188-prg01-whole-mutation-recovery-scope.md) | Whole-mutation recovery stays bounded to memory regions | Accepted | 2026-11-21 |

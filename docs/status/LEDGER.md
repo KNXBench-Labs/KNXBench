@@ -483,6 +483,10 @@ vocabulary file ties the Rust run-state serializer to the web admission and
 EN/DE message tables ([acceptance](../status/2026-11-21-prg01-n13-run-state-vocabulary-pin.md)).
 No behaviour, KL row or hardware claim changes; PRG-01 stays open.
 
+## PRG-01-N14: whole-mutation recovery scope (21 November 2026)
+
+Scoping slice on `work/prg01-n14-20261121` off `origin/main`: inventory of the recovery axis plus a test-only exhaustive restore-coverage pin ([acceptance](2026-11-21-prg01-n14-recovery-scope.md), [ADR-0188](../adr/0188-prg01-whole-mutation-recovery-scope.md)). No behaviour, KL row or hardware claim changes; PRG-01 stays open.
+
 ## REL-01 decisions complete; Docker signing approved (20 November 2026, second round)
 
 Owner decisions recorded in

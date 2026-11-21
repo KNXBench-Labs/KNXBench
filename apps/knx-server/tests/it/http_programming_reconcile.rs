@@ -5,7 +5,7 @@
 //! JSON (all its fields, parsed by the report type itself) plus the target
 //! address the run was started for. A completed run whose post-download check
 //! matches the plan, whose program id + source hash match the catalogue, whose
-//! plan shape matches the offline-recomputed plan for that address and whose
+//! plan content digest matches the offline-recomputed plan for that address and whose
 //! snapshot binding is current clears exactly the scope's parts; stale,
 //! mismatched, unchecked or incomplete reports clear nothing and refuse with
 //! 422 (409 when the snapshot is stale). No bus access: the plan is recomputed
@@ -159,7 +159,7 @@ fn binding(tree: &Value) -> Value {
 /// exactly as the CLI computes it — the matching report's own numbers.
 /// Reads the catalogue through the state's owner lease (the file is the
 /// same database the server adopted; a second connection would race it).
-fn expected_plan(state: &Arc<knx_server::AppState>, scope: &str) -> (usize, usize, usize) {
+fn expected_plan(state: &Arc<knx_server::AppState>, scope: &str) -> (usize, usize, usize, String) {
     let project = state.project.lock().unwrap().clone().unwrap();
     let device = project
         .devices
@@ -206,6 +206,7 @@ fn expected_plan(state: &Arc<knx_server::AppState>, scope: &str) -> (usize, usiz
                 prepared.plan.steps.len(),
                 prepared.plan.data_octets(),
                 prepared.request.links.len(),
+                knx_app::download_plan_digest::plan_content_digest(&prepared),
             ))
         })
         .expect("catalogue read lease")
@@ -266,7 +267,7 @@ fn report(
     hash: Option<&str>,
     check: Option<Value>,
 ) -> Value {
-    let (steps, data_octets, group_links) = expected_plan(state, scope);
+    let (steps, data_octets, group_links, digest) = expected_plan(state, scope);
     json!({
         "kind": "knxbench-download-report",
         "format": 1,
@@ -283,7 +284,12 @@ fn report(
         "support": "untested",
         "inferences": [],
         "warnings": [],
-        "plan": { "steps": steps, "dataOctets": data_octets, "groupLinks": group_links },
+        "plan": {
+            "steps": steps,
+            "dataOctets": data_octets,
+            "groupLinks": group_links,
+            "contentSha256": digest,
+        },
         "outcome": {
             "completed": completed,
             "written": if completed { "yes" } else { "partially" },
@@ -525,8 +531,9 @@ async fn reconcile_refuses_a_plan_that_no_longer_matches_the_project() {
     let shown = tree(&state).await;
     let hash = catalogue_hash(&state);
 
-    // Report numbers for a different project state: one octet short.
-    let (steps, data_octets, group_links) = expected_plan(&state, "partial-group-addresses");
+    // Report numbers for a different project state: one octet short, and a
+    // digest of other content.
+    let (steps, data_octets, group_links, _) = expected_plan(&state, "partial-group-addresses");
     let mut wire = report(
         &state,
         "partial-group-addresses",
@@ -537,6 +544,7 @@ async fn reconcile_refuses_a_plan_that_no_longer_matches_the_project() {
     wire["plan"]["dataOctets"] = json!(data_octets - 1);
     wire["plan"]["steps"] = json!(steps);
     wire["plan"]["groupLinks"] = json!(group_links);
+    wire["plan"]["contentSha256"] = json!("0".repeat(64));
     let (status, refused) = reconcile(&state, request(wire, TARGET, &shown)).await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
     assert!(

@@ -3,8 +3,10 @@
 //! `POST /api/device/{id}/programming/reconcile` accepts the report a CLI
 //! `--report` file holds plus the target address the run was started for.
 //! Marks change only when all four matchings hold: the report names the
-//! device's catalogue program and its source hash, the offline-recomputed
-//! plan for that address and scope equals the report's plan, the target
+//! device's catalogue program and its source hash, the canonical content
+//! digest of the offline-recomputed plan for that address and scope equals
+//! the report's `plan.contentSha256` (counts are only diagnostics; a report
+//! without the digest is refused), the target
 //! resolves to exactly this device, and the snapshot binding is current —
 //! and the run completed and its read-only post-download check matches the
 //! plan. Anything stale, mismatched or incomplete clears nothing. The clear
@@ -192,6 +194,11 @@ pub(crate) fn reconcile_device(
         )));
     }
     check_proves_run(&report).map_err(BoundCommandError::Refused)?;
+    let Some(reported_digest) = report.plan.content_sha256.clone() else {
+        return Err(BoundCommandError::Refused(
+            "the report carries no plan content digest (it predates content binding); rerun the download with this KNXBench version. Nothing was reconciled".into(),
+        ));
+    };
     let parts = reconcile_parts(&report.scope, &report.plan).map_err(BoundCommandError::Refused)?;
     let program_id = report.program.id.clone();
     let source_sha256 = report.program.source_sha256.clone();
@@ -235,21 +242,26 @@ pub(crate) fn reconcile_device(
                     .into(),
             ));
         }
-        // Plan match: recompute the current request's plan shape offline, in
-        // the report's scope, for the run's target — the same counts the
-        // CLI's plan had when it ran.
+        // Plan match: recompute the current request's scoped plan offline, for
+        // the run's target, and compare its canonical content digest — the same
+        // function the CLI's report used. Counts do not identify content.
         let expected = plan_shape(state, project, target, &report.scope)
             .map_err(BoundCommandError::Refused)?;
-        if expected
-            != (
-                report.plan.steps,
-                report.plan.data_octets,
-                report.plan.group_links,
-            )
-        {
-            return Err(BoundCommandError::Refused(
-                "the report's plan does not match the current project state; the project changed since the run, nothing was reconciled".into(),
-            ));
+        if expected.digest != reported_digest {
+            let counts_equal = (expected.steps, expected.data_octets, expected.group_links)
+                == (
+                    report.plan.steps,
+                    report.plan.data_octets,
+                    report.plan.group_links,
+                );
+            return Err(BoundCommandError::Refused(format!(
+                "the report's plan content does not match the current project state; the project changed since the run{}, nothing was reconciled",
+                if counts_equal {
+                    " (same size, different content)"
+                } else {
+                    ""
+                }
+            )));
         }
         // The run proves these parts are on the device: mark them programmed
         // (pending is the inverse of the loaded flags).
@@ -270,15 +282,24 @@ pub(crate) fn reconcile_device(
     )
 }
 
-/// `(steps, data_octets, group_links)` the current request would plan, in
-/// the report's scope, computed offline exactly as the CLI plans: a complete
-/// preparation with [`PreparedDownload::into_partial`] for a partial scope.
+/// What the current request would plan, in the report's scope: the content digest
+/// (the authority) and the counts (diagnostics only).
+struct PlanIdentity {
+    digest: String,
+    steps: usize,
+    data_octets: usize,
+    group_links: usize,
+}
+
+/// The identity of the plan the current request would run, computed offline exactly as the
+/// CLI plans: a complete preparation with [`PreparedDownload::into_partial`] for a partial
+/// scope.
 fn plan_shape(
     state: &AppState,
     project: &knx_core::Project,
     target: IndividualAddress,
     scope: &str,
-) -> Result<(usize, usize, usize), String> {
+) -> Result<PlanIdentity, String> {
     let partial = match scope {
         "complete" => None,
         "partial-parameters" => Some(PartialDownloadParts {
@@ -308,11 +329,12 @@ fn plan_shape(
             if let Some(parts) = partial {
                 prepared = prepared.into_partial(parts).map_err(|e| e.to_string())?;
             }
-            Ok((
-                prepared.plan.steps.len(),
-                prepared.plan.data_octets(),
-                prepared.request.links.len(),
-            ))
+            Ok(PlanIdentity {
+                digest: knx_app::download_plan_digest::plan_content_digest(&prepared),
+                steps: prepared.plan.steps.len(),
+                data_octets: prepared.plan.data_octets(),
+                group_links: prepared.request.links.len(),
+            })
         })
         .map_err(|_| "the product database is unavailable".to_string())?
 }

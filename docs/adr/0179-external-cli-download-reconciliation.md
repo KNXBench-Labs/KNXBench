@@ -115,7 +115,7 @@ itself proof of external device programming.
 - The WebUI can offer "reconcile external run" by reading the CLI's `--report`
   file and posting it with the device's current address and snapshot binding;
   a mismatch is a normal 422 the UI shows, never a silent clear.
-- Older reports without `postDownloadCheck` can never reconcile (they read
+- Older reports without `postDownloadCheck` or `plan.contentSha256` can never reconcile (they read
   as not checked) — a deliberate bias toward refusing.
 - `DownloadReport` becoming deserializable means its wire format is now a
   read contract too; new fields must stay optional to keep format 1.
@@ -124,3 +124,28 @@ itself proof of external device programming.
   outcome / missing or doubting check / changed plan each refuse with nothing
   cleared; an edit after the run leaves its parts pending; undo restores the
   marks. All over HTTP fixtures with a real ingested catalogue, no bus.
+
+## Amendment 2026-11-21 (WP-48.1, finding F16): the plan matches by content, not by counts
+
+Counts of steps, data octets and links are not identity: a same-width parameter edit or a
+replaced group link with an unchanged link count left an old report matching, and a fresh
+snapshot binding then let it clear newer pending parts. The matching in §3 is therefore:
+
+- `prepare_report` writes `plan.contentSha256`, the SHA-256 of the canonical encoding of the
+  scoped plan the CLI actually runs (program id, scope, manufacturer, mask and every step with
+  its addresses and octets; the encoding is `knxbench-plan-digest/1` in
+  `knx_app::download_plan_digest`). Table contents are inside the write steps, so group
+  addresses, associations and parameter octets are covered.
+- The server recomputes it offline from the same function
+  (`plan_content_digest` on the prepared, scoped download). A different digest refuses with
+  nothing changed; the counts remain in the message only to say "same size, different content".
+- **Format decision:** an optional field under format 1, no bump. The format comment already
+  states that added optional fields keep their meaning for readers; the CLI and server only
+  deserialise reports (no `deny_unknown_fields`), and the field means "no plan content stated"
+  when absent. A bump would reject old reports for every reader, including the maintainers'
+  review flow, although they stay valid evidence there.
+- **Legacy reports fail closed:** a report without `plan.contentSha256` never reconciles; the
+  refusal says to rerun the download with this version. There is no manual-assertion flow.
+- Scope: parameters or links a partial scope does not write are not part of that scope's
+  digest; a change to them leaves that scope's report valid and those parts are not cleared by
+  it anyway.

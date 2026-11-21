@@ -47,6 +47,13 @@ already found lying in the grass.
 
 ## Gates
 
+- **A same-numbered TCP/UDP loopback pair is a port race in parallel tests.** TCP and UDP
+  ephemeral ports are allocated independently, so binding one and then the other
+  on the same number panics with `AddrInUse` when another test holds that number
+  (seen 2026-11-21 in `cli_bus_tcp`, only under the full parallel run). Use
+  `knx_testsupport::tcp_listener_with_udp_trap`, `udp_socket_with_tcp_trap` or
+  `with_udp_trap`, which retry with a fresh candidate; never hand-roll the pair or
+  release a reserved port before the real bind.
 - **Pinned reader tests need their own source fixtures.** Copying a live reader
   into an audited-hash fixture makes every legitimate reader edit break an
   unrelated positive planner test. Use small fixed source-text fixtures and

@@ -1,5 +1,15 @@
 # Roadmap
 
+## Recent-change correctness follow-up (21 November 2026; WP-48, planned)
+
+The [WP-48 audit backlog](open-work/WP-48-recent-change-correctness-audit.md)
+records source-confirmed defects and separate verification leads from the changes
+since 14 November. Priorities are content-bound CLI-report reconciliation,
+structural module ownership, scoped caption provenance, usable configuration editing
+and honest last-download marks, followed by UI/test and catalogue-cache corrections.
+This is planning only: no runtime fix, new compatibility claim or implementation Go;
+existing evidence and hardware/write-consent boundaries remain unchanged.
+
 ## Reko online catalogue (delivered 16 November 2026, `c079ec8d6`)
 
 The owner-authorized Reko source shipped on main 16 November 2026 as

@@ -223,6 +223,12 @@ const CHECKS: { fixture: CheckFixture; restart: "acknowledged" | "unconfirmed"; 
     lines: ["postDownloadCheck.runState.notQualified.indeterminateMetadata"] },
   { fixture: "exact0700Elements", restart: "acknowledged",
     lines: ["postDownloadCheck.runState.notQualified.unqualifiedElements"] },
+  { fixture: "exact0702Running", restart: "acknowledged",
+    lines: ["postDownloadCheck.identity.match", "postDownloadCheck.runState.state.running", "postDownloadCheck.runState.scope"] },
+  { fixture: "exact0702DescriptionProblem", restart: "acknowledged",
+    lines: ["postDownloadCheck.identity.match", "postDownloadCheck.runState.notQualified.descriptionProblem"] },
+  { fixture: "exact0702DescriptionUnavailable", restart: "acknowledged",
+    lines: ["postDownloadCheck.identity.match", "postDownloadCheck.runState.step.description", "postDownloadCheck.runState.cause.noCorrelatedAnswer"] },
 ];
 
 function readingsOf(check: unknown): Reading[] {
@@ -252,8 +258,8 @@ async function expectUnknownRuntime(scope: Locator, m: Messages, check: { runtim
 
 for (const { fixture, restart, lines } of CHECKS) {
   const check = checkFixtures[fixture];
-  const exact0700 = fixture.startsWith("exact0700");
-  const observedPlan = exact0700 ? { ...plan, maskVersion: 0x0700 } : plan;
+  const qualified = fixture.startsWith("exact0700") || fixture.startsWith("exact0702");
+  const observedPlan = qualified ? { ...plan, maskVersion: fixture.startsWith("exact0702") ? 0x0702 : 0x0700 } : plan;
   const status = {
     ...finished,
     status: { state: "finished", written: "yes", restart,
@@ -263,7 +269,7 @@ for (const { fixture, restart, lines } of CHECKS) {
   };
   // The report field order the Rust serializer writes: the check after the outcome.
   const { parameterValues, ...head } = report.report;
-  const checked = { ...report, report: { ...head, program: { ...head.program, mask: exact0700 ? "0700" : head.program.mask }, outcome: { ...head.outcome, restart }, postDownloadCheck: check, parameterValues } };
+  const checked = { ...report, report: { ...head, program: { ...head.program, mask: qualified ? (fixture.startsWith("exact0702") ? "0702" : "0700") : head.program.mask }, outcome: { ...head.outcome, restart }, postDownloadCheck: check, parameterValues } };
   // An intercepted history page carrying the same check: a prepared API fixture, not a persisted
   // row. It exercises the real history UI consumer only; that the check survives a SQLite reopen
   // is established by the Rust CLI and server reopen tests, not by this browser lane.

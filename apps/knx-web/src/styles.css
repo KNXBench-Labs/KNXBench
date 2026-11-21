@@ -3739,7 +3739,7 @@ kbd { font: 11px var(--knx-font-body); color: var(--knx-muted); }
   background: var(--knx-warning-color);
 }
 /* ADR-0174: a plain line when nothing differs or nothing can be compared. */
-.parameter-last-download, .com-last-download { margin: 0 0 12px; font-size: 13px; color: var(--knx-muted); overflow-wrap: anywhere; }
+.parameter-last-download, .com-last-download, .com-last-download-numbers { margin: 0 0 12px; font-size: 13px; color: var(--knx-muted); overflow-wrap: anywhere; }
 .parameter-last-download[data-differs="true"], .com-last-download[data-differs="true"] { color: var(--knx-foreground); }
 /* Group-address views: the same amber row dot and summary line (WP-37). */
 .ga-last-download { margin: 0 0 12px; font-size: 13px; color: var(--knx-muted); overflow-wrap: anywhere;

@@ -46,10 +46,28 @@ export function ObjectLastDownloadSummary({ lastDownload, hidden }: { lastDownlo
   }
   parts.push(sectionSentence(t, "links", links.state, time(links.at)), sectionSentence(t, "flags", flags.state, time(flags.at)));
   const differs = count > 0;
-  return <p className="com-last-download" data-links={links.state} data-flags={flags.state} data-differs={differs ? "true" : undefined}>
-    {differs && <span className="com-last-download-dot" aria-hidden="true" />}
-    <span>{parts.join(" ")}</span>
-  </p>;
+  // The server's `differing` already names each number and what differs; rows it could not select have `instance_id: null`.
+  const unrowed = compared ? lastDownload.differing.filter(difference => difference.instance_id === null) : [];
+  return <>
+    <p className="com-last-download" data-links={links.state} data-flags={flags.state} data-differs={differs ? "true" : undefined}>
+      {differs && <span className="com-last-download-dot" aria-hidden="true" />}
+      <span>{parts.join(" ")}</span>
+    </p>
+    {unrowed.length > 0 && <p className="com-last-download-numbers">{unrowedText(t, unrowed)}</p>}
+  </>;
+}
+
+/** Longest list shown before "+N more"; the count sentence above still states the total. */
+export const MAX_LISTED_UNROWED = 10;
+
+const UNROWED_KEYS: Record<"links" | "flags" | "both", MessageKey> = {
+  links: "comTable.lastDownload.noRowEntry.links", flags: "comTable.lastDownload.noRowEntry.flags", both: "comTable.lastDownload.noRowEntry.both" };
+
+function unrowedText(t: Translate, unrowed: readonly DownloadObjectDifference[]): string {
+  const shown = unrowed.slice(0, MAX_LISTED_UNROWED).map(difference => t(UNROWED_KEYS[differenceKind(difference)], { number: difference.number }));
+  const more = unrowed.length - shown.length;
+  const list = more > 0 ? `${shown.join(", ")}, ${t("comTable.lastDownload.noRowMore", { count: more })}` : shown.join(", ");
+  return t("comTable.lastDownload.noRowList", { list });
 }
 
 function Flags({ flags }: { flags: DownloadObjectFlags }) {

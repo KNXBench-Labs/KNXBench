@@ -34,7 +34,7 @@ export type RunStateRecord =
 export type IdentityCheck =
   | { result: "unavailable"; part: IdentityPart }
   | { result: "mismatch"; part: IdentityPart; kind: "differs" | "malformed" }
-  | { result: "match"; exemplar: "notVerified"; loadStates: MachineReading[]; planLoadVerdict: PlanLoadVerdict; runStateMask?: "0700"; runState?: RunStateRecord };
+  | { result: "match"; exemplar: "notVerified"; loadStates: MachineReading[]; planLoadVerdict: PlanLoadVerdict; runStateMask?: "0700" | "0702"; runState?: RunStateRecord };
 export type ReachCheck =
   | { result: "notReached" }
   | { result: "unknown" }
@@ -112,12 +112,12 @@ function verdictAgrees(readings: MachineReading[], verdict: unknown): boolean {
   return false;
 }
 
-function admitRunState(value: unknown, readings: MachineReading[], exact0700: boolean): void {
+function admitRunState(value: unknown, readings: MachineReading[], qualifiedMask: boolean): void {
   const status = (value as { status?: unknown } | null)?.status;
   const loadsRead = readings.every((reading) => reading.observed.result === "observed");
   if (status === "notRead") {
     const reason = shape(value, ["status", "reason"]).reason;
-    ensure((reason === "unsupportedMask" && !exact0700) || (reason === "loadReadFailed" && !loadsRead));
+    ensure((reason === "unsupportedMask" && !qualifiedMask) || (reason === "loadReadFailed" && !loadsRead));
     return;
   }
   ensure(loadsRead);
@@ -127,9 +127,9 @@ function admitRunState(value: unknown, readings: MachineReading[], exact0700: bo
   } else if (status === "unavailable") {
     const record = shape(value, ["status", "step", "cause"]);
     ensure(STEPS.includes(record.step as string) && CAUSES.includes(record.cause as string));
-    if (record.step === "description") ensure(exact0700 && record.cause !== "refused" && record.cause !== "malformed");
+    if (record.step === "description") ensure(qualifiedMask && record.cause !== "refused" && record.cause !== "malformed");
   } else if (status === "notQualified") {
-    ensure(exact0700);
+    ensure(qualifiedMask);
     const reason = (value as { reason?: unknown }).reason;
     if (reason === "unsupportedDatatype") {
       const record = shape(value, ["status", "reason", "pdt"]);
@@ -163,7 +163,7 @@ function admitIdentity(value: unknown): void {
     const hasRunState = typeof value === "object" && value !== null && Object.hasOwn(value, "runState");
     const hasMask = typeof value === "object" && value !== null && Object.hasOwn(value, "runStateMask");
     const identity = shape(value, ["result", "exemplar", "loadStates", "planLoadVerdict", ...(hasRunState ? ["runState"] : []), ...(hasMask ? ["runStateMask"] : [])]);
-    if (hasMask) ensure(identity.runStateMask === "0700" && hasRunState);
+    if (hasMask) ensure((identity.runStateMask === "0700" || identity.runStateMask === "0702") && hasRunState);
     ensure(result === "match" && identity.exemplar === "notVerified" && Array.isArray(identity.loadStates));
     const readings = (identity.loadStates as unknown[]).map(admitReading);
     let failed = false;

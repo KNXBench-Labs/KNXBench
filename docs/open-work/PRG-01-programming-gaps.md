@@ -30,6 +30,19 @@ memory-refusal boundary stay unchanged. The package must include actual
 CLI/HTTP/history/report/web consumers and semantic RED before GREEN, not stop
 at a codec primitive. Physical function and overall PRG-01 remain open.
 
+## Software-accepted bounded increment — descriptor-qualified exact 0702 property state
+
+The [admitted contract](../contracts/post-download-run-state-0702.md), the
+[original-source investigation](../research/2026-11-20-property-run-state-observation-0702.md)
+and [ADR-0180](../adr/0180-exact-0702h-run-state-observation.md) extend the
+bounded optional-property observation to exact `0702h` with the same
+shape as exact `0700h`: Resources footnote 94 grants the legacy
+`PDT_UNSIGNED_CHAR` datatype only to masks `0020h`/`0701h`, so `0702h` is
+`PDT_CONTROL` and needs the same independent qualifying PID 6 property
+description before one `PID_RUN_STATE_CONTROL` read. Schedule, gates and
+serialized bytes for `0700h`/`0701h`/`0705h` are unchanged; other `070nh`
+masks still report `UnsupportedMask`.
+
 ## Software-accepted bounded increment — regular restore exemplar binding
 
 The [source-reviewed contract](../contracts/regular-restore-exemplar-binding.md)
@@ -242,16 +255,56 @@ binding is claimed. This is not fresh current-main or hardware acceptance.
 do not prove retention through Unload, allocation, task control or Restart.
 Broader inactive/default/Union/customer-write rules and PRG-01 remain open.
 
+## Bounded increment — PRG-01-N3: module-local Options admission (2026-11-20)
+
+The [N3 contract](../contracts/customer-adjustable-module-options.md), the
+[evidence note](../research/2026-11-20-module-local-options-admission.md) and
+[ADR-0181](../adr/0181-module-local-options-customer-adjustable.md) admit
+`CustomerAdjustableParameters` on a module definition's own `Static/Options`
+(new closed context class `ModuleOptions`); the parser walk is unchanged. The public writer refusal category
+`customer-adjustable-parameters` gains a `module Options` count; read-only
+preparation is unchanged. Acceptance record:
+[2026-11-20 module-local-options admission](../status/2026-11-20-module-local-options-admission.md).
+Wrapper, `Dynamic`/`Extension`, extra-`Static` and foreign-prefixed shapes stay
+excluded matcher limits. This is not hardware acceptance, not ETS
+customer-write semantics and not a closure of PRG-01.
+
+## Scoping record — PRG-01-N4 (21 November 2026)
+
+Remaining 070nh masks, other object layouts and memory run-state encoding have no
+source evidence; only their refusal is simulator-verifiable and is now pinned
+([research](../research/2026-11-21-run-state-remaining-masks-and-layouts.md),
+[contract](../contracts/post-download-run-state-unadmitted-masks.md),
+[ADR-0182](../adr/0182-unadmitted-run-state-masks-stay-refused.md),
+[record](../status/2026-11-21-unadmitted-run-state-masks.md)).
+
 ## Open
 
 - Broader target/exemplar identity and runtime-state observation beyond the
   bounded property contracts (`0701h`/`0705h`, plus descriptor-qualified exact
-  `0700h` whose bounded software acceptance is recorded above). Other object layouts,
-  memory encoding and physical function remain unproved.
+  `0700h` and `0702h` whose bounded software acceptance is recorded above).
+  Other object layouts, memory encoding and physical function remain unproved.
 - Parameter policies beyond the bounded whole-byte transfer contract: physical
   inactive-byte survival, broader inactive/default semantics, editable Dynamic,
-  `Union` and customer-write rules remain unresolved.
+  `Union` and customer-write rules remain unresolved (module-local Options are
+  now an admitted refusal context per PRG-01-N3; the remaining excluded
+  customer-adjustable shapes stay matcher limits).
 - Complete mutation effects and whole-mutation recovery contracts.
+
+PRG-01-N5 (21 November 2026) inventoried these remaining parameter-policy items
+and found none simulator-verifiable without inventing ETS semantics; it names the
+missing evidence per item ([research](../research/2026-11-21-prg01-n5-remaining-parameter-policy-evidence.md),
+[scope contract](../contracts/prg01-remaining-parameter-policy-scope.md),
+[ADR-0183](../adr/0183-prg01-remaining-parameter-policies-need-evidence.md)).
+No code or runtime claim changed.
+
+PRG-01-N6 (21 November 2026) examined the mutation-effects axis (post-restart memory
+comparison, further declared forms, other layouts) and found none simulator-verifiable
+without inventing semantics; the post-download check deliberately reads no memory
+because a restart may rewrite octets. It names the missing evidence
+([research](../research/2026-11-21-prg01-n6-mutation-effects-observation.md),
+[scope contract](../contracts/prg01-mutation-effects-observation-scope.md),
+[ADR-0184](../adr/0184-prg01-mutation-effects-observation-scope.md)). No code changed.
 
 ## Full-product coverage pin debt resolved — 8 November 2026
 

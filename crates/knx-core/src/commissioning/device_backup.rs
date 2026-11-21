@@ -965,4 +965,110 @@ mod tests {
             1
         );
     }
+
+    /// How a restore treats one step kind: what the backup can stand in for.
+    #[derive(Debug, PartialEq, Eq)]
+    enum Coverage {
+        /// Reads or manages the connection only.
+        ReadOnly,
+        /// A write whose octets the backup replaces.
+        BackedOctets,
+        /// A device change replayed as the plan has it; the backup holds nothing for it.
+        ReplayedUncovered,
+        /// A device change the backup cannot hold: a restore refuses the plan.
+        Refused,
+    }
+
+    /// Exhaustive: a new step variant does not compile until it is classified here.
+    fn coverage(step: &MemoryDownloadStep) -> Coverage {
+        match step {
+            MemoryDownloadStep::Connect
+            | MemoryDownloadStep::CompareProperty { .. }
+            | MemoryDownloadStep::Delay { .. }
+            | MemoryDownloadStep::RequireLoaded(_)
+            | MemoryDownloadStep::RequireExemplar(_)
+            | MemoryDownloadStep::Disconnect => Coverage::ReadOnly,
+            MemoryDownloadStep::WriteMemory { .. } => Coverage::BackedOctets,
+            MemoryDownloadStep::LoadRecord(_)
+            | MemoryDownloadStep::WriteProperty { .. }
+            | MemoryDownloadStep::Restart => Coverage::ReplayedUncovered,
+            MemoryDownloadStep::MasterResetCommand { .. }
+            | MemoryDownloadStep::WritePropertyParameters { .. } => Coverage::Refused,
+        }
+    }
+
+    #[test]
+    fn restore_coverage_of_every_step_kind_is_pinned() {
+        let record = event_record(
+            MemoryLoadStateMachine::AddressTable,
+            LoadEvent::StartLoading,
+        )
+        .unwrap();
+        let steps = [
+            MemoryDownloadStep::Connect,
+            MemoryDownloadStep::CompareProperty {
+                object_index: 3,
+                property_id: 13,
+                inline_data: IDENTITY.to_vec(),
+            },
+            MemoryDownloadStep::Delay { milliseconds: 1 },
+            MemoryDownloadStep::RequireLoaded(MemoryLoadStateMachine::AddressTable),
+            MemoryDownloadStep::RequireExemplar(ExemplarSerial::new(SERIAL)),
+            MemoryDownloadStep::Disconnect,
+            MemoryDownloadStep::WriteMemory {
+                address: 0x4000,
+                octets: vec![1],
+            },
+            MemoryDownloadStep::LoadRecord(record),
+            MemoryDownloadStep::WriteProperty {
+                object_index: 5,
+                property_id: 51,
+                inline_data: vec![1, 0],
+            },
+            MemoryDownloadStep::Restart,
+            MemoryDownloadStep::MasterResetCommand {
+                erase_code: 5,
+                object_index: 5,
+                property_id: 52,
+                command: 0x10,
+            },
+            MemoryDownloadStep::WritePropertyParameters {
+                object_index: 5,
+                property_id: 53,
+                elements: 1,
+                octets: vec![1],
+                owned: vec![1],
+            },
+        ];
+        for step in &steps {
+            let c = coverage(step);
+            // The two predicates the restore decision rests on agree with the table.
+            assert_eq!(
+                step.changes_unbacked_state(),
+                c == Coverage::Refused,
+                "{step:?}"
+            );
+            assert_eq!(
+                step.changes_device(),
+                !matches!(c, Coverage::ReadOnly),
+                "{step:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_fixed_property_write_is_replayed_as_planned_not_restored() {
+        // The backup holds memory regions and load states only: it has no value
+        // for this property, so the step is the product's, unchanged. Whether a
+        // restore may replay such a write is not decided here (PRG-01-N14).
+        let write = MemoryDownloadStep::WriteProperty {
+            object_index: 5,
+            property_id: 51,
+            inline_data: vec![1, 0],
+        };
+        let mut with_write = plan();
+        with_write.steps.insert(3, write.clone());
+        let restored = restore_plan(&with_write, address("1.1.67"), &backup()).unwrap();
+        assert!(restored.steps.contains(&write));
+    }
 }

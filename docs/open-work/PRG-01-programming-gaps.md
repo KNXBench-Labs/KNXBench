@@ -332,6 +332,15 @@ new category cannot silently fall back to a generic web reason
 ([ADR-0187](../adr/0187-download-refusal-categories-have-a-drift-pin.md),
 [acceptance](../status/2026-11-21-prg01-n12-category-drift-pin.md)). Test-only.
 
+PRG-01-N14 (21 November 2026) scoped the whole-mutation recovery axis: restore
+refusals and memory-region coverage are already pinned; one drift pin was added
+(exhaustive per-step restore coverage, test-only); replayed fixed property
+writes, non-memory state and post-restore function need evidence the admitted
+class cannot supply ([research](../research/2026-11-21-prg01-n14-recovery-axis.md),
+[contract](../contracts/prg01-whole-mutation-recovery-scope.md),
+[ADR-0188](../adr/0188-prg01-whole-mutation-recovery-scope.md),
+[acceptance](../status/2026-11-21-prg01-n14-recovery-scope.md)).
+
 ## Full-product coverage pin debt resolved — 8 November 2026
 
 The owner authorised a new documented characterisation baseline rather than

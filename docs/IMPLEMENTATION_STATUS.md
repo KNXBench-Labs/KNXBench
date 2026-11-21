@@ -12,6 +12,19 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Object numbers without a project row are listed in the last-download summary (21 November 2026; WP-37 S3)
+
+Under the communication-object summary, a second line now names the object
+numbers whose links or flags differ from the last download but have no
+selected project row, each with what differs (links, flags, or both): "Object
+numbers without a row: 12 (links), 17 (flags), 40 (links and flags)" /
+"Objektnummern ohne Zeile: …". It shows at most ten, then "+N more"; an unusable
+comparison lists nothing. The numbers were already on the wire
+(`ObjectLastDownload.differing`, `instance_id: null`), so this is web only: no
+API, schema or count change, and the client compares nothing. Tests: 5 new
+component tests and 4 new browser cases (en/de, 1440/400 px, no overflow);
+simulator and intercepted-browser only, no hardware.
+
 ## The open checked editor's accessible description is the last-download caption (21 November 2026; WP-37 S2)
 
 While a checked parameter editor is open on a row with the last-download caption

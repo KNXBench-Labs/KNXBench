@@ -260,6 +260,60 @@ describe("summary line", () => {
   });
 });
 
+describe("object numbers without a row", () => {
+  const numbers = (v: { host: HTMLElement }) => v.host.querySelector(".com-last-download-numbers");
+  const unrowed = (number: number, kind: "links" | "flags" | "both"): DownloadObjectDifference => ({ number, instance_id: null,
+    links: kind === "flags" ? [] : [{ group_address: 0x0a03, downloaded: null, current: true }],
+    flags: kind === "links" ? null : { downloaded: flags(), current: null } });
+  const entry = (lang: typeof en, kind: string, number: number) => lang[`comTable.lastDownload.noRowEntry.${kind}` as "comTable.lastDownload.noRowEntry.links"].replace("{number}", String(number));
+  const withUnrowed = (list: DownloadObjectDifference[]): ObjectLastDownload => ({ ...usable, differing: [links, ...list], instances: { 21: links },
+    differing_objects: 1 + list.length, no_selected_row: list.length });
+
+  it("lists each number with what differs, keeps the count sentence unchanged", async () => {
+    const v = await render(withUnrowed([unrowed(12, "links"), unrowed(17, "flags"), unrowed(40, "both")]));
+    expect(numbers(v)?.textContent).toBe(en["comTable.lastDownload.noRowList"].replace("{list}",
+      [entry(en, "links", 12), entry(en, "flags", 17), entry(en, "both", 40)].join(", ")));
+    expect(numbers(v)?.textContent).toBe("Object numbers without a row: 12 (links), 17 (flags), 40 (links and flags)");
+    expect(v.summary()?.textContent).toContain(en["comTable.lastDownload.noRow.other"].replace("{count}", "3"));
+    expect(numbers(v)?.hasAttribute("aria-hidden")).toBe(false);
+    await v.cleanup();
+  });
+
+  it("lists one number, and nothing when every difference has a row", async () => {
+    const v = await render(withUnrowed([unrowed(9, "flags")]));
+    expect(numbers(v)?.textContent).toBe("Object numbers without a row: 9 (flags)");
+    await v.draw({ ...usable, differing: [links], instances: { 21: links }, differing_objects: 1, no_selected_row: 0 });
+    expect(numbers(v)).toBeNull();
+    await v.cleanup();
+  });
+
+  it("bounds a long list with a +N more form", async () => {
+    const many = Array.from({ length: 13 }, (_, i) => unrowed(100 + i, "links"));
+    const v = await render(withUnrowed(many));
+    const shown = many.slice(0, 10).map(d => entry(en, "links", d.number)).join(", ");
+    expect(numbers(v)?.textContent).toBe(en["comTable.lastDownload.noRowList"].replace("{list}", `${shown}, ${en["comTable.lastDownload.noRowMore"].replace("{count}", "3")}`));
+    expect(numbers(v)?.textContent).not.toContain("110");
+    await v.cleanup();
+  });
+
+  it("lists nothing for unusable comparisons", async () => {
+    const v = await render({ links: { state: "absent" }, flags: { state: "otherProgram" }, differing: [unrowed(12, "links")], instances: {}, differing_objects: 0, no_selected_row: 0 });
+    expect(numbers(v)).toBeNull();
+    await v.cleanup();
+  });
+
+  it("speaks German and is replaced by the next detail", async () => {
+    settingsStorage.setItem("uiLanguage", "de"); resetUiLanguageForTests();
+    const v = await render(withUnrowed([unrowed(12, "links"), unrowed(17, "both")]));
+    expect(numbers(v)?.textContent).toBe("Objektnummern ohne Zeile: 12 (Verknüpfungen), 17 (Verknüpfungen und Flags)");
+    await v.draw(withUnrowed([unrowed(40, "flags")]));
+    expect(numbers(v)?.textContent).toBe("Objektnummern ohne Zeile: 40 (Flags)");
+    await v.draw(undefined);
+    expect(numbers(v)).toBeNull();
+    await v.cleanup();
+  });
+});
+
 it("the device editor passes the device detail's comparison and address style to the table", async () => {
   const tree: ProjectTree = { schema_version: 11, installations: [], group_address_style: "TwoLevel", errors: 0, warnings: 0,
     can_undo: false, can_redo: false, is_modified: false };

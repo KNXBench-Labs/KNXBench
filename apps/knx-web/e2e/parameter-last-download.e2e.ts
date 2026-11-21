@@ -383,6 +383,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(summary).toHaveText(`${m["comTable.lastDownload.differs.other"].replace("{count}", "3")} ${
       m["comTable.lastDownload.hidden.other"].replace("{count}", "2")} ${m["comTable.lastDownload.noRow.one"].replace("{count}", "1")} ${
       m["comTable.lastDownload.links.usable"].replace("{time}", time)} ${m["comTable.lastDownload.flags.usable"].replace("{time}", time)}`);
+    const listed = panel.locator(".com-last-download-numbers");
+    await expect(listed).toHaveText(m["comTable.lastDownload.noRowList"].replace("{list}", m["comTable.lastDownload.noRowEntry.flags"].replace("{number}", "9")));
     const group = panel.locator(".com-object-channel-summary");
     await expect(group).toHaveAccessibleDescription(m["comTable.lastDownload.group"]);
     await expect(group.locator(".com-object-download-mark")).toBeVisible();
@@ -440,3 +442,23 @@ test("keeps the object dots painted under forced colours", async ({ page }) => {
   }
   expect(state.unexpected).toEqual([]);
 });
+
+for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
+  test(`${language} bounds the list of object numbers without a row at ${width}px`, async ({ page }) => {
+    const m = language === "de" ? de : en;
+    await page.setViewportSize({ width, height: 1000 });
+    const many: DownloadObjectDifference[] = Array.from({ length: 14 }, (_, i) => ({ number: 100 + i, instance_id: null,
+      links: [{ group_address: 0x0a03, downloaded: null, current: true }], flags: { downloaded: flagChange.flags!.current, current: null } }));
+    const long: ObjectLastDownload = { ...objectsUsable, differing: [linkChange, flagChange, ...many], differing_objects: 16, no_selected_row: 14 };
+    const state = await intercept(page, language, usable, long);
+    await openDevice(page, language);
+    const listed = page.locator(".com-table-panel .com-last-download-numbers");
+    const shown = many.slice(0, 10).map(d => m["comTable.lastDownload.noRowEntry.both"].replace("{number}", String(d.number))).join(", ");
+    await expect(listed).toHaveText(m["comTable.lastDownload.noRowList"].replace("{list}", `${shown}, ${m["comTable.lastDownload.noRowMore"].replace("{count}", "4")}`));
+    const box = (await listed.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
+    expect(await noOverflow(page)).toBeLessThanOrEqual(1);
+    expect(state.unexpected).toEqual([]);
+  });
+}

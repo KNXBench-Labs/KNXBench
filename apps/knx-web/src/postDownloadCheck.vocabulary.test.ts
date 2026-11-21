@@ -1,4 +1,4 @@
-/** Pins the shared run-state vocabulary: admission and EN/DE messages cover exactly the Rust codes. */
+/** Pins the run-state vocabulary: admission and EN/DE messages match the Rust codes. */
 import { describe, expect, it } from "vitest";
 import fixtures from "./postDownloadCheck.fixtures.json";
 import vocabulary from "./postDownloadCheck.vocabulary.json";

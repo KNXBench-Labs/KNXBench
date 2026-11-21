@@ -29,5 +29,14 @@ qualification reasons, qualified masks `0700`/`0702`).
   gates beyond what the existing fixtures/cases tables already pin, nor any
   device behaviour. KNX-compatible, hardware-untested.
 
+## Gate
+
+Change-scoped package gate: fmt, documentation, browser-lanes, layering, headers,
+anchors, ledger, corpus-gates, tool-tests, web-gate (34 stages) and clippy passed.
+`rust-tests` exited 101 with only known pre-existing/environmental failures: `c49_partial_group_addresses`
+and six `device_system2::...::mounted_hardware::caption_*` tests (host process-guard
+tests that cannot pass in this environment; the change touches no `device_system2`
+file). The new Rust pin passed in the targeted `cargo test -p knx-app --lib run_state` run (15 passed). The gate is therefore partial.
+
 PRG-01 stays open (other object layouts, memory-state encoding, physical
 function, remaining parameter policies per ADR-0183).

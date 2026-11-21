@@ -455,6 +455,27 @@ Read-only access to the owner's own installation is unaffected. Still pending:
 website privacy copy, KL-186, SmartSensor follow-up. Not claimed: any bus or
 device write, release or deployment authority.
 
+## PRG-01-N1: descriptor-qualified exact-0702 run-state observation (20 November 2026)
+
+Bounded software increment on `work/prg01-n1-20261120` off `origin/main`
+`0d9b3f399` (branch reset to the clean base; no foreign merge commits in the
+PR range): exact `0702h` joins the admitted run-state masks with the same
+descriptor-qualified shape as exact `0700h` (Resources footnote 94 grants
+legacy `PDT_UNSIGNED_CHAR` only to `0020h`/`0701h`, so `0702h` is
+`PDT_CONTROL`). Contract
+[post-download-run-state-0702](../contracts/post-download-run-state-0702.md),
+research
+[2026-11-20-property-run-state-observation-0702](../research/2026-11-20-property-run-state-observation-0702.md),
+[ADR-0180](../adr/0180-exact-0702h-run-state-observation.md), software acceptance
+[2026-11-20-descriptor-qualified-0702-run-state](../status/2026-11-20-descriptor-qualified-0702-run-state.md).
+Simulator/loopback evidence only per B-05/B-08; `0700h`/`0701h`/`0705h`
+schedules, gates and serialized bytes unchanged; other `070nh` masks still
+`UnsupportedMask`. No KL row is affected: KL-006/KL-007 already cover the
+bounded-commissioning and vendor-plug-in residue, and this increment adds no
+new limitation — it is KNX-compatible, hardware-untested. PRG-01 open list
+updated (still open: other object layouts, memory encoding, physical
+function).
+
 ## REL-01 decisions complete; Docker signing approved (20 November 2026, second round)
 
 Owner decisions recorded in

@@ -223,6 +223,33 @@ describe("run-state presentation", () => {
       }
     }
   });
+  it("renders exact0702 optional-description outcomes in English and German without a transfer verdict", async () => {
+    for (const [language, messages, optional, description] of [
+      ["en", en, "Optional run-state property not qualified", "optional run-state description"],
+      ["de", de, "Optionale Laufzustandseigenschaft nicht qualifiziert", "Beschreibung der optionalen Laufzustandseigenschaft"],
+    ] as const) {
+      for (const name of ["exact0702DescriptionProblem", "exact0702DescriptionUnavailable", "exact0702Running"]) {
+        const view = await show(FIXTURES[name], language);
+        expect(view.querySelector("[data-check=unreadable]")).toBeNull();
+        expect(view.textContent).toContain(messages["postDownloadCheck.exemplar"]);
+        if (name === "exact0702Running") {
+          expect(view.textContent).toContain(messages["postDownloadCheck.runState.state.running"]);
+          expect(view.textContent).toContain(messages["postDownloadCheck.runState.scope"]);
+          expect(view.textContent).not.toContain(messages["postDownloadCheck.runtimeUnknown.noDefinedState"]);
+        } else {
+          expect(view.textContent).toContain(messages["postDownloadCheck.runtimeUnknown.noDefinedState"]);
+          expect(view.textContent).not.toContain(messages["postDownloadCheck.runState.state.running"]);
+          expect(view.textContent).toContain(name === "exact0702DescriptionUnavailable" ? description : optional);
+          if (name === "exact0702DescriptionProblem") expect(view.textContent).toContain(language === "en"
+            ? "does not prove absence or a hardware fault" : "beweist weder Abwesenheit noch einen Hardwarefehler");
+        }
+        expect(view.textContent).not.toMatch(/\{pdt\}|\{step\}|\{cause\}/);
+        expect(view.querySelector("button")).toBeNull();
+        await act(async () => root!.unmount()); host!.remove(); root = undefined;
+      }
+    }
+  });
+
   it("names each reported state with its scope and no health or function claim in both languages", async () => {
     for (const [language, messages, running, scope] of [
       ["en", en, "Run state: running", "validated plan-matching Applicationprogram object 3"],

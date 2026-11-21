@@ -27,6 +27,7 @@ fn a_prior_partial_run_keeps_its_scope_but_never_parameters_or_free_text() {
             steps: 2,
             data_octets: 3,
             group_links: 1,
+            content_sha256: None,
         },
         outcome: Some(ReportedOutcome::completed(
             Written::Yes,

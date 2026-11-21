@@ -361,7 +361,7 @@ session coordinates, reviews source/PR plus gate receipts, then integrates each 
 
 | Slice | User outcome / findings | Blocked by |
 | --- | --- | --- |
-| WP-48.1 | Old reports cannot clear new programming changes; F16 | None |
+| WP-48.1 | Old reports cannot clear new programming changes; F16 — implemented on branch `work/wp48-1-report-binding-20261121`, pending review/gate | None |
 | WP-48.2 | Structural module ownership; F01 and the shared-resolver/ADR part of F15 | None |
 | WP-48.3 | Correct scoped captions and provenance; F02–F03; verify rename/axis/historical-row and nested-reporting leads | None; coordinate shared ownership code with 48.2 |
 | WP-48.4 | Existing configuration can actually be edited, editor tracks revisions, server enforces document contract; F04–F06 | None; reuse WP-42 storage/preview/history |

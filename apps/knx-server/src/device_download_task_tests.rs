@@ -60,6 +60,7 @@ pub(super) fn synthetic_report() -> DownloadReport {
             steps: 3,
             data_octets: 1,
             group_links: 0,
+            content_sha256: None,
         },
         outcome: None,
         post_download_check: None,

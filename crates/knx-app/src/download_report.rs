@@ -32,7 +32,9 @@ pub const REPORT_KIND: &str = "knxbench-download-report";
 /// fields change no existing meaning: a reader of format 1 that lacks
 /// `postDownloadCheck` reads the run as not checked, and one that lacks
 /// `failure` (reports before DIAG-02) reads a stopped run's cause as not
-/// recorded, never as a success.
+/// recorded, never as a success. `plan.contentSha256` (WP-48.1) is such a
+/// field: a report without it states no plan content, so reconciliation
+/// refuses it (ADR-0179); nothing reads its absence as a match.
 pub const REPORT_FORMAT: u32 = 1;
 /// Where reports may be mailed instead of posted publicly.
 pub const REPORT_MAILBOX: &str = "issue@knxbench.com";
@@ -101,7 +103,7 @@ pub struct ReportedProgram {
 }
 
 /// The size of the plan a report is about.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ReportedPlan {
     /// Steps of the plan.
@@ -110,6 +112,11 @@ pub struct ReportedPlan {
     pub data_octets: usize,
     /// Group-address links of the configuration.
     pub group_links: usize,
+    /// Canonical SHA-256 of the scoped write plan's content
+    /// ([`crate::download_plan_digest`]); the authority a reconcile binds to.
+    /// Absent in a report older than WP-48.1: it names no plan content.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_sha256: Option<String>,
 }
 
 /// How a run ended, as witnessed.
@@ -207,6 +214,7 @@ pub fn prepare_report(
             steps: prepared.plan.steps.len(),
             data_octets: prepared.plan.data_octets(),
             group_links: prepared.request.links.len(),
+            content_sha256: Some(crate::download_plan_digest::plan_content_digest(prepared)),
         },
         outcome: None,
         post_download_check: None,
@@ -399,6 +407,7 @@ mod tests {
                 steps: 25,
                 data_octets: 1416,
                 group_links: 3,
+                content_sha256: None,
             },
             outcome: None,
             post_download_check: None,

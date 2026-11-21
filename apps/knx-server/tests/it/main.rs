@@ -87,6 +87,7 @@ mod http_positional_text;
 mod http_product_install;
 mod http_product_language;
 mod http_programming_reconcile;
+mod http_programming_reconcile_content;
 mod http_project_diff;
 mod http_project_history;
 mod http_project_notes;

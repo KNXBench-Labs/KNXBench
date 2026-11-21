@@ -17,7 +17,7 @@ completed with the run's outcome. JSON, `camelCase`:
 | `scope` | `complete`, `partial-parameters`, `partial-group-addresses`, `partial-both` |
 | `support` | `verified` or `untested`, as admitted |
 | `inferences`, `warnings` | The plan's, each `rule: detail (reference)` |
-| `plan` | `steps`, `dataOctets`, `groupLinks` |
+| `plan` | `steps`, `dataOctets`, `groupLinks` (counts, diagnostics only) and `contentSha256`: optional, additive in format 1 (WP-48.1), the SHA-256 of the scoped write plan's canonical content (encoding `knxbench-plan-digest/1`, documented in `crates/knx-app/src/download_plan_digest.rs`). A reconcile binds to it; a report without it can never reconcile (ADR-0179) |
 | `outcome` | `completed`, `written` (`yes`/`no`/`partially`), `restart` (`acknowledged`/`notInPlan`/`unconfirmed`, completed runs only), `stoppedInStep` |
 | `postDownloadCheck` | Optional, additive in format 1: the read-only check after the transfer ([contract](post-download-check.md)); `notChecked` for a failed run, absent in older reports (read as not checked) |
 | `parameterValues` | The project's values by `ParameterRef` id; absent ones took their product default |

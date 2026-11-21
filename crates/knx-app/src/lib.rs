@@ -25,6 +25,7 @@ pub mod device_download;
 pub mod diagnostic_bundle;
 pub mod documentation;
 pub mod download_failure;
+pub mod download_plan_digest;
 pub mod download_report;
 pub mod download_scope;
 pub mod download_support;

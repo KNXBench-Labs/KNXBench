@@ -277,6 +277,12 @@ because a restart may rewrite octets. It names the missing evidence
 [scope contract](../contracts/prg01-mutation-effects-observation-scope.md),
 [ADR-0184](../adr/0184-prg01-mutation-effects-observation-scope.md)). No code changed.
 
+PRG-01-N12 (21 November 2026) pinned consumer consistency: the web's per-category
+reason and action tables must name exactly the server's refusal categories, so a
+new category cannot silently fall back to a generic web reason
+([ADR-0187](../adr/0187-download-refusal-categories-have-a-drift-pin.md),
+[acceptance](../status/2026-11-21-prg01-n12-category-drift-pin.md)). Test-only.
+
 ## Full-product coverage pin debt resolved — 8 November 2026
 
 The owner authorised a new documented characterisation baseline rather than

@@ -164,6 +164,24 @@ pub enum UnsupportedCategory {
 }
 
 impl UnsupportedCategory {
+    /// Every category, so consumers in other layers can be checked for drift.
+    pub const ALL: [Self; 14] = [
+        Self::NotMemoryMapped,
+        Self::ProcedureStyle,
+        Self::UnmodelledStep,
+        Self::ProcedureShape,
+        Self::ProcedureContents,
+        Self::ParameterEvaluation,
+        Self::Modules,
+        Self::ParameterValue,
+        Self::ImageStructure,
+        Self::ByteOrder,
+        Self::ProductData,
+        Self::Configuration,
+        Self::VendorDownloadPlugin,
+        Self::CustomerAdjustableParameters,
+    ];
+
     /// The category's stable name, for reports and the API.
     pub fn code(self) -> &'static str {
         match self {
@@ -629,6 +647,33 @@ impl CoverageSummary {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn all_lists_every_category_once_with_distinct_codes() {
+        use super::UnsupportedCategory as C;
+        // No wildcard: a new variant fails to compile here until ALL is extended.
+        let position = |c: C| match c {
+            C::NotMemoryMapped => 0,
+            C::ProcedureStyle => 1,
+            C::UnmodelledStep => 2,
+            C::ProcedureShape => 3,
+            C::ProcedureContents => 4,
+            C::ParameterEvaluation => 5,
+            C::Modules => 6,
+            C::ParameterValue => 7,
+            C::ImageStructure => 8,
+            C::ByteOrder => 9,
+            C::ProductData => 10,
+            C::Configuration => 11,
+            C::VendorDownloadPlugin => 12,
+            C::CustomerAdjustableParameters => 13,
+        };
+        for (index, category) in C::ALL.into_iter().enumerate() {
+            assert_eq!(position(category), index);
+        }
+        let codes: std::collections::BTreeSet<_> = C::ALL.iter().map(|c| c.code()).collect();
+        assert_eq!(codes.len(), C::ALL.len());
+    }
+
     use super::*;
     use knx_core::commissioning::load_state::MaskVersion;
     use knx_core::commissioning::memory_download::MemoryDownloadStep;

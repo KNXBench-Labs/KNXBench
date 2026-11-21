@@ -4,6 +4,7 @@ use knx_core::commissioning::properties::{PID_OBJECT_TYPE, PID_RUN_STATE_CONTROL
 
 use super::*;
 mod exact0700;
+mod unadmitted_masks;
 use crate::commissioning::simulator::{PropertyReadFault, ReadFault};
 
 const APPLICATION_TYPE: [u8; 2] = [0x00, 0x03];

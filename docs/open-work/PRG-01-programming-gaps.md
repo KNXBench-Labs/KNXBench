@@ -317,6 +317,10 @@ and the report file pinned against the shared admission table
 [record](../status/2026-11-21-prg01-n9-report-consumer-consistency.md)).
 Simulator/fixture evidence only.
 
+PRG-01-N10 (21 November 2026) pinned malformed choose/when input for inactive
+whole-byte selection ([acceptance](../status/2026-11-21-prg01-n10-malformed-choose-when-pins.md)).
+Test-only; no behaviour change, no new policy.
+
 ## Full-product coverage pin debt resolved — 8 November 2026
 
 The owner authorised a new documented characterisation baseline rather than

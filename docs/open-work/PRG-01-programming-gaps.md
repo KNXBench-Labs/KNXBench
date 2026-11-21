@@ -310,6 +310,13 @@ PRG-01-N8 (21 November 2026) reconciled this file, the OPEN_WORK row and the
 ledger with the increments still queued on PR branches; see the
 [reconciliation](../status/2026-11-21-prg01-n8-queue-reconciliation.md). Docs only.
 
+PRG-01-N9 (21 November 2026) audited the post-download check across CLI, history,
+web and report: one drift fixed (the report summary now keeps the run-state reason)
+and the report file pinned against the shared admission table
+([ADR-0186](../adr/0186-report-summary-keeps-the-run-state-reason.md),
+[record](../status/2026-11-21-prg01-n9-report-consumer-consistency.md)).
+Simulator/fixture evidence only.
+
 ## Full-product coverage pin debt resolved — 8 November 2026
 
 The owner authorised a new documented characterisation baseline rather than

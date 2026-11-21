@@ -192,3 +192,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0183](0183-prg01-remaining-parameter-policies-need-evidence.md) | Remaining PRG-01 parameter policies wait for evidence, not simulators | Accepted | 2026-11-21 |
 | [0184](0184-prg01-mutation-effects-observation-scope.md) | Mutation-effects observation stays closed until restart-stability evidence exists | Accepted | 2026-11-21 |
 | [0185](0185-download-refusal-classifiers-are-exhaustive.md) | Download refusal classifiers are exhaustive and pinned | Accepted | 2026-11-21 |
+| [0186](0186-report-summary-keeps-the-run-state-reason.md) | The download-report summary keeps the run-state reason | Accepted | 2026-11-21 |

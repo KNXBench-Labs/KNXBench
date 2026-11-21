@@ -1114,5 +1114,20 @@ mod tests {
             );
         }
         assert!(from_json(&good).is_ok());
+        // Valid hex stays valid in either case; wrong lengths stay malformed.
+        let lower = good.replace("\"00ABFF\"", "\"00abff\"");
+        assert_eq!(
+            from_json(&lower).unwrap().backup.regions[1].octets,
+            [0x00, 0xAB, 0xFF]
+        );
+        for bad in [
+            good.replace("\"00ABFF\"", "\"00ABF\""),
+            good.replace("\"4400\"", "\"440\""),
+        ] {
+            assert!(
+                matches!(from_json(&bad), Err(BackupFileError::Malformed(_))),
+                "{bad}"
+            );
+        }
     }
 }

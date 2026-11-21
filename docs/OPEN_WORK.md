@@ -33,3 +33,4 @@ the former dated sections are in the [archive](history/OPEN_WORK_2026-10-25.md).
 | LS-05 | Optional humour copy | Later scope | [LS-05](open-work/LS-05-humour-copy.md) |
 | LS-06 | Wider product scope | Later scope | [LS-06](open-work/LS-06-wider-product-scope.md) |
 | LS-07 | Optional hardening and catalogue-cleanup extensions | Bounded descriptor-pinned JSON writers delivered; wider hardening and catalogue scope remains later | [LS-07](open-work/LS-07-optional-hardening.md) |
+| LS-08 | Unsigned `.knxproj` writer (parked prototype branch) | Later scope (owner 21 Nov): unpublished branch `work/knxproj-writer-20261114`, 11 commits, not reviewed or merged; ADR-0028 (no `.knxproj` writer) still holds; ETS 6.4.1 refuses unsigned archives | [LS-08](open-work/LS-08-knxproj-writer.md) |

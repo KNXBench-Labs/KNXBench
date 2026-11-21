@@ -306,6 +306,32 @@ because a restart may rewrite octets. It names the missing evidence
 [scope contract](../contracts/prg01-mutation-effects-observation-scope.md),
 [ADR-0184](../adr/0184-prg01-mutation-effects-observation-scope.md)). No code changed.
 
+PRG-01-N8 (21 November 2026) reconciled this file, the OPEN_WORK row and the
+ledger with the increments still queued on PR branches; see the
+[reconciliation](../status/2026-11-21-prg01-n8-queue-reconciliation.md). Docs only.
+
+PRG-01-N9 (21 November 2026) audited the post-download check across CLI, history,
+web and report: one drift fixed (the report summary now keeps the run-state reason)
+and the report file pinned against the shared admission table
+([ADR-0186](../adr/0186-report-summary-keeps-the-run-state-reason.md),
+[record](../status/2026-11-21-prg01-n9-report-consumer-consistency.md)).
+Simulator/fixture evidence only.
+
+PRG-01-N10 (21 November 2026) pinned malformed choose/when input for inactive
+whole-byte selection ([acceptance](../status/2026-11-21-prg01-n10-malformed-choose-when-pins.md)).
+Test-only; no behaviour change, no new policy.
+
+PRG-01-N11 (21 November 2026) hardened the backup file reader: signed or padded hex text
+(for example region octets `+5`) is refused as malformed instead of being read as a number
+([acceptance](../status/2026-11-21-prg01-n11-backup-hex-refusal.md)). Offline pin only; no
+format, consumer or hardware change.
+
+PRG-01-N12 (21 November 2026) pinned consumer consistency: the web's per-category
+reason and action tables must name exactly the server's refusal categories, so a
+new category cannot silently fall back to a generic web reason
+([ADR-0187](../adr/0187-download-refusal-categories-have-a-drift-pin.md),
+[acceptance](../status/2026-11-21-prg01-n12-category-drift-pin.md)). Test-only.
+
 ## Full-product coverage pin debt resolved — 8 November 2026
 
 The owner authorised a new documented characterisation baseline rather than
@@ -321,6 +347,13 @@ as `product-data`. No parser guard was relaxed and no hardware support added.
 This resolves only the pin-maintenance debt. The original selection is still
 unreconstructed; the new baseline is explicitly not an independent semantic
 oracle. The broader PRG-01 requirements above and KL-006 remain open.
+
+## Refusal reason codes pinned — 21 November 2026 (N7)
+
+`plan_category`/`image_category` are now exhaustive and every plan refusal's
+code is pinned ([contract](../contracts/download-refusal-reason-codes.md),
+[ADR-0185](../adr/0185-download-refusal-classifiers-are-exhaustive.md),
+[status](../status/2026-11-21-prg01-n7-refusal-code-pin.md)). No behaviour change.
 
 ## Consumer-consistency pin — PRG-01-N13
 

@@ -375,7 +375,7 @@ fn percent_encode(text: &str) -> String {
 mod tests {
     use super::*;
 
-    fn report() -> DownloadReport {
+    pub(super) fn report() -> DownloadReport {
         DownloadReport {
             kind: REPORT_KIND.into(),
             format: REPORT_FORMAT,
@@ -613,3 +613,7 @@ mod tests {
         assert!(form.contains(REPORT_MAILBOX));
     }
 }
+
+#[cfg(test)]
+#[path = "download_report_consumer_tests.rs"]
+mod consumer_tests;

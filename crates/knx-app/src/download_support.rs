@@ -164,6 +164,24 @@ pub enum UnsupportedCategory {
 }
 
 impl UnsupportedCategory {
+    /// Every category, so consumers in other layers can be checked for drift.
+    pub const ALL: [Self; 14] = [
+        Self::NotMemoryMapped,
+        Self::ProcedureStyle,
+        Self::UnmodelledStep,
+        Self::ProcedureShape,
+        Self::ProcedureContents,
+        Self::ParameterEvaluation,
+        Self::Modules,
+        Self::ParameterValue,
+        Self::ImageStructure,
+        Self::ByteOrder,
+        Self::ProductData,
+        Self::Configuration,
+        Self::VendorDownloadPlugin,
+        Self::CustomerAdjustableParameters,
+    ];
+
     /// The category's stable name, for reports and the API.
     pub fn code(self) -> &'static str {
         match self {
@@ -308,7 +326,14 @@ pub fn image_category(error: &ImageError) -> UnsupportedCategory {
         | ImageError::ConflictingValues { .. }
         | ImageError::Overlap(_)
         | ImageError::Parameter { .. } => UnsupportedCategory::ParameterValue,
-        _ => UnsupportedCategory::ImageStructure,
+        // Listed, not a wildcard: a new refusal must be classified on purpose (ADR-0185).
+        ImageError::Unsupported { .. }
+        | ImageError::SourceBindingChanged
+        | ImageError::GroupObjects(_)
+        | ImageError::GroupTables(_)
+        | ImageError::InactiveObject { .. }
+        | ImageError::PriorityDiffers { .. }
+        | ImageError::Masked { .. } => UnsupportedCategory::ImageStructure,
     }
 }
 
@@ -325,7 +350,21 @@ pub fn plan_category(error: &DownloadPlanError) -> UnsupportedCategory {
         DownloadPlanError::CustomerAdjustableParameters(_) => {
             UnsupportedCategory::CustomerAdjustableParameters
         }
-        _ => UnsupportedCategory::ProcedureContents,
+        // Listed, not a wildcard: a new refusal must be classified on purpose (ADR-0185).
+        DownloadPlanError::Attribute { .. }
+        | DownloadPlanError::ProgramId(_)
+        | DownloadPlanError::Lsm(_)
+        | DownloadPlanError::SegmentType(_)
+        | DownloadPlanError::MemoryType(_)
+        | DownloadPlanError::SegmentFlags(_)
+        | DownloadPlanError::Address(_)
+        | DownloadPlanError::Record(_)
+        | DownloadPlanError::SizeMismatch { .. }
+        | DownloadPlanError::NeverWritten(_)
+        | DownloadPlanError::AllocatedTwice(_)
+        | DownloadPlanError::DuplicateSegmentStart { .. }
+        | DownloadPlanError::MasterReset { .. }
+        | DownloadPlanError::PropertyParameters { .. } => UnsupportedCategory::ProcedureContents,
     }
 }
 
@@ -629,6 +668,33 @@ impl CoverageSummary {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn all_lists_every_category_once_with_distinct_codes() {
+        use super::UnsupportedCategory as C;
+        // No wildcard: a new variant fails to compile here until ALL is extended.
+        let position = |c: C| match c {
+            C::NotMemoryMapped => 0,
+            C::ProcedureStyle => 1,
+            C::UnmodelledStep => 2,
+            C::ProcedureShape => 3,
+            C::ProcedureContents => 4,
+            C::ParameterEvaluation => 5,
+            C::Modules => 6,
+            C::ParameterValue => 7,
+            C::ImageStructure => 8,
+            C::ByteOrder => 9,
+            C::ProductData => 10,
+            C::Configuration => 11,
+            C::VendorDownloadPlugin => 12,
+            C::CustomerAdjustableParameters => 13,
+        };
+        for (index, category) in C::ALL.into_iter().enumerate() {
+            assert_eq!(position(category), index);
+        }
+        let codes: std::collections::BTreeSet<_> = C::ALL.iter().map(|c| c.code()).collect();
+        assert_eq!(codes.len(), C::ALL.len());
+    }
+
     use super::*;
     use knx_core::commissioning::load_state::MaskVersion;
     use knx_core::commissioning::memory_download::MemoryDownloadStep;
@@ -920,6 +986,196 @@ mod tests {
             plan_category(&DownloadPlanError::AllocatedTwice(0x4000)),
             UnsupportedCategory::ProcedureContents
         );
+    }
+
+    /// Pins every plan refusal's category and code (ADR-0185). The classifier
+    /// match is exhaustive, so a new variant fails to compile until listed here.
+    #[test]
+    fn every_plan_refusal_keeps_its_category_and_code() {
+        use knx_core::commissioning::load_control_memory::MemoryLoadRecordError;
+        use knx_productdb::code::CustomerAdjustableCounts;
+        use UnsupportedCategory as C;
+        let cases: Vec<(DownloadPlanError, C, &str)> = vec![
+            (
+                DownloadPlanError::NotAProductProcedure(None),
+                C::ProcedureStyle,
+                "procedure-style",
+            ),
+            (
+                DownloadPlanError::NotMemoryMapped(None),
+                C::NotMemoryMapped,
+                "not-memory-mapped",
+            ),
+            (
+                DownloadPlanError::Attribute {
+                    name: "x",
+                    value: None,
+                },
+                C::ProcedureContents,
+                "procedure-contents",
+            ),
+            (
+                DownloadPlanError::ProgramId("P".into()),
+                C::ProcedureContents,
+                "procedure-contents",
+            ),
+            (
+                DownloadPlanError::ProcedureCount(0),
+                C::ProcedureShape,
+                "procedure-shape",
+            ),
+            (
+                DownloadPlanError::MergeFragment {
+                    position: 2,
+                    merge_id: "m".into(),
+                },
+                C::ProcedureShape,
+                "procedure-shape",
+            ),
+            (
+                DownloadPlanError::DoesNotConnectFirst,
+                C::ProcedureShape,
+                "procedure-shape",
+            ),
+            (
+                DownloadPlanError::Unmodelled("S".into()),
+                C::UnmodelledStep,
+                "unmodelled-step",
+            ),
+            (
+                DownloadPlanError::Lsm(9),
+                C::ProcedureContents,
+                "procedure-contents",
+            ),
+            (
+                DownloadPlanError::SegmentType(9),
+                C::ProcedureContents,
+                "procedure-contents",
+            ),
+            (
+                DownloadPlanError::MemoryType(9),
+                C::ProcedureContents,
+                "procedure-contents",
+            ),
+            (
+                DownloadPlanError::SegmentFlags(1),
+                C::ProcedureContents,
+                "procedure-contents",
+            ),
+            (
+                DownloadPlanError::Address(0x1_0000),
+                C::ProcedureContents,
+                "procedure-contents",
+            ),
+            (
+                DownloadPlanError::Record(MemoryLoadRecordError::EmptySegment),
+                C::ProcedureContents,
+                "procedure-contents",
+            ),
+            (
+                DownloadPlanError::SizeMismatch {
+                    address: 0x4000,
+                    allocated: 1,
+                    octets: 2,
+                },
+                C::ProcedureContents,
+                "procedure-contents",
+            ),
+            (
+                DownloadPlanError::NeverWritten("S".into()),
+                C::ProcedureContents,
+                "procedure-contents",
+            ),
+            (
+                DownloadPlanError::AllocatedTwice(0x4000),
+                C::ProcedureContents,
+                "procedure-contents",
+            ),
+            (
+                DownloadPlanError::DuplicateSegmentStart {
+                    address: 0x4000,
+                    first: "A".into(),
+                    second: "B".into(),
+                },
+                C::ProcedureContents,
+                "procedure-contents",
+            ),
+            (
+                DownloadPlanError::VendorDownloadPlugin("{G}".into()),
+                C::VendorDownloadPlugin,
+                "vendor-download-plugin",
+            ),
+            (
+                DownloadPlanError::CustomerAdjustableParameters(CustomerAdjustableCounts::default()),
+                C::CustomerAdjustableParameters,
+                "customer-adjustable-parameters",
+            ),
+            (
+                DownloadPlanError::MasterReset {
+                    erase_code: 1,
+                    channel: 1,
+                },
+                C::ProcedureContents,
+                "procedure-contents",
+            ),
+            (
+                DownloadPlanError::PropertyParameters {
+                    object_index: 1,
+                    property_id: 2,
+                    reason: "declared size without count".into(),
+                },
+                C::ProcedureContents,
+                "procedure-contents",
+            ),
+        ];
+        for (error, category, code) in cases {
+            assert_eq!(plan_category(&error), category, "{error}");
+            assert_eq!(category.code(), code, "{error}");
+        }
+    }
+
+    /// Pins the image refusals that are cheap to build; the rest are listed in the match.
+    #[test]
+    fn image_refusals_without_payload_keep_their_category() {
+        use knx_core::commissioning::group_object_table::GroupObjectTableError;
+        use knx_core::commissioning::group_tables::GroupTableError;
+        use UnsupportedCategory as C;
+        let cases: Vec<(ImageError, C)> = vec![
+            (ImageError::SourceBindingChanged, C::ImageStructure),
+            (
+                ImageError::GroupObjects(GroupObjectTableError::NoHeader { octets: 0 }),
+                C::ImageStructure,
+            ),
+            (
+                ImageError::GroupTables(GroupTableError::BroadcastAddress { object: 1 }),
+                C::ImageStructure,
+            ),
+            (ImageError::InactiveObject { object: 1 }, C::ImageStructure),
+            (
+                ImageError::PriorityDiffers {
+                    ref_id: "R".into(),
+                    project: "High".into(),
+                    product: None,
+                },
+                C::ImageStructure,
+            ),
+            (
+                ImageError::Masked {
+                    segment: "S".into(),
+                    offset: 0,
+                },
+                C::ImageStructure,
+            ),
+            (
+                ImageError::UnsupportedByteOrder {
+                    order: "LittleEndian".into(),
+                },
+                C::ByteOrder,
+            ),
+        ];
+        for (error, category) in cases {
+            assert_eq!(image_category(&error), category, "{error:?}");
+        }
     }
 
     #[test]

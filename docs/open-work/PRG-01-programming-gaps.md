@@ -326,6 +326,12 @@ PRG-01-N11 (21 November 2026) hardened the backup file reader: signed or padded 
 ([acceptance](../status/2026-11-21-prg01-n11-backup-hex-refusal.md)). Offline pin only; no
 format, consumer or hardware change.
 
+PRG-01-N12 (21 November 2026) pinned consumer consistency: the web's per-category
+reason and action tables must name exactly the server's refusal categories, so a
+new category cannot silently fall back to a generic web reason
+([ADR-0187](../adr/0187-download-refusal-categories-have-a-drift-pin.md),
+[acceptance](../status/2026-11-21-prg01-n12-category-drift-pin.md)). Test-only.
+
 ## Full-product coverage pin debt resolved — 8 November 2026
 
 The owner authorised a new documented characterisation baseline rather than

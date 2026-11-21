@@ -1,6 +1,6 @@
 # PRG-01 — Close non-Secure programming gaps
 
-**Status:** In progress. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** In progress, paused at evidence wall (21 November 2026, N15). Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 **Owner:** programming-correctness track; see the restart snapshot
 [`.ai/CURRENT_STATE.md`](../../.ai/CURRENT_STATE.md) before touching shared
@@ -340,6 +340,25 @@ class cannot supply ([research](../research/2026-11-21-prg01-n14-recovery-axis.m
 [contract](../contracts/prg01-whole-mutation-recovery-scope.md),
 [ADR-0188](../adr/0188-prg01-whole-mutation-recovery-scope.md),
 [acceptance](../status/2026-11-21-prg01-n14-recovery-scope.md)).
+
+## Evidence wall — PRG-01 paused (21 November 2026)
+
+PRG-01-N1..N14 are merged. Every remaining Open axis was scoped and ended at
+the same wall: nothing left can be decided from simulator, loopback, offline
+fixtures or public primary sources without inventing ETS or device semantics.
+PRG-01 pauses until the owner supplies new evidence or decides otherwise. No
+code, KL row or hardware claim changes in N15 (KNX-compatible, hardware-untested).
+
+| Open axis | Scoping slice | What would unblock it | Consent needed |
+| --- | --- | --- | --- |
+| Run-state beyond the bounded properties (other masks, object layouts, memory encoding, physical function) | N4 — [ADR-0182](../adr/0182-unadmitted-run-state-masks-stay-refused.md) | A primary-source rule per mask (property/object layout and value meaning) to admit it; physical function needs device observation | Rule: none beyond owner admission of the source. Observation: explicit hardware authorisation naming device and operation |
+| Parameter policies (physical inactive-byte survival, inactive/default semantics, editable Dynamic, `Union`, customer-write rules) | N5 — [ADR-0183](../adr/0183-prg01-remaining-parameter-policies-need-evidence.md) | Public primary-source rules for each policy item; survival through Unload/allocation/Restart is device observation only | Rule: owner admission. Observation: authorised test hardware |
+| Mutation-effects observation (post-restart memory comparison, further declared forms, other layouts) | N6 — [ADR-0184](../adr/0184-prg01-mutation-effects-observation-scope.md) | Device observation that a restart does or does not rewrite octets; a primary-source rule would be needed to read memory post-restart at all | Authorised test hardware (read access to the device after restart) |
+| Whole-mutation recovery (replayed fixed property writes, non-memory state, post-restore function) | N14 — [ADR-0188](../adr/0188-prg01-whole-mutation-recovery-scope.md) | Primary-source rule for idempotent/replayable property writes; non-memory state and post-restore function need device observation | Writes: dedicated test hardware with explicit authorisation naming device and operation |
+
+Cross-slice follow-up (not PRG-01 scope, not fixed here): the knx-cli test
+`cli_bus_tcp::system2_validation::admission::tcp_connection_refusal_never_falls_back_and_udp_controls_are_handshake_only`
+is flaky (AddrInUse in the probe peer helper; isolated reruns green).
 
 ## Full-product coverage pin debt resolved — 8 November 2026
 

@@ -272,6 +272,8 @@ pub enum QualificationReason {
 pub enum RunStateMask {
     #[serde(rename = "0700")]
     Exact0700,
+    #[serde(rename = "0702")]
+    Exact0702,
 }
 
 /// Why a continuation read failed: a closed vocabulary, no transport text.
@@ -675,7 +677,11 @@ impl PostDownloadCheck {
                     })
                     .collect(),
                 plan_load_verdict: observation.load_verdict().into(),
-                run_state_mask: (identity.mask.0 == 0x0700).then_some(RunStateMask::Exact0700),
+                run_state_mask: match identity.mask.0 {
+                    0x0700 => Some(RunStateMask::Exact0700),
+                    0x0702 => Some(RunStateMask::Exact0702),
+                    _ => None,
+                },
                 run_state: Some((*run_state).into()),
             })),
             // `reach()` says reached exactly for the three outcomes above;
@@ -740,11 +746,27 @@ impl PostDownloadCheck {
     /// The summary's run-state clause: `unknown`, or the reported state with its scope.
     pub fn runtime_summary(&self) -> String {
         match self.runtime {
-            RuntimeState::Unknown => "application running: unknown".into(),
+            RuntimeState::Unknown => match self.run_state_record() {
+                // A recorded continuation without a defined state keeps its reason,
+                // as the CLI and the web view state it; no record stays the legacy text.
+                Some(record) => format!(
+                    "application running: unknown (no defined run state observed; \
+                     run-state read: {record})"
+                ),
+                None => "application running: unknown".into(),
+            },
             known => format!(
                 "run state: {known} (reported property of the validated plan-matching \
                  Applicationprogram object 3; not device health or download success)"
             ),
+        }
+    }
+
+    /// The run-state continuation of a matching identity, if one was recorded.
+    fn run_state_record(&self) -> Option<&RunStateRecord> {
+        match self.identity() {
+            Some(IdentityCheck::Match(matched)) => matched.run_state(),
+            _ => None,
         }
     }
 
@@ -770,10 +792,7 @@ impl PostDownloadCheck {
         }
         match self.runtime {
             RuntimeState::Unknown => {
-                let record = match self.identity() {
-                    Some(IdentityCheck::Match(matched)) => matched.run_state(),
-                    _ => None,
-                };
+                let record = self.run_state_record();
                 // A record means a run-state continuation was recorded, with
                 // no defined state in it; no record is the legacy shape.
                 lines.push(
@@ -887,7 +906,9 @@ impl TryFrom<MatchedWire> for MatchedLoadStates {
                     })
                 ))
         {
-            return Err("0700 provenance requires run-state evidence, not unsupportedMask");
+            return Err(
+                "qualified-mask provenance requires run-state evidence, not unsupportedMask",
+            );
         }
         if let Some(record) = wire.run_state {
             if matches!(
@@ -899,7 +920,7 @@ impl TryFrom<MatchedWire> for MatchedLoadStates {
                     }
             ) && wire.run_state_mask.is_none()
             {
-                return Err("description evidence requires exact0700 provenance");
+                return Err("description evidence requires qualified-mask provenance");
             }
             if let RunStateRecord::NotQualified { reason, pdt } = record {
                 if match (reason, pdt) {

@@ -492,10 +492,11 @@ pub fn load(conn: &Connection, program: &str) -> Result<ParameterLayout, Product
                 .values()
                 .filter(|grid| grid.status == GridStatus::Grid)
                 .flat_map(|grid| grid.rows.iter().chain(&grid.columns))
-                // WP-05n: an axis declaring `TextParameterRefId` is a
-                // parameter-driven caption host (ADR-0177), never an axis
-                // translation candidate — in any scope.
-                .filter(|axis| axis.text_parameter_ref_id.is_none())
+                // ADR-0177 (grid-axis captions): an axis declaring
+                // `TextParameterRefId` stays a bound caption host in every scope (it shows the referenced
+                // parameter's value); only the translation-candidate filter
+                // in query::caption_templates.rs excludes it, so sibling
+                // axes without a reference still translate normally.
                 .filter(|axis| bound.as_ref().is_some_and(|bound| bound.contains(&axis.id)))
                 .map(|axis| axis.id.clone())
                 .collect();

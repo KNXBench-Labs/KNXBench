@@ -720,5 +720,142 @@
       }
     },
     "runtime": "unknown"
+  },
+  "exact0702Running": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan",
+          "runState": {
+            "status": "observed",
+            "objectIndex": 3,
+            "state": "running"
+          },
+          "runStateMask": "0702"
+        }
+      }
+    },
+    "runtime": "running"
+  },
+  "exact0702DescriptionProblem": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan",
+          "runState": {
+            "status": "notQualified",
+            "reason": "descriptionProblem"
+          },
+          "runStateMask": "0702"
+        }
+      }
+    },
+    "runtime": "unknown"
+  },
+  "exact0702DescriptionUnavailable": {
+    "observation": {
+      "status": "attempted",
+      "reach": {
+        "result": "reached",
+        "identity": {
+          "result": "match",
+          "exemplar": "notVerified",
+          "loadStates": [
+            {
+              "machine": "addressTable",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            },
+            {
+              "machine": "associationTable",
+              "expected": "unloaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "unloaded"
+              }
+            },
+            {
+              "machine": "applicationProgram",
+              "expected": "loaded",
+              "observed": {
+                "result": "observed",
+                "loadState": "loaded"
+              }
+            }
+          ],
+          "planLoadVerdict": "matchesPlan",
+          "runState": {
+            "status": "unavailable",
+            "step": "description",
+            "cause": "noCorrelatedAnswer"
+          },
+          "runStateMask": "0702"
+        }
+      }
+    },
+    "runtime": "unknown"
   }
 }

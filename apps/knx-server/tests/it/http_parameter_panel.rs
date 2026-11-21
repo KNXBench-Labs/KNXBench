@@ -922,6 +922,62 @@ async fn missing_active_module_object_refuses_the_entire_parameter_edit() {
     assert_eq!(undo.status(), StatusCode::BAD_REQUEST);
 }
 
+/// F01: the module-ownership resolver refuses neighbouring ids, mismatched
+/// counters and duplicate owners; a refused edit leaves the project (ids
+/// included) and the native history untouched.
+#[tokio::test]
+async fn module_owner_refusals_leave_ids_state_and_history_untouched() {
+    let program = WRITE_PROGRAM
+        .replace(
+            "</Static>\n<Dynamic>\n  <ParameterRefRef RefId=\"MOD-1_P-1_R-1\" />",
+            "<ComObjectTable><ComObject Id=\"MOD-O-1\" Number=\"1\" ObjectSize=\"1 Bit\" /></ComObjectTable><ComObjectRefs><ComObjectRef Id=\"MOD-O-1_R-1\" RefId=\"MOD-O-1\" /></ComObjectRefs></Static>\n<Dynamic>\n<ComObjectRefRef RefId=\"MOD-O-1_R-1\" />\n  <ParameterRefRef RefId=\"MOD-1_P-1_R-1\" />",
+        )
+        .replace("<Module Id=\"MOD-1_M-1\"", "<Module Id=\"A-1_MOD-1_M-1\"");
+    assert!(program.contains("A-1_MOD-1_M-1") && program.contains("MOD-O-1_R-1"));
+    let cases: [(&str, Vec<(&str, &str)>); 4] = [
+        (
+            "neighbouring RefId",
+            vec![("MOD-1_M-11", "MOD-1_M-11_MI-1")],
+        ),
+        ("counter mismatch", vec![("MOD-1_M-1", "MOD-1_M-1_MI-2")]),
+        (
+            "duplicate owners",
+            vec![
+                ("MOD-1_M-1", "MOD-1_M-1_MI-1"),
+                ("MOD-1_M-1", "MOD-1_M-1_MI-1"),
+            ],
+        ),
+        (
+            "malformed instance id",
+            vec![("MOD-1_M-1", "MOD-1_M-1_MI-x")],
+        ),
+    ];
+    for (case, instances) in cases {
+        let (_dir, products) = temp_product_db(&program);
+        let state = Arc::new(state_with_device_and_modules(products, vec![], instances));
+        let before = state.project.lock().unwrap().clone().unwrap();
+        let history = state.command_stack.lock().unwrap().history_lengths();
+        let app = knx_server::app(Arc::clone(&state), None);
+        let (status, result) = post_panel(app.clone(), 1, "P-2_R-1", "1").await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{case}: {result}");
+        assert!(
+            result["error"]
+                .as_str()
+                .unwrap()
+                .contains("whose instance/number mapping is not supported"),
+            "{case}: {result}"
+        );
+        let after = state.project.lock().unwrap().clone().unwrap();
+        assert_eq!(after, before, "{case}: project changed");
+        assert_eq!(after.ids, before.ids, "{case}: ids were allocated");
+        assert_eq!(
+            state.command_stack.lock().unwrap().history_lengths(),
+            history,
+            "{case}: native history changed"
+        );
+    }
+}
+
 #[tokio::test]
 async fn object_addition_preserves_preexisting_links_and_instance_overrides() {
     let (_dir, products) = temp_product_db(&configured_object_program());

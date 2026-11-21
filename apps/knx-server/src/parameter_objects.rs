@@ -191,21 +191,11 @@ pub(crate) fn include_missing(
         // `Module/@Id`'s own `MI-<k>` tail picks the owning instance.
         if let Some(scope) = &active.scope {
             let module_id = scope.module_id.as_deref();
-            let owners = modules
-                .iter()
-                .filter(|instance| {
-                    module_id.is_some_and(|id| id.contains(&format!("_{}", instance.source.ets_id)))
-                })
-                .collect::<Vec<_>>();
-            let owner = match owners.as_slice() {
-                [] => None,
-                [one] if one.instance_counter().is_some() => Some(*one),
-                many => module_id.and_then(mi_counter_of).and_then(|k| {
-                    many.iter()
-                        .find(|m| m.instance_counter() == Some(k))
-                        .copied()
-                }),
-            };
+            let owner =
+                module_id.and_then(|id| match knx_core::resolve_module_owner(id, &modules) {
+                    knx_core::ModuleOwner::Resolved(m) => Some(m),
+                    _ => None,
+                });
             let authoritative = owner.is_some();
             let present = authoritative
                 && represented.iter().any(|(instance, reference)| {
@@ -280,16 +270,4 @@ pub(crate) fn include_missing(
         Command::Batch(commands)
     };
     Ok((command, diagnostics))
-}
-
-/// The `MI-<k>` digits a program-side `Module/@Id` carries, when well-formed
-/// (ADR-0177): rightmost `_MI-` whose tail is all ASCII digits. This is the
-/// same counter definition as `knx_core::ModuleInstance::instance_counter`.
-fn mi_counter_of(module_id: &str) -> Option<u32> {
-    let marker = module_id.rfind("_MI-")?;
-    let digits = &module_id[marker + 4..];
-    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
-        return None;
-    }
-    digits.parse().ok()
 }

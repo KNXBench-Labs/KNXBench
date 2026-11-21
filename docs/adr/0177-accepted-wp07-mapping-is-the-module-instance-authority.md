@@ -75,3 +75,33 @@ writes and object reconciliation keep their existing refusal semantics, now
 expressed through the one authority. WP-37's module-scoped-parameters item can
 build on `instance_counter()`. No storage schema, protocol or UI change; no
 bus/device/write/release authority is granted or implied.
+
+## Amendment 2026-11-21 (WP-48.2, finding F01): one structural resolver
+
+The "ends with `_<RefId>`" rule of decision 2 was implemented as
+`module_id.contains("_<RefId>")` at six call sites, with no right boundary
+(`MD-2_M-4` matched `…_MD-2_M-41_MI-1`), a lone candidate admitted without
+checking the program-side `MI-` counter, and `find` order deciding between
+duplicates. It now lives in one pure function,
+`knx_core::resolve_module_owner(module_id, instances)` (`knx-core`, so
+`knx-productdb` and `knx-server` share it without a layering change).
+
+Grammar, as the producer emits it: `<program prefix>_<RefId>[_MI-<k>]`,
+`<RefId>` being the instance's `source.ets_id`. The id is split at its
+rightmost `_MI-`; `<RefId>` must end the remainder and begin at an `_`
+boundary. A carried counter must equal the instance's `instance_counter()`;
+an id without a counter (the declaration form `…_<RefId>`) resolves only when
+one instance claims it.
+
+Outcome is typed (`ModuleOwner`) and only `Resolved` may be acted on:
+`NoMatch`; `MalformedModuleId` (non-digit or overflowing `_MI-` tail);
+`MalformedInstance` (any candidate whose `instance_ets_id` is not
+`<RefId>_MI-<digits>`); `ConflictingRefs` (candidates with different
+`RefId`s); `CounterMismatch` (no candidate carries the id's counter);
+`Ambiguous` (several candidates remain — no counter, or duplicate owners).
+There is no first-match fallback and the result does not depend on input
+order; candidate ids are reported sorted. Callers keep their refusal
+semantics: `resolve_mi_authority` maps non-`Resolved` outcomes to
+`NoMatch`/`Ambiguous`/`Malformed`; parameter-edit admission refuses the whole
+edit; communication-object activation stays `Undetermined`.
+

@@ -262,6 +262,13 @@ source evidence; only their refusal is simulator-verifiable and is now pinned
   `Union` and customer-write rules remain unresolved.
 - Complete mutation effects and whole-mutation recovery contracts.
 
+PRG-01-N5 (21 November 2026) inventoried these remaining parameter-policy items
+and found none simulator-verifiable without inventing ETS semantics; it names the
+missing evidence per item ([research](../research/2026-11-21-prg01-n5-remaining-parameter-policy-evidence.md),
+[scope contract](../contracts/prg01-remaining-parameter-policy-scope.md),
+[ADR-0183](../adr/0183-prg01-remaining-parameter-policies-need-evidence.md)).
+No code or runtime claim changed.
+
 ## Full-product coverage pin debt resolved — 8 November 2026
 
 The owner authorised a new documented characterisation baseline rather than

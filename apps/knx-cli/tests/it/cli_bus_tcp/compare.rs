@@ -12,7 +12,7 @@ use super::{
 use knx_core::commissioning::memory_download::MemoryDownloadStep;
 use knx_net::ApplicationService as A;
 use std::{
-    net::{Ipv4Addr, TcpListener, UdpSocket},
+    net::Ipv4Addr,
     process::{Command, Output},
     thread,
 };
@@ -394,10 +394,9 @@ fn refused_tcp_uses_a_reserved_port_and_never_falls_back_to_udp() {
 fn default_and_explicit_udp_select_udp_handshake_only_not_a_complete_comparison() {
     for transport in [None, Some("udp")] {
         let fixture = fixture();
-        let udp = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let (udp, tcp) = knx_testsupport::udp_socket_with_tcp_trap();
         let addr = udp.local_addr().unwrap();
         udp.set_read_timeout(Some(super::WAIT)).unwrap();
-        let tcp = TcpListener::bind(addr).unwrap();
         tcp.set_nonblocking(true).unwrap();
         let socket = udp.try_clone().unwrap();
         let worker = Joined::new(thread::spawn(move || {

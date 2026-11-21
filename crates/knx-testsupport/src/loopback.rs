@@ -33,6 +33,22 @@ pub fn tcp_listener_with_udp_trap() -> (TcpListener, UdpSocket) {
     )
 }
 
+/// A loopback UDP socket on an ephemeral port plus a TCP trap on the same port number.
+///
+/// Mirror of [`tcp_listener_with_udp_trap`] for UDP-first gateways: a taken TCP port number
+/// drops that UDP candidate and tries a fresh one instead of panicking with `AddrInUse`.
+pub fn udp_socket_with_tcp_trap() -> (UdpSocket, TcpListener) {
+    for _ in 0..MAX_ATTEMPTS {
+        let udp = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+        match TcpListener::bind(udp.local_addr().unwrap()) {
+            Ok(tcp) => return (udp, tcp),
+            Err(error) if error.kind() == std::io::ErrorKind::AddrInUse => {}
+            Err(error) => panic!("TCP trap bind failed: {error}"),
+        }
+    }
+    panic!("no loopback port with both UDP and TCP free after {MAX_ATTEMPTS} attempts");
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -71,6 +87,19 @@ mod tests {
         let occupied = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
         let taken = occupied.local_addr().unwrap();
         let _ = with_udp_trap(|| taken, |addr| *addr);
+    }
+
+    #[test]
+    fn udp_first_pair_shares_one_port_and_survives_held_tcp_ports() {
+        // Many held TCP ports make a same-numbered TCP bind after a bare UDP bind collide often.
+        let held: Vec<TcpListener> = (0..2000)
+            .map_while(|_| TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).ok())
+            .collect();
+        for _ in 0..50 {
+            let (udp, tcp) = udp_socket_with_tcp_trap();
+            assert_eq!(udp.local_addr().unwrap(), tcp.local_addr().unwrap());
+        }
+        drop(held);
     }
 
     #[test]

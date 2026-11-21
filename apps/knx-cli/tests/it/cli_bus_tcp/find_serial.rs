@@ -642,10 +642,9 @@ fn tcp_history_and_bundle_preflight_preserve_foreign_evidence_without_contact() 
 fn omitted_and_explicit_udp_keep_the_real_udp_handshake_for_both_queries() {
     for by_address in [false, true] {
         for flags in [vec![], vec!["--tunnel-transport", "udp"]] {
-            let socket = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+            let (socket, tcp) = knx_testsupport::udp_socket_with_tcp_trap();
             socket.set_read_timeout(Some(WAIT)).unwrap();
             let endpoint = socket.local_addr().unwrap();
-            let tcp = TcpListener::bind(endpoint).unwrap();
             tcp.set_nonblocking(true).unwrap();
             let worker = thread::spawn(move || {
                 let mut buf = [0; 2048];

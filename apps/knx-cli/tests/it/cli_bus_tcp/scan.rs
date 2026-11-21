@@ -517,10 +517,9 @@ fn scan_refuses_non_unicast_zero_port_and_invalid_ipv4_before_dry_run() {
 #[test]
 fn scan_default_and_explicit_udp_receive_descriptor_and_never_connect_tcp() {
     for extra in [vec![], vec!["--tunnel-transport", "udp"]] {
-        let gateway = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let (gateway, tcp_trap) = knx_testsupport::udp_socket_with_tcp_trap();
         gateway.set_read_timeout(Some(WAIT)).unwrap();
         let address = gateway.local_addr().unwrap();
-        let tcp_trap = TcpListener::bind(address).unwrap();
         tcp_trap.set_nonblocking(true).unwrap();
         let worker = thread::spawn(move || {
             let mut buffer = [0; 128];

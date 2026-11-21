@@ -13,7 +13,7 @@ use knx_net::{
     ApplicationService as A,
 };
 use std::{
-    net::{Ipv4Addr, TcpListener, UdpSocket},
+    net::{Ipv4Addr, TcpListener},
     process::{Command, Output},
     sync::Arc,
     thread,
@@ -220,11 +220,10 @@ pub(super) fn rejected(mut cmd: impl FnMut(&str) -> Command) {
 }
 pub(super) fn udp_controls(mut cmd: impl FnMut(&str, Option<&str>) -> Command) {
     for transport in [None, Some("udp")] {
-        let udp = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let (udp, tcp) = knx_testsupport::udp_socket_with_tcp_trap();
         udp.set_read_timeout(Some(std::time::Duration::from_secs(10)))
             .unwrap();
         let addr = udp.local_addr().unwrap();
-        let tcp = TcpListener::bind(addr).unwrap();
         tcp.set_nonblocking(true).unwrap();
         let worker = thread::spawn(move || {
             let mut bytes = [0; 2048];

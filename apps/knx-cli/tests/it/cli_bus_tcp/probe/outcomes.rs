@@ -204,7 +204,6 @@ fn omitted_and_explicit_udp_complete_the_same_saved_real_plan_without_contacting
         simulator_gateway::{serve, GatewayConfig, GatewayEvent},
     };
     use std::{
-        net::{TcpListener, UdpSocket},
         sync::{Arc, Mutex},
         thread,
     };
@@ -220,10 +219,9 @@ fn omitted_and_explicit_udp_complete_the_same_saved_real_plan_without_contacting
         ));
         device.preset_memory(0x4400, &[0x2c, 1, 2, 1]);
         device.preset_memory(0x4408, &[7]);
-        let socket = UdpSocket::bind("127.0.0.1:0").unwrap();
+        let (socket, tcp) = knx_testsupport::udp_socket_with_tcp_trap();
         let addr = socket.local_addr().unwrap();
         socket.set_nonblocking(true).unwrap();
-        let tcp = TcpListener::bind(addr).unwrap();
         tcp.set_nonblocking(true).unwrap();
         let observed = Arc::new(Mutex::new(Vec::new()));
         let frames = observed.clone();

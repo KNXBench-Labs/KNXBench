@@ -6,8 +6,7 @@ decision: [ADR-0182](../adr/0182-unadmitted-run-state-masks-stay-refused.md).
 
 ## Admitted masks
 
-Only exact `0700h` (descriptor-qualified), `0701h`, `0705h` (and `0702h` once
-the PRG-01-N1/N2 slice is merged) reach the run-state continuation.
+Only exact `0700h` (descriptor-qualified), `0701h`, `0705h` reach the run-state continuation.
 
 ## Rule
 

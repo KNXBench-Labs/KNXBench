@@ -2,11 +2,11 @@
 
 ## Question
 
-After `0700h`, `0701h`, `0705h` (and `0702h`, delivered in PRG-01-N1/N2), is any
+After `0700h`, `0701h`, `0705h` (`0702h` is handled by a separate slice), is any
 further run-state observation simulator-verifiable without inventing semantics?
 
 ## Evidence reused (not re-inspected)
-
+All facts come from the [property run-state review](2026-10-29-property-run-state-observation.md)
 All facts come from the 0702h source review (`2026-11-20-property-run-state-observation-0702.md`, on the unmerged PRG-01-N1/N2 branches)
 and the [0700h investigation](2026-10-29-property-description-run-state-0700.md) of the
 original KNX Standard v3.0.0 PDFs; licensed extracts stay private.
@@ -22,7 +22,7 @@ original KNX Standard v3.0.0 PDFs; licensed extracts stay private.
 
 No remaining run-state gap is both source-backed and simulator-verifiable. The
 simulator can only pin the **refusal**: an unadmitted mask produces no
-run-state frame beyond the identity read. Existing tests pinned only `0702h`
+run-state frame beyond the identity read. Existing tests on main pinned only `0702h`
 and `070Fh`; this slice pins every other unadmitted low nibble and masks
 outside the family, including precedence over a failed load read.
 

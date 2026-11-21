@@ -96,6 +96,7 @@ pub fn decompose_module_qualified(ets_id: &str) -> Option<(String, String, Strin
 /// ADR-0177: with the accepted mapping, the `Module/@Id` itself carries the
 /// instance counter (`…_<RefId>_M-<m>_MI-<k>`), so a repeated module is
 /// resolved by that counter instead of being ambiguous by construction.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MiAuthority {
     /// Exactly one imported `ModuleInstance` matches, and its
     /// `instance_ets_id` decomposes cleanly — these are the `MI-` digits
@@ -121,64 +122,62 @@ pub enum MiAuthority {
     },
 }
 
-/// D39 rules 2-3, with the accepted WP-07 mapping (ADR-0177): the
-/// instance-matching rule is that the `RefId` occurs in the program-side
-/// `Module/@Id` as an id component — the mapping appends `_M-<m>_MI-<k>`
-/// after it, so a plain `ends_with` never sees real export ids (whose prefix
-/// is the product's `A-…` form). The leading underscore keeps `MD-1_M-2`
-/// from matching `…_MD-11_M-2`. The `MI-` digits come from the shared
-/// authority [`knx_core::ModuleInstance::instance_counter`] (ADR-0177);
-/// `MiAuthority::Found` carries the counter as its decimal string so the
-/// existing callers keep their shape.
+/// D39 rules 2-3 through the one structural resolver
+/// [`knx_core::resolve_module_owner`] (ADR-0177, amended 2026-11-21): the
+/// `RefId` must end the program-side `Module/@Id` on a component boundary,
+/// an `MI-` tail the id carries must equal the instance counter, and only
+/// exactly one such instance is `Found` (carried as its decimal counter).
+/// Duplicate, conflicting, counter-mismatching or malformed candidates are
+/// never first-matched: they map to `Ambiguous`/`Malformed`.
 pub fn resolve_mi_authority(
     instances: &[knx_core::ModuleInstance],
     module_id: &str,
 ) -> MiAuthority {
-    let matches: Vec<&knx_core::ModuleInstance> = instances
-        .iter()
-        .filter(|m| module_id.contains(&format!("_{}", m.source.ets_id)))
-        .collect();
-    match matches.as_slice() {
-        [] => MiAuthority::NoMatch,
-        [one] => match one.instance_counter() {
-            Some(k) => MiAuthority::Found(k.to_string()),
-            None => MiAuthority::Malformed {
-                source_ets_id: one.source.ets_id.clone(),
-                instance_ets_id: one.instance_ets_id.clone(),
-            },
-        },
-        many => {
-            // ADR-0177: the accepted mapping puts the instance counter in
-            // the program-side `Module/@Id` itself (`…_<RefId>_M-<m>_MI-<k>`),
-            // so a repeated module is no longer inherently ambiguous — the
-            // id's own `MI-` digits pick the one instance carrying that
-            // counter. Only a missing/malformed id counter or a counter no
-            // imported instance carries stays ambiguous/malformed.
-            let id_counter = mi_counter_of(module_id);
-            match id_counter.and_then(|k| {
-                many.iter()
-                    .find(|m| m.instance_counter() == Some(k))
-                    .map(|_| k)
-            }) {
-                Some(k) => MiAuthority::Found(k.to_string()),
-                None => MiAuthority::Ambiguous {
-                    source_ets_id: many[0].source.ets_id.clone(),
-                    instance_ets_ids: many.iter().map(|m| m.instance_ets_id.clone()).collect(),
-                },
-            }
+    use knx_core::ModuleOwner;
+    let describe = |ids: &[knx_core::ModuleInstanceId]| -> Vec<&knx_core::ModuleInstance> {
+        instances.iter().filter(|m| ids.contains(&m.id)).collect()
+    };
+    let ambiguous = |found: Vec<&knx_core::ModuleInstance>| {
+        let mut instance_ets_ids: Vec<String> =
+            found.iter().map(|m| m.instance_ets_id.clone()).collect();
+        instance_ets_ids.sort();
+        MiAuthority::Ambiguous {
+            source_ets_id: found
+                .iter()
+                .map(|m| m.source.ets_id.clone())
+                .min()
+                .unwrap_or_default(),
+            instance_ets_ids,
         }
+    };
+    match knx_core::resolve_module_owner(module_id, instances) {
+        ModuleOwner::Resolved(m) => match m.instance_counter() {
+            Some(k) => MiAuthority::Found(k.to_string()),
+            None => malformed_of(m),
+        },
+        ModuleOwner::NoMatch => MiAuthority::NoMatch,
+        ModuleOwner::MalformedInstance(ids) => {
+            let mut found = describe(&ids);
+            found.sort_by(|a, b| a.instance_ets_id.cmp(&b.instance_ets_id));
+            found
+                .first()
+                .map_or(MiAuthority::NoMatch, |m| malformed_of(m))
+        }
+        // A malformed program-side id has no structural owner; report every
+        // instance whose RefId ends it as the refused set.
+        ModuleOwner::MalformedModuleId(ids) if ids.is_empty() => MiAuthority::NoMatch,
+        ModuleOwner::MalformedModuleId(ids) => ambiguous(describe(&ids)),
+        ModuleOwner::ConflictingRefs(ids)
+        | ModuleOwner::CounterMismatch(ids)
+        | ModuleOwner::Ambiguous(ids) => ambiguous(describe(&ids)),
     }
 }
 
-/// The `MI-<k>` digits a program-side `Module/@Id` carries, when well-formed
-/// (ADR-0177): rightmost `_MI-` whose tail is all ASCII digits.
-fn mi_counter_of(module_id: &str) -> Option<u32> {
-    let marker = module_id.rfind("_MI-")?;
-    let digits = &module_id[marker + 4..];
-    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
-        return None;
+fn malformed_of(m: &knx_core::ModuleInstance) -> MiAuthority {
+    MiAuthority::Malformed {
+        source_ets_id: m.source.ets_id.clone(),
+        instance_ets_id: m.instance_ets_id.clone(),
     }
-    digits.parse().ok()
 }
 
 /// One device's evaluated `Dynamic` tree, from its stored parameter values
@@ -284,13 +283,17 @@ pub fn evaluate_device(
         // `MI-<k>` comparison now goes through the shared authority
         // (ADR-0177): the instance's counter must equal the candidate's
         // `mi_digits`, which is the same all-ASCII-digit check expressed once.
-        let matches: Vec<_> = module_instances
-            .iter()
-            .filter(|m| {
-                module_id.contains(&format!("_{}", m.source.ets_id))
-                    && m.instance_counter().map(|k| k.to_string()) == Some(mi_digits.clone())
-            })
-            .collect();
+        let carried_id = format!("{module_id}_MI-{mi_digits}");
+        let owner = knx_core::resolve_module_owner(&carried_id, module_instances);
+        // The stored digits must be the counter's canonical spelling.
+        let matches: Vec<&knx_core::ModuleInstance> = match owner {
+            knx_core::ModuleOwner::Resolved(m)
+                if m.instance_counter().map(|k| k.to_string()) == Some(mi_digits.clone()) =>
+            {
+                vec![m]
+            }
+            _ => Vec::new(),
+        };
         let declared: Vec<_> = declarations
             .iter()
             .filter(|(id, _)| id == &module_id)
@@ -300,9 +303,7 @@ pub fn evaluate_device(
         // existing evaluator also supports legacy declaration aliases; don't
         // silently change that single-instance write/read contract here.
         let has_matching_definition = has_unique_declaration && declared[0].1 == prefix;
-        let has_imported_owner = module_instances
-            .iter()
-            .any(|m| module_id.contains(&format!("_{}", m.source.ets_id)));
+        let has_imported_owner = !matches!(owner, knx_core::ModuleOwner::NoMatch);
         if has_imported_owner && (matches.len() != 1 || !has_unique_declaration) {
             stale.push(StaleValue { ets_id, raw });
             continue;
@@ -469,5 +470,61 @@ impl DeviceEvaluation {
             (false, true) => ValueStatus::Inactive,
             (false, false) => ValueStatus::Unknown,
         }
+    }
+}
+
+#[cfg(test)]
+mod owner_tests {
+    use super::*;
+    use knx_core::{DeviceId, ModuleInstance, ModuleInstanceId, SourceRef};
+
+    fn inst(id: u32, ref_id: &str, instance: &str) -> ModuleInstance {
+        ModuleInstance {
+            id: ModuleInstanceId(id),
+            device: DeviceId(1),
+            source: SourceRef {
+                path: "t".into(),
+                ets_id: ref_id.into(),
+            },
+            repeat_index: String::new(),
+            instance_ets_id: instance.into(),
+            arguments: vec![],
+        }
+    }
+
+    /// F01: exact boundary, counter agreement and refusal through the shared resolver.
+    #[test]
+    fn resolve_mi_authority_uses_the_structural_resolver() {
+        let m4 = [inst(1, "MD-2_M-4", "MD-2_M-4_MI-1")];
+        assert_eq!(
+            resolve_mi_authority(&m4, "A-1_MD-2_M-41"),
+            MiAuthority::NoMatch
+        );
+        assert_eq!(
+            resolve_mi_authority(&m4, "A-1_MD-2_M-4"),
+            MiAuthority::Found("1".into())
+        );
+        assert!(matches!(
+            resolve_mi_authority(&m4, "A-1_MD-2_M-4_MI-99"),
+            MiAuthority::Ambiguous { .. }
+        ));
+        let dup = [
+            inst(1, "MD-2_M-4", "MD-2_M-4_MI-1"),
+            inst(2, "MD-2_M-4", "MD-2_M-4_MI-1"),
+        ];
+        let reversed = [dup[1].clone(), dup[0].clone()];
+        assert_eq!(
+            resolve_mi_authority(&dup, "A-1_MD-2_M-4_MI-1"),
+            resolve_mi_authority(&reversed, "A-1_MD-2_M-4_MI-1")
+        );
+        assert!(matches!(
+            resolve_mi_authority(&dup, "A-1_MD-2_M-4_MI-1"),
+            MiAuthority::Ambiguous { .. }
+        ));
+        let bad = [inst(3, "MD-2_M-4", "MD-2_M-4_MI-x")];
+        assert!(matches!(
+            resolve_mi_authority(&bad, "A-1_MD-2_M-4"),
+            MiAuthority::Malformed { .. }
+        ));
     }
 }

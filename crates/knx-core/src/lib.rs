@@ -22,6 +22,7 @@ pub mod installation;
 pub mod instruction;
 pub mod limits;
 pub mod module;
+pub mod module_owner;
 pub mod names;
 pub mod note;
 pub mod object_priority;
@@ -69,6 +70,7 @@ pub use group_address_names::{resolve_project_group_address_names, GROUP_ADDRESS
 pub use ids::*;
 pub use installation::Installation;
 pub use module::ModuleInstance;
+pub use module_owner::{resolve_module_owner, ModuleOwner};
 pub use parameter::ParameterInstance;
 pub use project::{IdAllocationError, IdAllocators, Project, ProjectInfo, CURRENT_SCHEMA_VERSION};
 pub use provenance::{Layer, Override, Resolved};

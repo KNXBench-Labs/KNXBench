@@ -188,45 +188,21 @@ fn decide<'a>(
 }
 
 /// The one device `ModuleInstance` a scoped activation belongs to, by the
-/// innermost scope's `Module/@Id` (D39: the `RefId` occurs in it as an id
-/// component; the accepted WP-07 mapping appends `_M-<m>_MI-<k>` after it).
-/// When several instances share that `RefId`, ADR-0177 breaks the tie with
-/// the `MI-` counter the `Module/@Id` itself carries; a `Module/@Id` without
-/// a well-formed counter, zero matches or a counter no imported instance
-/// carries all resolve to `None` — never guessed.
+/// innermost scope's `Module/@Id`, through the shared structural resolver
+/// [`knx_core::resolve_module_owner`] (ADR-0177): zero, malformed, duplicate,
+/// conflicting or counter-mismatching candidates resolve to `None`, never a
+/// guess.
 fn owning_instance<'a>(
     hit: &ActiveRef,
     device_instances: &'a [knx_core::ModuleInstance],
 ) -> Option<&'a knx_core::ModuleInstance> {
     let module_id = hit.scope.as_ref()?.module_id.as_deref()?;
-    // D39: the `Module/@Id` ends with the instance `RefId` — but the
-    // accepted WP-07 mapping (ADR-0177) appends "_M-<m>_MI-<k>" after it in
-    // real exports, so the RefId is a *substring* of the id, not its suffix.
-    // Match on the RefId occurring as an id component and read the counter
-    // from the id's own "_MI-" tail.
-    let mut matches = device_instances
-        .iter()
-        .filter(|m| module_id.contains(&format!("_{}", m.source.ets_id)));
-    let first = matches.next()?;
-    if matches.next().is_some() {
-        // Repeated instances: the Module/@Id's own MI- digits decide.
-        let id_counter = mi_counter_of(module_id)?;
-        return device_instances.iter().find(|m| {
-            module_id.contains(&format!("_{}", m.source.ets_id))
-                && m.instance_counter() == Some(id_counter)
-        });
+    // One structural resolver (ADR-0177): exact RefId boundary, MI-counter
+    // agreement, refusal on zero/malformed/duplicate/conflicting candidates.
+    match knx_core::resolve_module_owner(module_id, device_instances) {
+        knx_core::ModuleOwner::Resolved(instance) => Some(instance),
+        _ => None,
     }
-    first.instance_counter().is_some().then_some(first)
-}
-
-/// The `MI-<k>` digits a program-side `Module/@Id` carries, when well-formed.
-fn mi_counter_of(module_id: &str) -> Option<u32> {
-    let marker = module_id.rfind("_MI-")?;
-    let digits = &module_id[marker + 4..];
-    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
-        return None;
-    }
-    digits.parse().ok()
 }
 
 /// Channel nodes built so far, so every object of one channel shares one
@@ -1032,5 +1008,76 @@ mod tests {
             )
         );
         assert!(nodes[0].channel.is_none());
+    }
+
+    /// One expansion of `A_MD-1` whose `Module/@Id` is `module_id`.
+    fn one_module_program(module_id: &str) -> ProgramTrees {
+        let mut m = nd(3, Some(2), "Module");
+        m.element_id = Some(module_id.to_string());
+        m.ref_id = Some("A_MD-1".to_string());
+        let program = DynamicTree::from_nodes(vec![
+            nd(1, None, "Dynamic"),
+            nd(2, Some(1), "ChannelIndependentBlock"),
+            m,
+        ]);
+        let module = DynamicTree::from_nodes(vec![
+            nd(1, None, "Dynamic"),
+            channel(2, 1, "A_MD-1_CH-1", "Kanal"),
+            com_ref(3, 2, "A_MD-1_O-1"),
+        ]);
+        ProgramTrees::from_parts(program, HashMap::from([("A_MD-1".to_string(), module)]))
+    }
+
+    fn activation_of(
+        program: &ProgramTrees,
+        instances: &[knx_core::ModuleInstance],
+    ) -> ComObjectActivation {
+        let keys = HashMap::from([(
+            1,
+            ComObjectKey {
+                lookup_id: "A_MD-1_O-1".to_string(),
+                scope: ObjectScope::Module(&instances[0]),
+            },
+        )]);
+        run(program, &keys, instances, &HashMap::new(), &[1])[0].activation
+    }
+
+    /// F01: `…_MD-1_M-4` is a substring of `…_MD-1_M-41`, but not its owner.
+    #[test]
+    fn a_longer_module_id_does_not_activate_a_shorter_instance() {
+        let instances = vec![instance(10, "MD-1_M-4")];
+        let longer = one_module_program("A_MD-1_M-41_MI-1");
+        assert_eq!(
+            activation_of(&longer, &instances),
+            ComObjectActivation::Undetermined
+        );
+        let exact = one_module_program("A_MD-1_M-4_MI-1");
+        assert_eq!(
+            activation_of(&exact, &instances),
+            ComObjectActivation::Active
+        );
+    }
+
+    /// F01: a carried counter no instance has, or two instances claiming the
+    /// same counter, never activate by first match.
+    #[test]
+    fn counter_mismatch_and_duplicate_owners_do_not_activate() {
+        let one = vec![instance(10, "MD-1_M-1")];
+        let mismatch = one_module_program("A_MD-1_M-1_MI-99");
+        assert_eq!(
+            activation_of(&mismatch, &one),
+            ComObjectActivation::Undetermined
+        );
+        let duplicates = vec![instance(10, "MD-1_M-1"), instance(11, "MD-1_M-1")];
+        let carried = one_module_program("A_MD-1_M-1_MI-1");
+        assert_eq!(
+            activation_of(&carried, &duplicates),
+            ComObjectActivation::Undetermined
+        );
+        let reversed: Vec<_> = duplicates.iter().rev().cloned().collect();
+        assert_eq!(
+            activation_of(&carried, &reversed),
+            ComObjectActivation::Undetermined
+        );
     }
 }

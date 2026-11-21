@@ -183,9 +183,13 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0175](0175-device-configuration-modules-are-declarative-data.md) | Device configuration modules are declarative data | Accepted | 2026-11-15 |
 | [0176](0176-manual-reko-catalogue-acquisition.md) | Reko supplies files; the existing catalogue importer still decides | Delivered on main `c079ec8d6`; not in Alpha 22 | 2026-11-16 |
 | [0177](0177-accepted-wp07-mapping-is-the-module-instance-authority.md) | The accepted WP-07 mapping is the module-instance authority | Proposed | 2026-11-17 |
+| [0177](0177-grid-axis-text-parameter-captions.md) | Grid-axis captions resolve their declared text parameter (number shared with the WP-07 row above) | Accepted implementation direction | 2026-11-17 |
 | [0178](0178-rel01-catalogue-defines-the-beta-exit.md) | The REL-01 catalogue defines the beta exit | Accepted | 2026-11-20 |
 | [0179](0179-external-cli-download-reconciliation.md) | An external CLI download report reconciles pending marks only on authoritative match | Proposed | 2026-11-20 |
+| [0180](0180-exact-0702h-run-state-observation.md) | Exact `0702h` joins the descriptor-qualified run-state observation | Accepted | 2026-11-20 |
+| [0181](0181-module-local-options-customer-adjustable.md) | Module-local Options joins the bounded customer-adjustable refusal | Proposed | 2026-11-20 |
 | [0182](0182-unadmitted-run-state-masks-stay-refused.md) | Unadmitted run-state masks stay refused until a source admits them | Proposed | 2026-11-21 |
 | [0183](0183-prg01-remaining-parameter-policies-need-evidence.md) | Remaining PRG-01 parameter policies wait for evidence, not simulators | Accepted | 2026-11-21 |
 | [0184](0184-prg01-mutation-effects-observation-scope.md) | Mutation-effects observation stays closed until restart-stability evidence exists | Accepted | 2026-11-21 |
+| [0185](0185-download-refusal-classifiers-are-exhaustive.md) | Download refusal classifiers are exhaustive and pinned | Accepted | 2026-11-21 |
 | [0186](0186-report-summary-keeps-the-run-state-reason.md) | The download-report summary keeps the run-state reason | Accepted | 2026-11-21 |

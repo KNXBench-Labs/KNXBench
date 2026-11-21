@@ -40,12 +40,19 @@ fn admitted_union_and_module_scopes_reach_the_public_writer_without_module_trans
 }
 
 #[test]
-fn excluded_module_options_and_foreign_prefixes_do_not_invent_the_new_refusal() {
+fn excluded_descendants_and_foreign_prefixes_do_not_invent_the_new_refusal() {
     let dir = tempfile::tempdir().unwrap();
     let (products, project) = installed(dir.path(), "");
     let plain = prepare_device_download(&products, &project, target()).unwrap();
     for contents in [
-        r#"<ModuleDefs><ModuleDef><Static><Options CustomerAdjustableParameters="Sync" /></Static></ModuleDef></ModuleDefs>"#,
+        // Still excluded (ADR-0181): module Options behind a wrapper, in a
+        // module's Dynamic/Extension, and foreign-prefixed attributes.
+        r#"<ModuleDefs><ModuleDef><Static><Wrapper><Options CustomerAdjustableParameters="Sync" /></Wrapper></Static></ModuleDef></ModuleDefs>"#,
+        r#"<ModuleDefs><ModuleDef><Dynamic><Options CustomerAdjustableParameters="Sync" /></Dynamic></ModuleDef></ModuleDefs>"#,
+        r#"<ModuleDefs><ModuleDef><Static><Options xmlns:x="urn:foreign" x:CustomerAdjustableParameters="Sync" /></Static></ModuleDef></ModuleDefs>"#,
+        // A Static nested in the root Static is not entered by the parser (ADR-0181).
+        r#"<Static><ModuleDefs><ModuleDef><Static><Options CustomerAdjustableParameters="Sync" /></Static></ModuleDef></ModuleDefs></Static>"#,
+        r#"<Static><Options CustomerAdjustableParameters="Sync" /></Static>"#,
         r#"<Options xmlns:x="urn:foreign" x:CustomerAdjustableParameters="Sync" />"#,
         r#"<Parameters><Parameter Id="M-FFF6_A-0001-01-0000_P-991" xmlns:x="urn:foreign" x:CustomerAdjustable="true" /></Parameters>"#,
     ] {
@@ -53,6 +60,29 @@ fn excluded_module_options_and_foreign_prefixes_do_not_invent_the_new_refusal() 
         let prepared = prepare_device_download(&products, &project, target()).unwrap();
         assert_eq!(prepared.plan, plain.plan);
         assert_eq!(prepared.image.segments, plain.image.segments);
+    }
+}
+
+#[test]
+fn admitted_module_local_options_reach_the_public_writer_and_keep_reads_unchanged() {
+    let dir = tempfile::tempdir().unwrap();
+    let (products, project) = installed(dir.path(), "");
+    let plain = prepare_device_download(&products, &project, target()).unwrap();
+    // The module anchor inside the root Static and the nested admitted ModuleDef edges admit the
+    // declaration (ADR-0181); every present value refuses equally.
+    for contents in [
+        r#"<ModuleDefs><ModuleDef><Static><Options CustomerAdjustableParameters="privateSentinel" /></Static></ModuleDef></ModuleDefs>"#,
+        r#"<ModuleDefs><ModuleDef><ModuleDefs><ModuleDef><Static><Options CustomerAdjustableParameters="Sync" /></Static></ModuleDef></ModuleDefs></ModuleDef></ModuleDefs>"#,
+    ] {
+        replace_source(&products, program_xml(contents));
+        assert_refusal(prepare_device_download(&products, &project, target()).unwrap_err());
+        assert_eq!(
+            offline_plan(&products, PROGRAM_ID).unwrap_err().0.code(),
+            CUSTOMER
+        );
+        // Read-only preparation is unchanged: the image equals the markerless one.
+        let read = prepare_device_download_for_reading(&products, &project, target()).unwrap();
+        assert_eq!(read.image.segments, plain.image.segments);
     }
 }
 

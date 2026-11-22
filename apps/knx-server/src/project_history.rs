@@ -146,6 +146,8 @@ fn view_from_parts(
 }
 
 fn view_locked(state: &AppState, project: &knx_core::Project) -> Result<HistoryView, ApiError> {
+    // The caller holds the project: a Save in progress is refused, not waited for (WP-31).
+    drop(state.store_path.lock_unless_saving()?);
     let path = state
         .store_path
         .lock()
@@ -218,6 +220,9 @@ fn mutate(
     let current = project
         .as_ref()
         .ok_or_else(|| ApiError::bad_request("no project open"))?;
+    // Before the generation is read: a Save holds it, and waiting here would keep the
+    // project locked for the rest of the Save (WP-31). Refused, nothing changed.
+    drop(state.store_path.lock_unless_saving()?);
     if request.server_incarnation != state.server_incarnation
         || request.snapshot_revision != domain::current_project_revision(state)
         || request.generation

@@ -705,3 +705,43 @@ async fn historical_non_utf8_profile_survives_native_save_and_reopen_and_is_remo
     let (_, removed) = request(&app, "GET", &path, Value::Null).await;
     assert_eq!(removed["profile"], Value::Null);
 }
+
+#[tokio::test]
+async fn a_profile_apply_during_a_save_is_refused_at_once_and_the_token_survives() {
+    let (_dir, state, app, device) = fixture().await;
+    let before = state.project.lock().unwrap().clone();
+    let (_, view) = request(
+        &app,
+        "GET",
+        "/api/project/device-config-profiles",
+        Value::Null,
+    )
+    .await;
+    let (status, plan) = request(
+        &app,
+        "POST",
+        "/api/project/device-config-profiles/preview",
+        preview_payload(&view, set_action(device, "{\"nodes\": []}")),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{plan}");
+    let apply = json!({"token":plan["token"],"confirmed":true});
+    crate::saving_hold::refused_while_saving(
+        &state,
+        &app,
+        "POST",
+        "/api/project/device-config-profiles/apply",
+        apply.clone(),
+    )
+    .await;
+    assert_eq!(*state.project.lock().unwrap(), before);
+    let (status, applied) = request(
+        &app,
+        "POST",
+        "/api/project/device-config-profiles/apply",
+        apply,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{applied}");
+    assert_eq!(applied["changed"], true);
+}

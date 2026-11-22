@@ -433,3 +433,46 @@ async fn association_rows_adopt_links_at_the_mount_undo_and_never_write() {
     assert!(no_writes(&h.device));
     assert!(!h.device.memory_was_written());
 }
+
+#[tokio::test]
+async fn an_adoption_apply_during_a_save_is_refused_at_once_and_the_preview_survives() {
+    let h = link_harness().await;
+    let (cookie, compared) = compare_links(&h, None).await;
+    let token = compared["observationToken"].as_str().unwrap().to_owned();
+    let selected = indices(&rows(&compared, "association"));
+    let (status, shown) = send(
+        &h.app,
+        browser_post(
+            "/api/device-compare/preview",
+            json!({ "observationToken": token, "selected": selected }),
+            &cookie,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{shown}");
+    let before = send(&h.app, get("/api/project")).await.1;
+    let lengths = h.state.command_stack.lock().unwrap().history_lengths();
+    let apply =
+        json!({ "previewToken": shown["previewToken"], "confirmation": "AdoptDeviceComparison" });
+    crate::saving_hold::refused_while_saving_with(
+        &h.state,
+        &h.app,
+        "POST",
+        "/api/device-compare/apply",
+        &[("cookie", cookie.as_str())],
+        apply.clone(),
+    )
+    .await;
+    assert_eq!(send(&h.app, get("/api/project")).await.1, before);
+    assert_eq!(
+        h.state.command_stack.lock().unwrap().history_lengths(),
+        lengths
+    );
+    let (status, applied) = send(
+        &h.app,
+        browser_post("/api/device-compare/apply", apply, &cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{applied}");
+    assert_eq!(applied["changed"], true);
+}

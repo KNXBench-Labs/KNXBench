@@ -261,7 +261,7 @@ pub(super) async fn apply(
         let project = project.as_mut().ok_or_else(missing)?;
         let mut stack = state.command_stack.lock().expect("state mutex poisoned");
         let counts = *state.import_counts.lock().expect("state mutex poisoned");
-        let path = state.store_path.lock().expect("state mutex poisoned");
+        let path = state.store_path.lock_unless_saving()?;
         let clean = state.clean_project.lock().expect("state mutex poisoned");
         let saved = state.last_saved_at.lock().expect("state mutex poisoned");
         let opaque = state.opaque.lock().expect("state mutex poisoned");

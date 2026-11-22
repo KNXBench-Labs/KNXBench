@@ -3831,6 +3831,9 @@ pub(crate) struct SnapshotBinding {
 #[derive(Debug)]
 pub(crate) enum BoundCommandError {
     NoProject,
+    /// A Save holds the project file and this write is a file transaction;
+    /// nothing ran. Retryable.
+    Saving,
     /// The binding no longer names the live project; nothing ran.
     Stale,
     /// The command refused; nothing changed.
@@ -3944,6 +3947,14 @@ fn apply_bound_with(
         binding.snapshot_revision,
     ) {
         return Err(BoundCommandError::Stale);
+    }
+    // A write that changes a baseline is a file transaction (ADR-0173 §7): refused
+    // while a Save writes instead of holding the project for the rest of it (WP-31).
+    // Held project: a free path means no Save can start before we are done.
+    if !effective_baseline_edits(state, baselines).is_empty()
+        && state.store_path.lock_unless_saving().is_err()
+    {
+        return Err(BoundCommandError::Saving);
     }
     let mut refused = false;
     let message = message.as_deref().unwrap_or(label);

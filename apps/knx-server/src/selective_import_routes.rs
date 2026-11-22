@@ -83,6 +83,12 @@ async fn process(
         let project = project
             .as_mut()
             .ok_or_else(|| ApiError::refused("selectiveImportTarget", "no project open"))?;
+        // Before the snapshot: with the project held, a free path means no Save is writing
+        // and none can start, so the snapshot cannot predate a Save's catalogue references.
+        // A Save in progress is refused, not waited for (WP-31).
+        if apply {
+            drop(state.store_path.lock_unless_saving()?);
+        }
         let mut snapshot = NativeSnapshot {
             project: project.clone(),
             opaque: state.opaque.lock().expect("state mutex poisoned").clone(),
@@ -112,7 +118,7 @@ async fn process(
         let preview = import::apply(&mut snapshot, &mut candidate_stack, plan)
             .map_err(|e| ApiError::conflict("selectiveImportStale", e))?;
         // Durable admission precedes every in-memory publication, context included.
-        let path = state.store_path.lock().expect("state mutex poisoned");
+        let path = state.store_path.lock_unless_saving()?;
         let mut generation = state
             .history_generation
             .lock()

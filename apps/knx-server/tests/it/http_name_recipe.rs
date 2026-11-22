@@ -383,3 +383,27 @@ async fn cancel_forgets_only_its_own_preview() {
     assert_eq!(mine["cancelled"], true);
     assert_eq!(apply(&app, &plan, true).await.0, StatusCode::CONFLICT);
 }
+
+#[tokio::test]
+async fn a_recipe_apply_during_a_save_is_refused_at_once_and_the_token_survives() {
+    let (_dir, state, app, ids) = fixture().await;
+    let before = names(&state);
+    let (status, plan) = preview(&app, &ids, "Z ", "").await;
+    assert_eq!(status, StatusCode::OK, "{plan}");
+    crate::saving_hold::refused_while_saving(
+        &state,
+        &app,
+        "POST",
+        "/api/name-recipe/apply",
+        json!({"token": plan["token"], "confirmed": true}),
+    )
+    .await;
+    assert_eq!(names(&state), before);
+    assert_eq!(
+        state.command_stack.lock().unwrap().history_lengths(),
+        (0, 0)
+    );
+    let (status, applied) = apply(&app, &plan, true).await;
+    assert_eq!(status, StatusCode::OK, "{applied}");
+    assert_ne!(names(&state), before);
+}

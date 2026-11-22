@@ -682,3 +682,24 @@ async fn plugin_data_routes_remain_inside_existing_authentication() {
     }
     assert_untouched(&f, &before).await;
 }
+
+#[tokio::test]
+async fn an_apply_during_a_save_is_refused_at_once_and_keeps_its_plan() {
+    let f = fixture().await;
+    let shown = preview(&f).await;
+    let before = untouched(&f).await;
+    let apply = json!({"confirmationToken": shown["confirmationToken"]});
+    crate::saving_hold::refused_while_saving(
+        &f.state,
+        &f.app,
+        "POST",
+        "/api/project/plugin-data/apply",
+        apply.clone(),
+    )
+    .await;
+    assert_untouched(&f, &before).await;
+    // The refusal left the plan in its slot and wrote no rollback version.
+    let (status, applied) = post(&f.app, "/api/project/plugin-data/apply", apply).await;
+    assert_eq!(status, StatusCode::OK, "{applied}");
+    assert_eq!(applied["rollbackVersion"]["label"], ROLLBACK_LABEL);
+}

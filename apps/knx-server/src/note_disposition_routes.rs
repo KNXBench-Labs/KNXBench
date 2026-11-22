@@ -183,6 +183,7 @@ async fn apply(
         )
         .map_err(|error| match error {
             BoundCommandError::NoProject => ApiError::bad_request("No project open"),
+            BoundCommandError::Saving => ApiError::project_saving(),
             BoundCommandError::Stale => ApiError::conflict(
                 "noteDispositionStale",
                 "The project changed since the affected notes were listed; nothing was deleted. Delete again to see the current notes.",

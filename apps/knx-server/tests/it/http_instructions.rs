@@ -590,3 +590,37 @@ async fn an_imported_device_still_says_imported_with_its_hash() {
     assert_eq!(view["origin"], "imported");
     assert_eq!(view["originalXmlSha256"].as_str().map(str::len), Some(64));
 }
+
+#[tokio::test]
+async fn an_instruction_apply_during_a_save_is_refused_at_once_and_the_token_survives() {
+    let (_dir, state, app, id) = fixture(r"{\rtf1 original}").await;
+    let before = state.project.lock().unwrap().clone();
+    let (_, view) = request(
+        &app,
+        "GET",
+        &format!("/api/devices/{id}/instructions"),
+        Value::Null,
+    )
+    .await;
+    let (status, plan) = request(
+        &app,
+        "POST",
+        &format!("/api/devices/{id}/instructions/preview"),
+        preview_request(&view, document("edited while saving")),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let path = format!("/api/devices/{id}/instructions/apply");
+    crate::saving_hold::refused_while_saving(
+        &state,
+        &app,
+        "POST",
+        &path,
+        apply_request(&plan, true, false),
+    )
+    .await;
+    assert_eq!(*state.project.lock().unwrap(), before);
+    let (status, applied) = request(&app, "POST", &path, apply_request(&plan, true, false)).await;
+    assert_eq!(status, StatusCode::OK, "{applied}");
+    assert_eq!(applied["changed"], true);
+}

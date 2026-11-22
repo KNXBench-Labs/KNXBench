@@ -257,6 +257,7 @@ async fn edit(
         })
         .map_err(|error| match error {
             BoundCommandError::NoProject => ApiError::bad_request("No project open"),
+            BoundCommandError::Saving => ApiError::project_saving(),
             BoundCommandError::Stale => ApiError::conflict(
                 "functionStale",
                 "The project changed since these Functions were read; refresh and edit again. Nothing was applied.",

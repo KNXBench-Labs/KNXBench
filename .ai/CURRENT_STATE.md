@@ -1,4 +1,7 @@
 # Restart snapshot — WP-37 docs closeout (Slice S1) by subagent (2026-11-20, branch work/wp37-docs-closeout-20261120)
+## Stored device-profile consumer (PAUSED; owner WebUI profile integration; observed 2026-11-22 11:55)
+- PR #137 merged as `1243d13ca`; source and integrated acceptance published at `0ef05a084`. Both selected 16-stage package gates passed with frozen inputs and checked untouched user data; independent sidecar-guard closure approved.
+- Owner boundary: finish merge/push of the export, then pause BEFORE the offline firmware-simulator consumer. That successor has not started; explicit owner Go is required to resume. No device, bus, USB, VM, flash or physical-download authority; concurrent writer/path-swap races remain unproven. Evidence `<profile-scratch>/smartsensor-e2e-20261122/`.
 ## WP-48 corrective backlog (PARKED; owner WebUI audit; observed 2026-11-21)
 - Owner requested defect search since 14 November and one work package, not implementation. `docs/open-work/WP-48-recent-change-correctness-audit.md` records 16 source-confirmed findings, six separate verification-lead groups and nine planned slices. Audit target `163e38b85`; helper probes are not full runtime/browser/device acceptance.
 - Await explicit implementation Go; no bus/hardware/provider/VM/release/deploy authority. Runtime fixes remain open; source ownership must be rechecked on fresh main before each sequential subagent slice. Shared dirty root and foreign tracks stay untouched.

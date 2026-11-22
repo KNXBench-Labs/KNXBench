@@ -16,7 +16,12 @@ editor/document corrections of WP-48.4 are PR #131 (`971653dda`). Not delivered 
 planned here: downloading a configuration to a device (needs its own qualification and
 authorisation; the former "WP-42.4" label is not a package of this file). The row left
 [OPEN_WORK](../OPEN_WORK.md) on 20 November 2026; a stale-base merge re-added it with
-the pre-delivery text until WP-48.9 removed it again.
+the pre-delivery text. Its text now states the delivered scope (updated with the
+stored-document export); it stays listed while that track records the physical download
+as a separate follow-up.
+The offline, project-read-only stored-document export (`knx devconf export-stored`,
+PR #137 `1243d13ca`) is delivered as well; the physical download path stays a separate,
+unqualified follow-up.
 
 ## Requested outcome
 
@@ -36,7 +41,8 @@ part of this work package.
    SHA-256 in the product-data layer; per-device configuration document in the
    project (native schema 22) with one undoable command per apply; a missing
    module keeps the stored document unchanged and read-only. *Delivered*
-   (`df896afe1`, `af51c2983`; PR !57 `3a72996b4`).
+   (`df896afe1`, `af51c2983`; PR !57 `3a72996b4`). `knx devconf export-stored` exports a
+   stored document through a project-read-only CLI path.
 3. **WP-42.3 — editor.** Device panel section: attach a module explicitly,
    structured editor (tree tables as trees, other tables as lists, typed field
    editors, reference pickers), live validation with field focus, export

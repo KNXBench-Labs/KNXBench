@@ -366,8 +366,10 @@ Implementation note (WP-48.2 and WP-48.9): the shared resolver part landed in 48
 - **Queue/status.** The WP-42 and LS-02 rows were stale restorations (a stale-base merge,
   `d18687ba1`, re-added rows that `c7e61f09a` had removed). WP-42.2 storage and WP-42.3
   editor are on main (`df896afe1`, `af51c2983`, merge `3a72996b4`, PR !57); LS-02 is
-  delivered as `c079ec8d6` (digest-bound cache availability in 48.8). Both rows, and the
-  delivered WP-43 row, are removed from OPEN_WORK; their detail files carry the state.
+  delivered as `c079ec8d6` (digest-bound cache availability in 48.8). The LS-02 and
+  delivered WP-43 rows are removed from OPEN_WORK; their detail files carry the state. The
+  WP-42 row stays with the corrected delivered-scope text that the concurrent
+  stored-export track (PR #137) published; its physical download is a separate follow-up.
 
 ## Catalogue and reconciliation findings
 

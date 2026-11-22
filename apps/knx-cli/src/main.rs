@@ -58,7 +58,7 @@ const USAGE: &str = "usage: knx import <file.knxproj> [--store <path.knxdb> [--r
      \x20         (offline reduced monitoring projection, not a backup; never overwrites)\n\
      \x20     knx doc-export <store.knxdb> <out.html> [--language en|en-US|de|de-DE]\n\
      \x20     knx diff [--exit-code] <a.knxdb|a.knxproj> <b.knxdb|b.knxproj>\n\
-     \x20     knx devconf check|validate|export ...  (device configuration modules)\n\
+     \x20     knx devconf check|validate|export|export-stored ...  (device configuration modules)\n\
      \x20     knx contribution analyze <file.knxproj|file.knxprod>\n\
      \x20     knx contribution preview <file> --options <options.json>\n\
      \x20     knx contribution export <file> <out.zip> --options <options.json>\n\

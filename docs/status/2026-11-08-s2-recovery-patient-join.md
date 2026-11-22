@@ -49,7 +49,7 @@ Commits `83a62976a` (test change) and `372f7b8e2` (docs), merged main-first as
 change-scoped package gate selected 14 stages; all exited 0 with valid proofs,
 inputs frozen, no user data touched or unchecked: Rust 1,764 passed / 0 failed /
 72 ignored (7 binaries), private corpus 51/51. Pushed with `origin/main`
-unchanged; local, tracking and live `main` read back as `f3af37ca4`.
+unchanged; local, tracking and live `main` read back as `f3af37ca4` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `ea7cd04c9`).
 
 ## Limits
 

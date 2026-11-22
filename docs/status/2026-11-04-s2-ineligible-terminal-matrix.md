@@ -4,7 +4,7 @@ Observed: 4 November 2026.
 
 ## Scope
 
-Published source `70ad4e24c`, main-first `446480584`.
+Published source `70ad4e24c` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `df1258c9e`), main-first `446480584`.
 
 This test-only extension characterizes the existing final-verification no-credit
 rule for retained-source and standalone-package preparation, namespaces 20 and

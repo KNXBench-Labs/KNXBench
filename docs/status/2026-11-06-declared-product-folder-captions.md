@@ -104,8 +104,8 @@ acceptance follows.
 ## Software acceptance and publication
 
 Source `1e3b441d3` passed the independent complete-feature re-review after F1/F2/F3
-correction. Main-first integration `252b11c3c` has the identical tracked tree,
-with fresh main `91480fbf4` as its first parent. Both complete selected package
+correction. Main-first integration `252b11c3c` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `55ce05d4b`) has the identical tracked tree,
+with fresh main `91480fbf4` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `de8c0f6ec`) as its first parent. Both complete selected package
 gates passed all 17 planned stages, with valid proofs, frozen inputs and checked,
 untouched user data. These are change-scoped gates, not release `--full` gates.
 

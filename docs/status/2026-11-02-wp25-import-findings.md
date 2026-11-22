@@ -1,6 +1,6 @@
 # WP-25: import findings after reopening
 
-Source delivered 2 November 2026, main-first merge `3455fdb9ca604be6141002172523cdcd889b2405`
+Source delivered 2 November 2026, main-first merge `3455fdb9ca604be6141002172523cdcd889b2405` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `cdad879a0`)
 (first parent `95d968f46`, feature `e91d232df`, guard correction `cbc480864`).
 Main-only after Alpha 19; no new release, deployment or bus operation.
 

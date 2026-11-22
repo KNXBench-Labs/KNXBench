@@ -5,7 +5,7 @@ Loopback and simulator evidence only: no real-gateway interoperability.
 
 ## Acceptance
 
-The reviewed source was integrated main-first as `cc62f5585` and publication was
+The reviewed source was integrated main-first as `cc62f5585` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `dd44a242a`) and publication was
 read back exactly. Two independent reviews (Standards, Spec) first returned BLOCK;
 every finding was fixed (rustfmt, a surviving missing-metadata mutant, exact refusal
 statuses, the legacy-recording wording). The package gate then failed twice on

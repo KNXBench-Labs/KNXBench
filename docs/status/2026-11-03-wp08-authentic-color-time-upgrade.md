@@ -26,7 +26,7 @@ wording correction was checked against both original build receipts: the
 builds used one task-local target directory sequentially, not separate targets.
 No product invocation was repeated for that correction.
 
-The documentation feature `f7fb7732e` was published main-first as `94d515855`.
+The documentation feature `f7fb7732e` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `10bee7129`) was published main-first as `94d515855` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `1a61cea6d`).
 Both selected ten-stage documentation gates completed successfully with frozen
 inputs and no touched or unchecked user data. Parent readback matched the
 integration, tracking and live main refs. These are documentation-delivery

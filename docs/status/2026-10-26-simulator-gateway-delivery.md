@@ -4,7 +4,7 @@ Observed: 26 October 2026.
 
 ## Delivered boundary
 
-Published merge `f75820cad` integrates feature `03b6affcf` on main-first base
+Published merge `f75820cad` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `8bdc2676f`) integrates feature `03b6affcf` on main-first base
 `5bb8d0766`. Independent whole-feature review and correction re-review approved;
 a separate test-only follow-up also received APPROVE.
 
@@ -64,7 +64,7 @@ additional family, recovery or compatibility admission.
 
 ## CLI continuation acceptance
 
-Published main-first merge `44efafa9c` contains the separately authorized journal
+Published main-first merge `44efafa9c` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `51cf846fc`) contains the separately authorized journal
 and CLI corrections (feature `ff2e45148`). The initial independent review required
 changes; the recovery-barrier correction and its download/replay tests received
 APPROVE. Regression tests were written before the journal and pre-send fixes;

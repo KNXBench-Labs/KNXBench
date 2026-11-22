@@ -2,7 +2,7 @@
 
 ## Published source and contract
 
-Main-first **`080f2723d`** is published and was read back as equal local,
+Main-first **`080f2723d`** (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `06c1ad027`) is published and was read back as equal local,
 tracking and live `main`. The feature commits are `3173e60d7` and the explicit
 standalone-fixture correction `e5a4f1f8b`. Independent review approved all
 17 original files and the three additional import-only fixture adapters;

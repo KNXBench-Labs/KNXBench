@@ -4,7 +4,7 @@
 
 The bounded runtime extends the existing read-only installed-product folder-caption
 overlay to same-schema project/23 sources and explicit product language requests.
-It is **software-accepted and published on main `8de9487de`**, on base `041df68a0`.
+It is **software-accepted and published on main `8de9487de`** (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `02cb3beca`), on base `041df68a0`.
 The parent verified independent Standards/Spec APPROVE, the complete selected
 17-stage gate and exact local/tracking/live publication readback. The runtime gate
 ended at 13:55:07 CET on 14 November 2026; the parent acceptance aggregate was
@@ -37,8 +37,8 @@ publication examples are introduced here.
 | F2 exact M11 RED | 28 passes / 1 failure, exit 101: a reachable second foreign manufacturer translates the same program; the mutant reaches the intended foreign-visible-text assertion, not an unrelated refusal |
 | Corrected focused GREEN | Captions 29/29, shared language rule 7/7, HTTP 12/12, server unit 5/5, each exit 0; retained clippy/fmt/headers exit 0. These are filtered/overlapping lanes, **not additive totals** |
 | Independent correction review | `review02`: Standards/Spec APPROVE; F1/F2/F3/F5 CLOSED, no remaining findings in the correction delta. Unchanged-area initial source/test/mutant conclusions and the adjudicated amendments are carried, not a new whole-feature review run |
-| Main-first composition (historical source-only epoch) | `789ab6143ed1f032ff90a508aa7c28bdcac15cc5` on fresh main `041df68a0754192c47cf78a1f8296771680dce53`; parent verified all eleven feature paths and the full feature hunks including context, equal after excluding row offsets. No fresh execution or publication in that composition epoch |
-| Published runtime acceptance | `8de9487de4d84517479de159353de3748cd7a840` on `041df68a0754192c47cf78a1f8296771680dce53`, carrying integration `789ab6143` / corrected feature `9b0d937dc`; independent Standards/Spec APPROVE (`deleg_816ee240`), complete selected gate 17/17 with ordered exits 0 / valid proofs, exact local/tracking/live readback |
+| Main-first composition (historical source-only epoch) | `789ab6143ed1f032ff90a508aa7c28bdcac15cc5` on fresh main `041df68a0754192c47cf78a1f8296771680dce53` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `cfdbcf06b`); parent verified all eleven feature paths and the full feature hunks including context, equal after excluding row offsets. No fresh execution or publication in that composition epoch |
+| Published runtime acceptance | `8de9487de4d84517479de159353de3748cd7a840` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `02cb3beca`) on `041df68a0754192c47cf78a1f8296771680dce53`, carrying integration `789ab6143` / corrected feature `9b0d937dc`; independent Standards/Spec APPROVE (`deleg_816ee240`), complete selected gate 17/17 with ordered exits 0 / valid proofs, exact local/tracking/live readback |
 
 ### Fresh integrated runtime results (parent-verified aggregate)
 
@@ -83,7 +83,7 @@ The main-first parent summary freezes SHA-256 identities for eleven paths:
 
 The documentation handoff records before/after comparisons against those hashes;
 no binding regeneration or feature-source edit belongs to this successor.
-Main's published WP07 runtime `e31f0e062` and documentation `041df68a0`, and the
+Main's published WP07 runtime `e31f0e062` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `da2b12808`) and documentation `041df68a0`, and the
 separate E4 delivery, retain their own acceptance scopes; their results are not
 WP06 acceptance evidence.
 

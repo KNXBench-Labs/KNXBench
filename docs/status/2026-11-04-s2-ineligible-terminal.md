@@ -10,7 +10,7 @@ counts, source identities and historical exclusions are not upgraded.
 
 ## Current disposition
 
-**Bounded fixture package accepted and published main-first as `633d669e3`
+**Bounded fixture package accepted and published main-first as `633d669e3` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `dd85a0130`)
 (source `b8ac9826e`).** Independent review, corrected focused execution and both
 complete selected 14-stage gates passed. This test-only package strengthens one
 E16 cross. Production behavior, protocols, policies and dependencies are unchanged.
@@ -164,7 +164,7 @@ is introduced.
 
 ## Broad gates and publication
 
-Feature `b8ac9826e` and its equal-tree main-first merge `633d669e3` each passed
+Feature `b8ac9826e` and its equal-tree main-first merge `633d669e3` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `dd85a0130`) each passed
 all 14 selected stages: formatting, documentation, browser-lane policy, layering,
 headers, anchors, ledger, corpus-gate policy, tool tests, clean-desktop, Clippy,
 Rust tests, corpus and diff check. This is change-scoped acceptance of knx-server

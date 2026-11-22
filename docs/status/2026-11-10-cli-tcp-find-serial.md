@@ -66,7 +66,7 @@ source archives and review identities remain private under
 ## Integrated acceptance and publication
 
 The focused source/documentation commit is `64effe8a02d4bae38f317eeae32eaff01f66788b`.
-Fresh main-first runtime acceptance ran on `5b20e14a1a9307335b41abd61f1fecb375ff8386` against pinned upstream
+Fresh main-first runtime acceptance ran on `5b20e14a1a9307335b41abd61f1fecb375ff8386` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `43f55c2f0`) against pinned upstream
 `4a5325e383e7fecf88443ed0ebcdfc6315392848`. The actual maintained change-scoped package gate completed
 **13/13 selected stages**, all direct exits zero with valid native proof:
 

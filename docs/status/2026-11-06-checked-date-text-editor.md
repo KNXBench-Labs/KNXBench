@@ -48,7 +48,7 @@ review did not run browsers; parent browser/visual evidence is separate.
 
 ## Committed software acceptance and publication
 
-Feature `b19dfb131` was integrated main-first as `76dc954a1` on base `7cba23ff2`.
+Feature `b19dfb131` was integrated main-first as `76dc954a1` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `3c93b59e1`) on base `7cba23ff2`.
 The feature and integration trees were identical. The maintained change-scoped
 package gate ran once on that committed integration, then published it only after
 all selected proofs passed and the upstream base still matched. Independent

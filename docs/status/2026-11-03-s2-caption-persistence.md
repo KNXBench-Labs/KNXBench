@@ -1,6 +1,6 @@
 # S2-05 E15: changed-caption persistence failure — 3 November 2026
 
-**SOFTWARE ACCEPTED — source `f5c65ea99`, main-first `99f7e65dd`.**
+**SOFTWARE ACCEPTED — source `f5c65ea99`, main-first `99f7e65dd` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `b0ad55b35`).**
 Independent review and both complete selected 14-stage package gates passed.
 This fixture-only follow-up exercises a named portion of the caption rule's E15
 obligation, not all of E15 or S2-05. It changes no production behavior, source
@@ -74,7 +74,7 @@ Git provenance was supplied by the parent, not reconstructed in that snapshot.
 
 ## Complete selected acceptance and publication
 
-Source `f5c65ea99` and main-first `99f7e65dd` have identical trees. Both frozen
+Source `f5c65ea99` and main-first `99f7e65dd` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `b0ad55b35`) have identical trees. Both frozen
 package gates completed all 14 planned stages with direct exit zero and valid
 proofs: formatting, documentation, browser-lane registration, layering, headers,
 anchors, ledger, corpus-gate registration, tool tests, desktop cleanup, Clippy,

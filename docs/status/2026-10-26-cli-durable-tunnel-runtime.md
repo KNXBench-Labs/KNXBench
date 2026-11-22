@@ -4,7 +4,7 @@ Observed: 26 October 2026.
 
 ## Delivered boundary
 
-Published main-first merge `a8004cb2e` on `8459b5fe8` (feature `46c38df26`).
+Published main-first merge `a8004cb2e` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d589d971d`) on `8459b5fe8` (feature `46c38df26`).
 `knx device download`, `knx device restore` and `knx device service-control`
 now use the existing `tunnel_runtime()` helper, as the System-2 commands
 already do. Its two worker threads can service the tunnel's existing receive
@@ -32,7 +32,7 @@ review traced the actual barriers, rather than inferring them from that small di
   corpus 17/17. Tooling registered 440 tests with six skipped.
 - Web/browser and bindings stages were not selected. The frontend bundle was
   separately built as a setup artifact, not browser acceptance.
-- Local, tracking and live `main` read back equal to `a8004cb2e`.
+- Local, tracking and live `main` read back equal to `a8004cb2e` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d589d971d`).
 - The owning CLI run passed 176 unit and 242 integration cases (21 ignored).
   These overlap the package-gate population; they are not extra unique tests.
 

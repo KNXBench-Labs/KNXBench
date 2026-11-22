@@ -2,8 +2,8 @@
 
 ## Published source
 
-`8b5edad7f` is published on `main`; exact remote readback matched the accepted
-candidate. The main-first merge `e9a9cf9e1` integrates the reviewed helper and
+`8b5edad7f` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d4136192c`) is published on `main`; exact remote readback matched the accepted
+candidate. The main-first merge `e9a9cf9e1` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `321a7a734`) integrates the reviewed helper and
 consumer feature `bd0274184` with the previously delivered scope advice. The
 last commit corrects only a browser fixture's checklist expectation.
 

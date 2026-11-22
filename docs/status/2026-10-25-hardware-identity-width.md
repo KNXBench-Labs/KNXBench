@@ -2,7 +2,7 @@
 
 ## Delivered boundary
 
-Source commit `a09691045`, main-first integrated merge `07fe2e67f`:
+Source commit `a09691045`, main-first integrated merge `07fe2e67f` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d446b7210`):
 Device Object PID 78 comparisons require exactly six response octets before
 regular download/restore backup acquisition, persistence and mutation. Valid
 zero-padded product comparison declarations remain supported. Unknown resources

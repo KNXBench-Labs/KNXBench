@@ -11,7 +11,7 @@ than accidentally taking the unscoped `Inactive` path. This is a read-only
 server overlay, not a new module-instance mapping contract.
 
 The bounded slice is independently reviewed, software-accepted and published
-on main as `e31f0e062db95f692966b989a65baa0bcf4f6668`, based on
+on main as `e31f0e062db95f692966b989a65baa0bcf4f6668` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `da2b12808`), based on
 `d44a02d722f61e1772a224829261ec9a2820c259`. The complete selected gate passed
 **14/14 stages**: **2090 Rust passes / 0 failures / 73 ignored**, separately
 **51/51 selected corpus tests**, and tool tests **547 passed / 16 optional skips**.

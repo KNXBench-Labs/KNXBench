@@ -1,6 +1,6 @@
 # System-2 own-run hint and refusal reasons — 25 October 2026
 
-Status: delivered in `aa2f39f1b` (main `a15b8f0eb`); unreleased, reporter re-test pending.
+Status: delivered in `aa2f39f1b` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `b036331fe`) (main `a15b8f0eb` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `7accddfab`)); unreleased, reporter re-test pending.
 Base: `866cb5ca6`. This diagnostic slice follows GitHub issue #30; it does not
 close [S2-02](../open-work/S2-02-gateway-busy-after-failed-runs.md).
 

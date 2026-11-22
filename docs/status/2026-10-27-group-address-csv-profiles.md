@@ -2,7 +2,7 @@
 
 ## Delivered boundary
 
-Published main-first merge `ed8b8ec136d8d009bbfc5bd85806c66227a6152a`
+Published main-first merge `ed8b8ec136d8d009bbfc5bd85806c66227a6152a` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `9f62e0f36`)
 (feature `301a795b6799a68b9b671d3cd95dd4fd863371fd`) adds four fixed
 name/address column layouts to the shared address-only CSV import path.
 [Contract](../contracts/group-address-csv-profiles.md).

@@ -2,7 +2,7 @@
 
 ## Delivery state
 
-**Software-accepted and published as main-first `61e28d225` on `84d081084`**;
+**Software-accepted and published as main-first `61e28d225` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `00d871e96`) on `84d081084`**;
 feature `e4aa31945` was based on `80e1416a0`. The original publication receipt records a
 successful actual isolated server build/version check and equal local,
 tracking and live tips. On 6 November 2026, a fresh upstream check finds that
@@ -97,7 +97,7 @@ user-data guard belongs to the outer package, not the nested web schema.
 | Run | Source binding | Rust summaries | Selected corpus |
 | --- | --- | --- | --- |
 | Branch | `80e1416a0` → `e4aa31945` | 3,669 passed, 0 failed, 144 ignored; 23 summary rows | 91/91 in five targets |
-| Main-first | `84d081084` → `61e28d225` | 3,676 passed, 0 failed, 144 ignored; 23 summary rows | 91/91 in five targets |
+| Main-first | `84d081084` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `6dd89453b`) → `61e28d225` | 3,676 passed, 0 failed, 144 ignored; 23 summary rows | 91/91 in five targets |
 
 Rust, corpus and overlapping browser configurations are separate populations,
 not a unique combined test count. Main-first includes newer upstream inputs;

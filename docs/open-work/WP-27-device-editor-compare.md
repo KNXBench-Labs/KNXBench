@@ -1,6 +1,6 @@
 # WP-27 — Compare button in the device editor
 
-Delivered on main, 3 November 2026: source `080f2723d`. Independent review and
+Delivered on main, 3 November 2026: source `080f2723d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `06c1ad027`). Independent review and
 source-bound software acceptance are complete; this does not add hardware or
 native-shell acceptance. [Measured coverage and boundaries](../status/2026-11-03-wp27-device-editor-compare.md).
 
@@ -53,7 +53,7 @@ configuration; the standalone editor and table-column owning configurations also
 ran. Eight EN/DE editor frames at 1440/400 pixels were actually inspected.
 
 While gating, main advanced only by six upstream documentation files. Published
-main-first `080f2723d` equals the accepted tree plus that exact patch, proven with
+main-first `080f2723d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `06c1ad027`) equals the accepted tree plus that exact patch, proven with
 an isolated Git index and a mismatching-tree control. Its separate documentation
 delta completed **10/10** stages; runtime results retain their original source
 identity rather than being relabelled as a new full run.

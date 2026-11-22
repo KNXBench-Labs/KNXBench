@@ -1,6 +1,6 @@
 # S2-05 E13: malformed current parameter at mounted settlement — 4 November 2026
 
-**SOFTWARE ACCEPTED — source `c0c7d1da2`, main-first `37fcc9b50`.**
+**SOFTWARE ACCEPTED — source `c0c7d1da2`, main-first `37fcc9b50` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `8b59d8c8a`).**
 Independent review and both complete selected 14-stage package gates passed.
 This test-only characterization exercises the existing current-request refusal
 at the mounted terminal path. It changes no production behavior, source
@@ -78,7 +78,7 @@ manifests match; four actual invocation binaries and raw results are retained.
 
 ## Complete selected acceptance and publication
 
-Source `c0c7d1da2` and main-first `37fcc9b50` have identical trees. Both package
+Source `c0c7d1da2` and main-first `37fcc9b50` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `8b59d8c8a`) have identical trees. Both package
 gates completed all 14 planned stages with direct exit zero and valid proofs:
 formatting, documentation, browser-lane registration, layering, headers, anchors,
 ledger, corpus-gate registration, tool tests, desktop cleanup, Clippy, Rust tests,

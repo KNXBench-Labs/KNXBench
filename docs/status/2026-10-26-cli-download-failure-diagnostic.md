@@ -4,7 +4,7 @@ Observed: 26 October 2026.
 
 ## Delivered boundary
 
-Published main-first merge `23e1ff3ec` on base `62089b033` (feature `a1b26ed06`,
+Published main-first merge `23e1ff3ec` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `65a0ff7a1`) on base `62089b033` (feature `a1b26ed06`,
 documentation `a75e0a6dc`, review corrections `e5cfa1e7b`). `knx device download`
 and `knx device restore` now build the same payload-free `DownloadFailure` as
 the server worker, from the executor's own terminal error and progress:
@@ -33,7 +33,7 @@ the server worker, from the executor's own terminal error and progress:
   14 binaries (127 ignored), selected corpus 91/91; tooling registered 431 tests,
   six skipped. Browser and bindings stages were not selected; the frontend bundle
   was built as the desktop prerequisite, not as browser acceptance.
-- Local, tracking and live `main` read back equal to `23e1ff3ec`.
+- Local, tracking and live `main` read back equal to `23e1ff3ec` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `65a0ff7a1`).
 - Focused CLI selection: 30 passed, including 15 failure cases. Owning CLI runs:
   174 unit and 242 integration tests passed, 21 ignored. The app's focused
   diagnostic selection passed ten tests. These overlap the package gate and are

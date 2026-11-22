@@ -1,7 +1,7 @@
 # WP-24 — Product catalogue as a table with sortable headers
 
 Owner request: 25 October 2026. Implementation authorised on 26 October 2026
-through the next-open-tasks assignment. Delivered as `8dd6cf72d` after independent
+through the next-open-tasks assignment. Delivered as `8dd6cf72d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `1d38c89c3`) after independent
 implementation/correction reviews and complete integrated acceptance.
 [Acceptance](../status/2026-10-26-catalogue-table.md).
 No application release is assigned.

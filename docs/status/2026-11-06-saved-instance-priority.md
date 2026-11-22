@@ -3,7 +3,7 @@
 ## Delivery state
 
 The bounded implementation is independently reviewed, has focused executable
-proofs and is software-accepted and published on main as `ed0cf7737`
+proofs and is software-accepted and published on main as `ed0cf7737` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `a6f240a34`)
 (main-first parents `196e1f53f` and feature `7943905f4`). Exact remote,
 tracking and live-tree readback was verified. See
 [Integrated execution](#integrated-execution-and-selective-fixture-regression).

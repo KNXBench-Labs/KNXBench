@@ -1,6 +1,6 @@
 # DIAG-02 — Retain download failure evidence in the log and report
 
-**Priority:** P1. **Status:** Delivered on `main` as `4209645b4` (26 October 2026, owner's
+**Priority:** P1. **Status:** Delivered on `main` as `4209645b4` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `b45ad0be2`) (26 October 2026, owner's
 Go); [server/web delivery](../status/2026-10-26-download-failure-diagnostic.md),
 [CLI follow-up `23e1ff3ec`](../status/2026-10-26-cli-download-failure-diagnostic.md).
 Removed from [OPEN_WORK](../OPEN_WORK.md) after delivery. Owner request: 26 October 2026.

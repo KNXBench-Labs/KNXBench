@@ -4,7 +4,7 @@ Observed: 29 October 2026.
 
 ## Accepted runtime scope
 
-Main-first runtime integration `0ddfe49533ab159c427f9e2324afdcd1ebf82ccf`
+Main-first runtime integration `0ddfe49533ab159c427f9e2324afdcd1ebf82ccf` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `e73c3f878`)
 merges implementation `d12a79f16b270f2d2b6ff339e8978a0581746d88` on the
 source-reviewed contract/reservation `f5427e629`. Its runtime tree equals the
 accepted implementation tree. Later result-documentation changes are not

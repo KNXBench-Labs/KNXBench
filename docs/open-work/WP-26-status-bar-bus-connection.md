@@ -17,7 +17,7 @@ Go, with System-2 work first. Active scope and owner: `.ai/CURRENT_STATE.md`.
 3. Add the footer drop-up, separate explicit connect/disconnect action and bus
    settings link. Gateway selection while connected never switches the session.
 
-Historical backend-only checkpoint, 2 November 2026: step 1 was delivered main-first as `038845ef8`, with
+Historical backend-only checkpoint, 2 November 2026: step 1 was delivered main-first as `038845ef8` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `71371424e`), with
 independent review/re-review and both selected 14-stage package gates passed.
 [Acceptance and boundaries](../status/2026-11-02-wp26-nonqueueing-start.md).
 That checkpoint did not include the controller or footer. The package below adds
@@ -25,7 +25,7 @@ session-and-server-bound non-queueing stop, then the shared controller and menu.
 Known download/management holders and System-2 priority are retained; brief
 session readers may cause busy refusal, with explicit manual retry only.
 
-Delivered on main, 2 November 2026, as `7ea7ff6dd`: session-bound stop, the shared
+Delivered on main, 2 November 2026, as `7ea7ff6dd` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `948baa1ce`): session-bound stop, the shared
 web controller (`busConnection.ts`) and the status-bar control
 (`BusConnectionStatus.tsx`) are implemented together; the monitor panel connects
 and disconnects through that controller and stops only its own session. All nine
@@ -101,7 +101,7 @@ IP versus serial selection in settings, footer and monitor. It requires a
 server-local path, unique caller-chosen source and explicit passive/active mode;
 no hardware is enumerated. Active auto-ACK is disclosed before Connect.
 
-Published main-first `eab79cc5b` passed F1–F4 correction review, the complete
+Published main-first `eab79cc5b` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `fb73a1ff4`) passed F1–F4 correction review, the complete
 selected package gate and all 16 affected production configurations. The correction binds serial
 group traffic to the displayed session/process, retains admission through cleanup,
 surfaces conservative active-start uncertainty and honors known serial provenance
@@ -134,7 +134,7 @@ HID, FT1.2 and other USB protocols remain unsupported.
 
 Tests use synthetic/injected filesystem data and intercepted HTTP only. No host
 hardware enumeration, device open, real installation or physical compatibility
-test belongs to this package. Published `edc6c90d5` completes this bounded
+test belongs to this package. Published `edc6c90d5` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `5733ed7f1`) completes this bounded
 software successor, not complete USB detection or the wider WP-26 hardware scope.
 [Acceptance and distinct execution bindings](../status/2026-11-05-wp26-passive-serial-candidates.md) ·
 [Primary source, API and test boundary](../research/2026-11-05-passive-serial-candidates.md).

@@ -2,7 +2,7 @@
 
 ## Published source
 
-`d73a2413b` is published on `main` with matching live and tracking-ref readback.
+`d73a2413b` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `12af24b49`) is published on `main` with matching live and tracking-ref readback.
 The main-first merge preserves upstream `7553fdcf5` outside five reviewed paths.
 The regular memory planner refuses an allocation that matches multiple data-bearing
 image segments at the same start, rather than silently choosing the first payload

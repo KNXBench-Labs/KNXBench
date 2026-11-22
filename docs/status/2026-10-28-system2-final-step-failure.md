@@ -66,10 +66,10 @@ Earlier attempts and gaps stay as recorded above; this round fixes the five revi
 ## Software acceptance and source delivery
 
 Feature `96f41c7f16c6190a641fc92a9aaa76f201d5e56d` (reviewed tree `7a1b3831f`)
-is published on main-first delivery `309384726fa33dc39afe54da206122243cc063b1`.
+is published on main-first delivery `309384726fa33dc39afe54da206122243cc063b1` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `9d1b17d85`).
 Independent whole-feature and correction re-review approved with zero open Critical,
 Important or Minor findings. The actual product acceptance remains bound to the feature
-and initial main-first integration `8bdc42c7edfddcff20db78c807fd43d32c569388`:
+and initial main-first integration `8bdc42c7edfddcff20db78c807fd43d32c569388` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `dde747fcf`):
 
 | Execution | Maintained stages | Rust passed / ignored | Vitest | Default browser | Production devices | Selected corpus |
 | --- | --- | --- | --- | --- | --- | --- |

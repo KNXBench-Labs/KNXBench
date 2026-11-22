@@ -289,7 +289,7 @@ was not performed; there is no mutating-HTTP trace proving zero requests.
 The actual retained ELF is bound to frozen `9ea3c5a9c-DIRTY` and its 147-file
 frontend, not integration base `52559229b` or main-first candidate `994d9bd5d`.
 Independent native aggregate review approves that bounded six-cell composition.
-The main-first runtime delivery is software-accepted and published as `ea7ac7ae1`
+The main-first runtime delivery is software-accepted and published as `ea7ac7ae1` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `6cc02a44c`)
 after the complete selected 11-stage package gate (43 nested web stages), with
 frozen inputs and checked user data untouched. The focus slice ships in Alpha 22;
 no deployment or native source rebinding is inferred.

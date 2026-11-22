@@ -1,6 +1,6 @@
 # WP-22 — Native version timeline acceptance
 
-Published runtime: `132070176850af871403fae5149808cf4348ea64`, 26 October 2026.
+Published runtime: `132070176850af871403fae5149808cf4348ea64` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `f70a6dcaa`), 26 October 2026.
 Feature `a56fb360`; independent implementation review and correction re-review:
 APPROVE. Local, tracking and live main matched after publication.
 

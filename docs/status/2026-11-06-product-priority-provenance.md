@@ -2,7 +2,7 @@
 
 ## Delivered boundary
 
-Source `c376f0347`, published as tree-identical main-first `edd41cd25`, adds
+Source `c376f0347`, published as tree-identical main-first `edd41cd25` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `0cc343498`), adds
 `ComObjectView.priority_layer: Option<ValueLayer>` beside the existing literal.
 ProgramRef wins by presence, including equal, empty, whitespace and unknown
 values; Program is reported only for a present program declaration; absence

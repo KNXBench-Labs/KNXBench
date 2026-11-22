@@ -190,7 +190,7 @@ and successful complete comparison perform different contracts.
 
 ## Integrated acceptance and retained limits
 
-Main-first `cee41bf0d` (source `d4e1332d4`, first parent `11a04c8f2`) passed the
+Main-first `cee41bf0d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `38babefc5`) (source `d4e1332d4`, first parent `11a04c8f2`) passed the
 complete maintained **14-stage change-scoped package gate** on 5 November 2026.
 Every selected stage exited zero with a valid owning proof; the recorded start/end
 input digests match, the plan completed, and real user data was checked and untouched.

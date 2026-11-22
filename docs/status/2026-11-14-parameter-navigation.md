@@ -1,6 +1,6 @@
 # Evaluated parameter navigation — software acceptance
 
-Accepted and published on main on 14 November 2026 as `2867ee1b5`.
+Accepted and published on main on 14 November 2026 as `2867ee1b5` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `4780e6a38`).
 This is a bounded main-only successor after the Alpha 21 cutoff, not a release,
 native/reference-tool compatibility, hardware or whole-WP-05 acceptance.
 
@@ -17,7 +17,7 @@ Folding and search are presentation state, not new project commands.
 ## Source and review binding
 
 - Feature `bcaa81b0d` plus registration-only test corrections `8b3028170` and
-  `9d35f16fc`; main-first integration `2867ee1b5`, first parent `28db298af`.
+  `9d35f16fc`; main-first integration `2867ee1b5` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `4780e6a38`), first parent `28db298af`.
 - Independent Spec review: APPROVE, no findings; five deliberate semantic
   mutations were rejected by assertions, with restored controls passing.
 - Standards review initially requested a fix for per-child owner-string copying.

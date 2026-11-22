@@ -2,7 +2,7 @@
 
 ## Delivery (2 November 2026)
 
-Feature `3f19ebe65` is published main-first as `0d6299187`. Local, tracking and
+Feature `3f19ebe65` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `79e6f33ea`) is published main-first as `0d6299187` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `11e7985db`). Local, tracking and
 live remote references were read back equal. This is main-only source delivery,
 not a release, deployment or physical-device acceptance.
 

@@ -41,7 +41,7 @@ The reported short HTTP stall and the actual refused step remain unresolved.
   Transport loss, malformed replies and server errors retain unknown-outcome
   handling. No automatic retry, force-disconnect or clear-state control is added.
 
-Diagnostic slice delivered in `aa2f39f1b` (main `a15b8f0eb`) and published in Alpha 17
+Diagnostic slice delivered in `aa2f39f1b` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `b036331fe`) (main `a15b8f0eb` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `7accddfab`)) and published in Alpha 17
 (tag commit `a9ea32d72`). At that delivery no reporter re-test had been requested or run;
 for the later runs see the closure section below. See the source/HTTP contract in
 [alpha16-system2-http-mount](../contracts/alpha16-system2-http-mount.md).

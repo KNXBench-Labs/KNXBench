@@ -2,7 +2,7 @@
 
 ## Delivery and package checks
 
-Published main-first as `1173e1daf` (feature `0aab69508`) after
+Published main-first as `1173e1daf` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d762ab011`) (feature `0aab69508`) after
 independent whole-evidence source/text review and focused correction review
 APPROVE. Parent-recomputed source/evidence identities were unchanged across
 both reviews; the reviewers' narrower inspection limits remain in the private

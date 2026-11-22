@@ -8,7 +8,7 @@ retains its complete normalized model, but reopening it with an empty product
 database cannot resolve its application. This package adds one synthetic HTTP
 characterization and current documentation; **production is unchanged**.
 
-Baseline: published `93b1a2d5`, following WP-13's documentation reconciliation.
+Baseline: published `93b1a2d5` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `92f602fa1`), following WP-13's documentation reconciliation.
 No real project, product corpus, device, network service, credential or vendor
 code is used. The original imported-project tests are retained.
 
@@ -53,7 +53,7 @@ are not summed; the later complete scoped package gate is recorded separately.
 
 ## Package acceptance
 
-Delivered on `main` as main-first `0dbef5cf` (feature `4b7b8db0`); immediate
+Delivered on `main` as main-first `0dbef5cf` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `36e45b0a4`) (feature `4b7b8db0`); immediate
 local/tracking/live readback matched. Maintained scoped gate13/13 passed:
 1,057 Rust tests, zero failures, 53 ignored in the ordinary run; 51/51 selected
 corpus cases separately executed; 323 registered tooling tests with one existing

@@ -1,6 +1,6 @@
 # OpenKNX capability reconciliation (OKX-07)
 
-Observed baseline: 1 November 2026, against main at `f22ef1b04`.
+Observed baseline: 1 November 2026, against main at `f22ef1b04` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `db1af8f3b`).
 
 OKX-04 update: canonical baggage joins, bounded PNG decoding and explicit
 offline HTML are delivered with owning API/CLI tests, independent review,

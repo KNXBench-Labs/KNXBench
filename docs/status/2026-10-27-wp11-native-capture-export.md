@@ -112,7 +112,7 @@ whole-evidence and focused core source/text reviews returned APPROVE; the tiny
 roadmap-wrap finding was corrected and the original preparation cutoff kept
 until execution completed. No native replay was needed for review.
 
-Published main-first as `8227419a52dd6ab2e3981ae5571999886056f671` (feature
+Published main-first as `8227419a52dd6ab2e3981ae5571999886056f671` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `4a8077516`) (feature
 `ae0b8fc71f3f6fc65b8e541464b35e6682aba7f9`). Branch and integrated
 maintained change-scoped gates each passed all **10/10** planned stages, with
 frozen inputs and no touched or unchecked user data. Each registered

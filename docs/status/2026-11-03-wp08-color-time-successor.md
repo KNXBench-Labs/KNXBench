@@ -2,7 +2,7 @@
 
 ## Accepted scope and source identity
 
-Source `9ed8fca6aebecf77b739703864691edcc4b489b4` was published main-first
+Source `9ed8fca6aebecf77b739703864691edcc4b489b4` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `1a997db0c`) was published main-first
 as `5c405bfde508a22e2e7001e88615faf4491ec2c6`. The feature and published
 merge have identical trees. This is a main-only ProductDB v32 data repair,
 not a release, deployment or broader [WP-08](../open-work/WP-08-parameter-value-codecs.md)
@@ -67,7 +67,7 @@ and five doctest suites, with 176 ignored; each selected private corpus passed 9
 selected runs, not every workspace, ignored, private-corpus or browser test.
 The package selected no web/browser suite and makes no new native-UI claim.
 The standard conditional publisher checked the upstream base before pushing;
-tracking/live Main was subsequently read back equal to `5c405bfde`.
+tracking/live Main was subsequently read back equal to `5c405bfde` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `0d365d7f3`).
 
 Raw receipts, source inventories, corrected artifacts, reviews, mutation binaries
 and an own-source Git bundle are retained privately. Existing cache executables

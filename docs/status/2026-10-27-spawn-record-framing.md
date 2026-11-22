@@ -58,7 +58,7 @@ integration remains in `<profile>/evidence/gate01-cold-start-20261027/`.
 
 ## Acceptance boundary
 
-Published main-first as `bc1b47a9abe41d4b3cd0a23c4afed3b772258ee0` (feature `c82db6d5167ed0c16289a275dbbc2e09344d6375`)
+Published main-first as `bc1b47a9abe41d4b3cd0a23c4afed3b772258ee0` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d2a0485c4`) (feature `c82db6d5167ed0c16289a275dbbc2e09344d6375`)
 after independent review APPROVE. Branch and integrated maintained package gates
 each passed all ten planned stages, with frozen inputs and no touched or unchecked
 user data. Integrated tooling: 466 registered methods,

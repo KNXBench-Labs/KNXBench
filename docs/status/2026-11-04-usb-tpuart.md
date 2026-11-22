@@ -61,7 +61,7 @@ The parent authenticates source manifests and direct-exit logs. Independent
 correction review closed F1/F2/F3/T1, with four compiled semantic mutant
 rejections and four restored controls; no compile failures or survivors were
 credited. Both maintained **16-stage** change-scoped gates passed: branch
-`ee0076ed2` and main-first `81b0a2092`, each with **8,209 Rust passes and 247
+`ee0076ed2` and main-first `81b0a2092` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `b30f2c0ea`), each with **8,209 Rust passes and 247
 ignored tests**, a separate **155/155 corpus** and **62 binding-test passes**
 (the bindings overlap the workspace population and are not added to it).
 Both receipts prove complete stages, frozen inputs and checked, untouched

@@ -4,7 +4,7 @@ Observed: 4 November 2026.
 
 ## Current disposition
 
-**Bounded fixture package accepted and published main-first as `fb1facc41`
+**Bounded fixture package accepted and published main-first as `fb1facc41` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `04cc47ba3`)
 (source `03bc5e57d`).** Independent review, focused execution and both complete
 selected 14-stage gates passed. This is a fixture-only strengthening, not a new
 production behavior or overall E14 acceptance. No production
@@ -121,7 +121,7 @@ guards remained clean and fully checked.
 ## Package acceptance and main-first delivery
 
 The reviewed fixture source was committed as `03bc5e57d`; the separately gated
-main-first merge `fb1facc41` has its exact Git tree. Both actual change-scoped
+main-first merge `fb1facc41` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `04cc47ba3`) has its exact Git tree. Both actual change-scoped
 plans selected 14 stages and completed all of them with direct exit 0 and valid
 proofs: fmt, documentation, static browser-lane registration, layering, headers,
 anchors, ledger, corpus-gate registration, tool tests, clean-desktop, Clippy,

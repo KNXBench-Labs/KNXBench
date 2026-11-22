@@ -1,6 +1,6 @@
 # S2-01 — System-2: width-aware PID 7 evidence and safe diagnostic projection
 
-**Priority:** P1. **Status:** Projection scope **DELIVERED** as `536e492bc`
+**Priority:** P1. **Status:** Projection scope **DELIVERED** as `536e492bc` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d7294970d`)
 ([dossier](../status/2026-10-26-system2-safe-diagnostic-projection.md)): private
 diagnostic `5f1ad454e`, exact-profile width correction `54b052885` (inherited, reviewed
 and integrated-gate accepted, [record](../status/2026-10-26-up258-pid7-width.md)), and
@@ -66,13 +66,13 @@ checkpoint/reopen contract, DTO, shareable report and EN/DE panel
 is typed only: legacy and untyped failures (including legacy-policy refusals) and old
 journals stay without a diagnostic and are never backfilled from free text.
 
-Delivered as `536e492bc` after independent review and the maintained 15-stage
+Delivered as `536e492bc` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d7294970d`) after independent review and the maintained 15-stage
 branch and integrated gates (counts in the dossier). A diagnostic is a bounded
 observation, not a hardware-support grant, a retry or a recovery route. Acceptance of
 the result documents themselves is separate. The new entries are translated EN/DE; a
 pre-existing static English status paragraph in the German panel is inherited and
 unchanged. The shared journal/error surfaces were coordinated with the width owner
-(already published as `54b052885`).
+(already published as `54b052885` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `898024716`)).
 
 ## Retained boundaries
 

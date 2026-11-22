@@ -1,7 +1,7 @@
 # S2-05 — System-2: result in the device list, report, project settlement
 
 **Priority:** P1. **Status:** bounded result/report and automatic project-belief
-integration accepted on main-first `8c06ddc96`, including supervised terminal
+integration accepted on main-first `8c06ddc96` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `cc71fe73e`), including supervised terminal
 settlement and application-level status/reload ownership. Feature and integrated
 selected gates15/15 each passed. #30's allocation mismatch is accounted for by the
 firmware clearing the hidden `Download_Flag` octet itself (observed 2 November 2026,
@@ -18,7 +18,7 @@ Contract: [system2-download-result](../contracts/system2-download-result.md).
 ## Software consolidation, 4 November 2026
 
 The [E1–E17 software matrix consolidation](../status/2026-11-04-s2-05-software-matrix.md)
-is accepted main-first as `cee41bf0d` on 5 November 2026: App integrity/ownership
+is accepted main-first as `cee41bf0d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `38babefc5`) on 5 November 2026: App integrity/ownership
 adversaries, actual-worker catalogue/project contention, full lifecycle and
 history conservation, changed-source large-project measurement and exact limits.
 Two independently compiled wrong variants fail their owning assertions, with
@@ -37,7 +37,7 @@ The narrow caption class and physical/general-equivalence limits are unchanged.
   tolerated value; every other byte stays strict. The requested field run is done
   ([field run](#field-run-8-november-2026)). Open: the exact clear time (Load Completed or
   restart); the run reads the octet back only after Load Completed, so it does not settle that.
-- General per-part source equivalence stays open. Since main-first `0d6299187`
+- General per-part source equivalence stays open. Since main-first `0d6299187` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `11e7985db`)
   (2 November 2026) a verified run on a proven
   unchanged source credits the parts the current project still states as written.
   Independent re-review and both selected 14-stage package gates passed
@@ -47,33 +47,33 @@ The narrow caption class and physical/general-equivalence limits are unchanged.
   with an explicitly new source-and-package-pinned profile. No settlement-only
   re-pinning contract or production equivalence policy is implemented by that evidence.
   The explicitly software-authorized [narrow caption-only rule](../status/2026-11-03-s2-caption-settlement-candidate.md)
-  is accepted main-first as `288bd8005` after independent review and both complete
+  is accepted main-first as `288bd8005` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `9c15583a2`) after independent review and both complete
   selected 14-stage gates. It implements the bounded [settlement-only design](../design/system2-settlement-source-equivalence.md),
   not general source equivalence or new start/recovery authority. The later
   [software consolidation](../status/2026-11-04-s2-05-software-matrix.md) maps all
   finite E-rows to existing or newly executed controls, including actual-worker
   lease/proof counts, causal project contention and changed-source measurements;
-  finite software consolidation is accepted main-first as `cee41bf0d`. It does not
+  finite software consolidation is accepted main-first as `cee41bf0d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `38babefc5`). It does not
   claim every possible
   adversary, individual SQL counts or broader source policy. A bounded
   [E15 changed-caption persistence-failure follow-up](../status/2026-11-03-s2-caption-persistence.md)
-  is accepted main-first as `99f7e65dd`: focused mounted execution, independent
+  is accepted main-first as `99f7e65dd` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `b0ad55b35`): focused mounted execution, independent
   review with four compiled wrong-variant assertion failures and both complete
   selected 14-stage gates. This closes that bounded failure cross, not all E15.
   The [E13 malformed-current-parameter follow-up](../status/2026-11-04-s2-current-parameter-refusal.md)
   has focused mounted proof for both selector families/namespaces and prior
   pending/marked states plus independent terminal-refusal and address-fallback
-  calibration, accepted main-first as `37fcc9b50` after both complete selected
+  calibration, accepted main-first as `37fcc9b50` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `8b59d8c8a`) after both complete selected
   14-stage gates. This closes that bounded current-input cross, not all E13.
   The [E14 command-bound current-target/revision follow-up](../status/2026-11-04-s2-current-target-revision.md)
-  is accepted main-first as `fb1facc41`: four new leaves/16 mounted cells across
+  is accepted main-first as `fb1facc41` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `04cc47ba3`): four new leaves/16 mounted cells across
   both families/namespaces and pending/marked beliefs, exact post-command
   preservation, a genuine revision-only positive control, independent four-variant
   assertion calibration and both complete selected 14-stage gates. The callback
   counter is a separately labelled private seam probe, not worker read-count
   evidence. This closes that bounded cross, not all E14 or lifecycle/recovery.
   The [E16 ineligible final-verification follow-up](../status/2026-11-04-s2-ineligible-terminal.md)
-  is accepted main-first as `633d669e3`: two new leaves/four retained/ns20 cases
+  is accepted main-first as `633d669e3` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `dd85a0130`): two new leaves/four retained/ns20 cases
   cross a healthy caption-ALL witness with actual failed/healthy terminal workers,
   exact MEMORY/history conservation and frozen facts. Independent review calibrated
   two real owner variants; both complete selected 14-stage gates passed. Version
@@ -84,13 +84,13 @@ The narrow caption class and physical/general-equivalence limits are unchanged.
   pending/marked beliefs (eight leaves/16 cases), published main-first as
   `446480584` after independent correction review and both selected 14-stage
   gates. The bounded [caption-positive original recovery proof](../status/2026-11-04-s2-caption-recovery-authority.md)
-  is published main-first as `77edfc3b3`: four standalone/retained20/23 mounted
+  is published main-first as `77edfc3b3` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `05dd69639`): four standalone/retained20/23 mounted
   leaves check actual original recovery, exact OLD model restoration, original
   evidence/confirmation authority and conservative MEMORY/history settlement.
   Independent review closed a redo-oracle gap; both selected 14-stage gates passed.
   This closes that finite cross, not all E11/E16. The separate
   [wrong-observed-serial recovery proof](../status/2026-11-04-s2-caption-recovery-serial.md)
-  is published main-first as `18ae7406b`: four mounted source/namespace leaves
+  is published main-first as `18ae7406b` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `81da9e023`): four mounted source/namespace leaves
   preserve the existing no-write refusal, original Verified facts and conservative
   history settlement; four valid-original neighbors remain. Independent source
   review/correction closure, one compiled guard-bypass calibration with four intended
@@ -143,7 +143,7 @@ replay), reopen and the reports carry it, status schema 4 serves `finalStepFailu
 the panel shows it in EN and DE with an explicit "unavailable" for older journals. Scope,
 grammar and limits: [contract](../contracts/system2-download-result.md#final-step-failure).
 Proven by focused Net, App, server and web runs, both 15-stage package gates and the
-isolated built-server smoke. Source `96f41c7f1` is delivered main-first as `309384726`;
+isolated built-server smoke. Source `96f41c7f1` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `051763e61`) is delivered main-first as `309384726`;
 the docs-only upstream delta carries the product acceptance from `8bdc42c7e`, not a new
 product run. [Acceptance and exact boundaries](../status/2026-10-28-system2-final-step-failure.md#software-acceptance-and-source-delivery).
 No hardware evidence exists.

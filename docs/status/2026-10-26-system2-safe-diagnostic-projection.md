@@ -2,7 +2,7 @@
 
 ## Delivery status
 
-**Delivered as `536e492bc`.** Feature commit `eeba38bf` (production `5c469a5ec`),
+**Delivered as `536e492bc` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d7294970d`).** Feature commit `eeba38bf` (production `5c469a5ec`),
 independent whole-feature, test-coverage and gate-correction reviews all APPROVE.
 Branch gate, 15 stages, passed: Rust 2731 passed / 129 ignored, corpus 91/91, vitest
 4553 passed (306 files), browser inventory 914. Integrated gate on the merge:

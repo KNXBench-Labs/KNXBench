@@ -4,7 +4,7 @@ Observed: 30 October 2026.
 
 ## Current disposition
 
-**Historical main-first software acceptance is recorded on `2bec7dd8a`, which
+**Historical main-first software acceptance is recorded on `2bec7dd8a` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `4d934cbfb`), which
 is contained in the inspected main history.** The retained 31 October gate
 completed 14/14 selected stages. The [4 November reconciliation](#historical-acceptance-reconciliation--4-november-2026)
 qualifies the missing separate branch-green and original final-smoke binary
@@ -186,7 +186,7 @@ field) are addressed in tests, code comment and contract.
 The authenticated retained 31 October records establish **one** completed,
 source-frozen 14-stage change-scoped main-first gate on runtime `2bec7dd8a`
 (base `465f08cac`). Its feature-side parent `84e028ed6` has the identical Git
-tree; `2bec7dd8a` is contained in the inspected fetched main history. This is
+tree; `2bec7dd8a` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `4d934cbfb`) is contained in the inspected fetched main history. This is
 historical source containment and receipt-based acceptance, not a reconstructed
 original push/readback transaction or a fresh acceptance run on current main.
 

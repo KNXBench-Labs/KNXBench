@@ -58,7 +58,7 @@ answer timing through an absent optional override.
 
 ## Acceptance boundary
 
-Published source: main-first merge `3583ab8e0`, containing feature `6f7d22228`
+Published source: main-first merge `3583ab8e0` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `80e4da9c6`), containing feature `6f7d22228`
 and the ordinary-server persistence follow-up `ca940e2ed`. Final independent
 confirmation is APPROVE. Branch and integrated maintained package gates each
 passed all 14 selected stages with frozen inputs and no touched or unchecked

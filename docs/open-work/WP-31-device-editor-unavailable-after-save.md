@@ -280,7 +280,7 @@ project/store-path waits, not every diagnostic or server route. Other mixed path
 catalogue database reads outside this collector and the reporter's original
 error/proxy hypothesis remain open. Acceptance followed: an independent review
 approved the package, the selected 14-stage package gate passed and it was
-published as `789dfcbdd`; no real installation was accessed.
+published as `789dfcbdd` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `959b51512`); no real installation was accessed.
 
 ### Mixed bus/project routes off the runtime (WP-31e, 13 November 2026)
 

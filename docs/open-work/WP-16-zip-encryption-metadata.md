@@ -1,6 +1,6 @@
 # WP-16 — ZIP encryption metadata consistency (AES extra field)
 
-**Status:** Delivered (26 October 2026): delivered on `main` as `161e3b14b` (feature `305609215`, review fix `bdaf3bfc9`); maintained change-scoped 14/14 gate green: 5,033 Rust tests in 33 binaries (220 ignored), 155/155 selected corpus cases, frozen inputs, no touched or unchecked user data; local/tracking/live readback equal. No longer listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** Delivered (26 October 2026): delivered on `main` as `161e3b14b` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `1883e07c6`) (feature `305609215`, review fix `bdaf3bfc9`); maintained change-scoped 14/14 gate green: 5,033 Rust tests in 33 binaries (220 ignored), 155/155 selected corpus cases, frozen inputs, no touched or unchecked user data; local/tracking/live readback equal. No longer listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 ## Task
 

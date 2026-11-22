@@ -2,7 +2,7 @@
 
 ## Delivered source scope
 
-Main-first merge `a1742023993de900e3f1cd829e5099b84d6b1e54` publishes
+Main-first merge `a1742023993de900e3f1cd829e5099b84d6b1e54` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `9472a7a85`) publishes
 feature `8d3ebe69d5461ebb5bd4a9afdda872ca7a1c3b7b`. Local, tracking and live
 `main` were read back equal. The selected user checkout remains unchanged;
 unrelated local changes and parked worktrees were preserved.

@@ -170,7 +170,7 @@ owns the local results and separates the complete synthetic TCP observation
 from UDP handshake-only controls. Independent Standards and Spec reviews APPROVE;
 all 13 selected package-gate stages passed (716 Rust tests, 22 ignored; separate
 corpus 17/17; frozen inputs and checked, untouched user data), and publication
-on main `7213ab41c` was read back. This observation increment does not itself
+on main `7213ab41c` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `a933269d6`) was read back. This observation increment does not itself
 enable execution/recovery; that separate candidate is described below. Other
 programming consumers do not gain the option. No release or hardware claim.
 
@@ -188,7 +188,7 @@ The [dedicated record](../status/2026-11-13-cli-tcp-system2-validation.md) owns
 focused evidence and remaining limits. Independent Standards and Spec reviews
 APPROVE; all 13 selected package stages passed (726 Rust tests, 22 ignored;
 separate corpus 17/17; frozen inputs and checked, untouched user data), and
-publication as main `99a78fe35` was read back. No hardware or release claim;
+publication as main `99a78fe35` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `104514e57`) was read back. No hardware or release claim;
 broader WP-29 and other programming consumers remain open.
 
 ## Implementation boundaries

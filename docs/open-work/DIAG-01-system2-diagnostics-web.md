@@ -1,6 +1,6 @@
 # DIAG-01 — System-2 memory diagnostic profile in the web UI
 
-**Status:** Delivered (26 October 2026): delivered on `main` as `a4bb0aa4e`; independent review and fix re-review APPROVE; maintained change-scoped 15/15 gate green (919 browser tests, 1,522 Rust tests in 9 binaries, 51/51 selected corpus cases, frozen inputs, no touched user data); local/tracking/live readback equal. Simulator-verified only, no
+**Status:** Delivered (26 October 2026): delivered on `main` as `a4bb0aa4e` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `9a416f5aa`); independent review and fix re-review APPROVE; maintained change-scoped 15/15 gate green (919 browser tests, 1,522 Rust tests in 9 binaries, 51/51 selected corpus cases, frozen inputs, no touched user data); local/tracking/live readback equal. Simulator-verified only, no
 hardware run. No longer listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is
 the [ledger](../status/LEDGER.md).
 

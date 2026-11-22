@@ -2,7 +2,13 @@
 
 Owner request: 21 November 2026. Search changes since approximately 14 November,
 including unlabelled contributions, and record actionable defects in one work package.
-**Recorded only: no implementation claim and no implementation Go.**
+
+**Status: closed 22 November 2026 — delivered on main** (slices 48.1–48.8 by PRs #127,
+#129–#135, slice 48.9 documentation closeout; see the slice table and the closeout summary
+below). The sections from "Requested outcome" to "Verification leads" are the intake text
+of 21 November 2026, kept as written with later implementation notes; they describe the
+state at audit target `163e38b85`, not today's code. Remaining items live in their owning
+items (closeout summary).
 
 ## Requested outcome and review boundary
 
@@ -30,8 +36,9 @@ Evidence vocabulary:
   or used to expand write authority without a discriminating test/source decision.
 
 No live installation, provider login/download, ETS VM or hardware operation was used.
-Runtime findings are not fixed by publishing this document. The documentation package's
-own gate is separate from the proposed runtime acceptance cases below.
+At intake (21 November) no runtime finding was fixed by publishing this document; the
+slices below fixed them afterwards. The documentation package's own gate is separate from
+the runtime acceptance cases below.
 
 ## Confirmed findings
 
@@ -313,7 +320,7 @@ calls. A scoped value read in `build_image_selected` therefore falls back (via
 `ValueMap::get`, then `get_unscoped`) to the one unscoped value, which every instantiation
 shares at its own `BaseOffset`; module-qualified request keys are refused by name
 (`no such ParameterRef`). The `ImageRequest.values` doc comment claimed such keys were
-decomposed and consumed per instance (ADR-0177); it was wrong and is corrected. Per-instance
+decomposed and consumed per instance (ADR-0189, then numbered 0177); it was wrong and is corrected. Per-instance
 image values are not implemented: that is a producer gap, recorded here, not changed in
 this slice, and no hardware claim. Tests in `module_scoped_image.rs` pin the policy (exact
 octets, unchanged neighbours, default and shared unscoped value), the refusal of scoped
@@ -340,6 +347,26 @@ contradictions, not evidence that the incomplete features are fully accepted.
 Acceptance: unique ADR identity and explicit dated amendments, backlink sweep, queue/detail
 and maintained status reconciliation against actual delivered commits and remaining gaps.
 Do not rewrite historical gate reports or turn the above bugs into completed features.
+
+Implementation note (WP-48.2 and WP-48.9): the shared resolver part landed in 48.2
+(`knx_core::resolve_module_owner`, PR #129). WP-48.9 resolved the rest:
+- **ADR identity.** The authority ADR was created later the same day (10:15 against 07:16)
+  and is now [ADR-0189](../adr/0189-accepted-wp07-mapping-is-the-module-instance-authority.md);
+  ADR-0177 is the grid-axis caption ADR only. A dated note in ADR-0189 records the former
+  number. Source comments, maintained docs and the ADR index were switched (42 textual
+  references in 22 files plus the OPEN_WORK link). Dated records (the ledger, status
+  records, the retained KL-068 dossier) keep their original "ADR-0177" wording; the note in
+  ADR-0189 and the index row say which ADR they mean. No redirect stub: no link to the old
+  file name remained outside the audit anchors above.
+- **Authority ADR status stays Proposed.** The 17 November owner decision accepted the
+  counted mapping witness as evidence and lifted the block; it did not accept the ADR text
+  (OWN-01 records no acceptance of it). ADR-0189 carries an amendment saying so and
+  describing the implemented `_<RefId>` boundary/counter rule.
+- **Queue/status.** The WP-42 and LS-02 rows were stale restorations (a stale-base merge,
+  `d18687ba1`, re-added rows that `c7e61f09a` had removed). WP-42.2 storage and WP-42.3
+  editor are on main (`df896afe1`, `af51c2983`, merge `3a72996b4`, PR !57); LS-02 is
+  delivered as `c079ec8d6` (digest-bound cache availability in 48.8). Both rows, and the
+  delivered WP-43 row, are removed from OPEN_WORK; their detail files carry the state.
 
 ## Catalogue and reconciliation findings
 
@@ -392,42 +419,47 @@ hashing. Legacy files without a record report not-downloaded until the download 
 rehashes and adopts them (no network) or removes them; verification failure and eviction
 remove both files. Import-time checks are unchanged.
 
-## Verification leads — not confirmed runtime defects
+## Verification leads — dispositions (22 November 2026)
 
-1. **Module image authority:** `b4d141288`/`e0738472a` admit base-offset module images;
-   some docs still say module images refuse. Trace the accepted source/arithmetic policy,
-   actual prepare/write consumers and refusal categories before proposing a safety change.
-   Hardware-untested alone is not proof of a forbidden path; no new bus/write consent exists.
-2. **`CollapseIfEmpty` value domain:** the executed pure planner collapses an empty row for
-   raw `"false"`, `"0"` and `"true"`. This is observed behaviour, not proof of the external
-   attribute's normative type. Obtain existing primary evidence and pin the contract before
-   claiming boolean parsing is the fix. Do not invent semantics from string truthiness.
-3. **Rename scopes and axis fallback:** rename settlement groups by definition rather than
-   full expansion scope; filled rename text drops fill metadata; axis fallback can retain a
-   fill even when showing a literal. Add discriminating multi-instance/empty-value cases and
-   compare the existing contracts before changing conservative refusals or fallback policy.
-4. **Historical catalogue rows:** Button literals still reopen retained source without
-   requiring re-import (`parameter_layout/button.rs:3–9`); therefore the earlier blanket
-   claim that Buttons now require re-import is too broad. Translation lookup instead needs
-   persisted `element_id`/a label entry, and v34 adds `inline` without promotion. Test an
-   authentic pre-change database to establish exactly which capabilities need backfill or
-   an explicit re-import notice; do not prescribe a blanket destructive re-import.
-5. **Other review leads:** all-hidden table preferences, hidden selection controls,
-   per-definition axis-query budget reuse and last-download request fan-out need targeted
-   consumer/keyboard/performance checks. The catalogue already has search-field keyboard
-   navigation; do not claim complete keyboard inaccessibility from row-button removal alone.
-6. **Nested-binding refusal causes (former F13, demoted by claims review):** there is no
-   separate `nested_binding()` cause projection, but generic reporting already exists:
-   `parameter_layout/grid.rs:375–382,787–789` records `UnshownContent`,
-   `apps/knx-server/src/parameter_grid.rs:106–115` preserves it, and
-   `apps/knx-web/src/ParameterWorkspace.tsx:282–296` retains the issue unless its caption
-   was displayed. An unavailable grid has an explicit layout explanation too. Establish
-   a reached supported candidate missing adequate reporting before calling this a bug;
-   otherwise cause-specific reporting is an enhancement, not a data-loss correction.
+None of these was promoted to a runtime defect without evidence. Original lead text is
+summarised; the disposition is what holds now.
+
+1. **Module image authority — resolved (WP-48.7 review).** The image builder admits
+   base-offset module images (`b4d141288`/`e0738472a`): a module-local `Memory/@BaseOffset`
+   resolves per instantiation. It refuses, fail-closed, devices whose instances carry
+   stored module-qualified parameter values (`no such ParameterRef`, `ParameterValue`
+   category) and still refuses a module `ComObjectRef` (`a module instance`). "Module images
+   refuse wholesale" and "module images are admitted wholesale" are both wrong; stale
+   statements were corrected in WP-48.9 (WP-37 detail file, IMPLEMENTATION_STATUS, REL-01,
+   one dated ledger entry annotated). Owner: [WP-07](WP-07-module-instance-authority.md)
+   (per-instance image values), [KL-068](../limitations/KL-068-repeated-module-activation.md).
+2. **`CollapseIfEmpty` value domain — open, owner [WP-05](WP-05-parameter-layout-fidelity.md).**
+   The repository holds no primary evidence for the attribute's value type: the research
+   note cites the public schema-20 grammar for the attribute's existence and the 762
+   declaring rows only, and the PSR rules document is not in the corpus. The shipped rule
+   is documented in the parameter-workspace contract as truthiness of a non-empty string
+   (`"false"` and `"0"` therefore collapse too); it is not claimed as ETS behaviour.
+   Lift condition: a primary source, or an authentic project with an observed rendering,
+   fixing the value domain; until then no boolean parsing is introduced.
+3. **Rename scopes and axis fallback — dispositioned in WP-48.3** (rename scope and fill
+   metadata fixed; axis fallback unchanged by decision; Button translation versus text
+   parameter open). Open owner questions moved to WP-05 and OWN-01 (below).
+4. **Historical catalogue rows — partly confirmed in WP-48.3.** Open: an authentic
+   pre-change database to decide backfill versus a re-import notice. Moved to WP-05 and
+   OWN-01.
+5. **Other review leads — open, not confirmed defects.** Moved to their owners so they
+   survive this closure: per-definition axis-query budget reuse → WP-05; last-download
+   request fan-out → [WP-37](WP-37-pending-changes-across-ui.md); all-hidden table
+   preferences and hidden selection controls → [OWN-01](OWN-01-owner-decisions.md)
+   (no active UI owner exists; lift condition: a targeted consumer/keyboard check in a
+   future UI package). The catalogue's search-field keyboard navigation stands; no claim of
+   complete keyboard inaccessibility.
+6. **Nested-binding refusal causes — not a defect** (WP-48.3); cause-specific reporting is
+   an enhancement.
 
 ## WP-48.3 result (scoped captions and provenance)
 
-Implemented on `work/wp48-3-scoped-captions-20261122`; pending review/gate.
+Delivered in WP-48.3 (PR #130, merge `00a9338d0`).
 
 - **F02 fixed.** A literal Button's caption/translation/fill is looked up with its exact
   `(scope.node_chain(), node_id)` key. HTTP fixture `passive_labels/module_buttons.rs`: a
@@ -478,21 +510,41 @@ Implemented on `work/wp48-3-scoped-captions-20261122`; pending review/gate.
 
 ## Bounded corrective packages and actual status
 
-All slices below are **planned; awaiting implementation Go**. The order is recommended,
-not an invented dependency chain. Deliver them sequentially through subagents; the main
-session coordinates, reviews source/PR plus gate receipts, then integrates each accepted slice.
+All nine slices are delivered on `origin/main`. Each of 48.1–48.8 had an independent
+review and a green change-scoped package gate before its merge; per-slice evidence is in
+the implementation notes above and in the PR. Merge commits are the first-parent merges.
 
-| Slice | User outcome / findings | Blocked by |
-| --- | --- | --- |
-| WP-48.1 | Old reports cannot clear new programming changes; F16 — implemented on branch `work/wp48-1-report-binding-20261121`, pending review/gate | None |
-| WP-48.2 | Structural module ownership; F01 and the shared-resolver/ADR part of F15 — implemented on branch `work/wp48-2-module-owner-20261121`, pending review/gate | None |
-| WP-48.3 | Correct scoped captions and provenance; F02–F03; verify rename/axis/historical-row and nested-reporting leads — implemented on branch `work/wp48-3-scoped-captions-20261122`, pending review/gate | None; coordinate shared ownership code with 48.2 |
-| WP-48.4 | Existing configuration can actually be edited, editor tracks revisions, server enforces document contract; F04–F06 — implemented on branch `work/wp48-4-devconf-editor-20261122`, pending review/gate | None; reuse WP-42 storage/preview/history |
-| WP-48.5 | Usable, honest last-download address marks; F07–F08 — implemented on branch `work/wp48-5-ga-last-download-20261122`, pending review/gate | None |
-| WP-48.6 | Correct monitor ordering and stationary readable select controls; F09–F10 — implemented on branch `work/wp48-6-monitor-select-20261122`, pending review/gate | None |
-| WP-48.7 | Effective UDP/settings regressions and per-instance image proof; F11–F12, F14 — implemented on branch `work/wp48-7-test-proof-20261122`, pending review/gate; F14 also records that per-instance image values are not implemented | None; producer changes may coordinate with 48.2 |
-| WP-48.8 | Catalogue cache availability follows the selected digest; F17 — implemented on branch `work/wp48-8-catalogue-digest-20261122`, pending review/gate | None |
-| WP-48.9 | Resolve evidence/compatibility leads and reconcile remaining decision/status references; remaining F15 | Existing source evidence for semantic/write claims; status closeout follows the relevant earlier slices |
+| Slice | User outcome / findings | PR | Merge commit |
+| --- | --- | --- | --- |
+| WP-48.1 | Old reports cannot clear new programming changes; F16 | #127 | `705d35abe` |
+| WP-48.2 | Structural module ownership (shared `knx_core::resolve_module_owner`); F01 and the resolver part of F15 | #129 | `098f13de8` |
+| WP-48.3 | Correct scoped captions and provenance; F02–F03; rename/axis/historical-row/nested-reporting leads dispositioned | #130 | `00a9338d0` |
+| WP-48.4 | Configuration editor loads and edits stored documents, tracks revisions, server enforces the document contract; F04–F06 | #131 | `971653dda` |
+| WP-48.5 | Usable, honest last-download address marks; F07–F08 | #132 | `54ca43ee8` |
+| WP-48.6 | Chronological monitor ordering and stationary readable select controls; F09–F10 | #133 | `0e3e428dc` |
+| WP-48.7 | Effective UDP-trap and settings regressions, per-instance image proof; F11–F12, F14 (producer gap recorded, KL-068 / ADR-0189 amendment / WP-07) | #134 | `e3ef3bff9` |
+| WP-48.8 | Catalogue cache availability follows the selected digest; F17 | #135 | `9cd7c0d98` |
+| WP-48.9 | Status closeout: ADR identity, WP-42/LS-02 status, lead and decision dispositions; rest of F15 | this change | recorded in the merge |
+
+## Closeout summary (22 November 2026)
+
+Sixteen confirmed findings (F01–F12, F14–F17; F13 was demoted at intake):
+- **Fixed in runtime code (12):** F01, F02, F03, F04, F05, F06, F07, F08, F09, F10, F16,
+  F17.
+- **Test/harness proof restored (3):** F11, F12, F14. F14 is a test gap closed with a
+  recorded producer gap, not a fixed producer.
+- **Documentation/status (1):** F15.
+- **Remaining, with owner:**
+  - Per-instance image values (devices with module-qualified stored values refuse
+    download): [WP-07](WP-07-module-instance-authority.md), [KL-068](../limitations/KL-068-repeated-module-activation.md).
+  - Repeat-expansion Button coverage (F02 acceptance item), `CollapseIfEmpty` value
+    domain, Button translation versus `@TextParameterRefId`, axis-fallback tooltip
+    wording, historical Button rows, axis-query budget: [WP-05](WP-05-parameter-layout-fidelity.md).
+  - `-0` in device-configuration documents: [WP-42](WP-42-device-configuration-modules.md).
+  - Last-download request fan-out: [WP-37](WP-37-pending-changes-across-ui.md).
+  - ADR-0189 owner acceptance, all-hidden table preferences/hidden selection controls,
+    and the four owner questions: [OWN-01](OWN-01-owner-decisions.md).
+- No hardware, live-bus, ETS VM, provider login or release action was part of WP-48.
 
 Per-slice completion requires regression coverage of the stated acceptance cases,
 independent review, the maintained change-scoped package gate, updated owning docs and

@@ -12,6 +12,24 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## WP-48 recent-change correctness audit closed (22 November 2026)
+
+All nine WP-48 slices are on main (PRs #127 and #129–#135; the closeout is documentation
+only). Fixed in runtime code: report-bound programming reconciliation (F16), structural
+module-owner resolution (F01), scoped caption lookup and honest caption provenance
+(F02–F03), loading/refreshing/strictly validated device-configuration documents
+(F04–F06), usable and honest group-address last-download marks (F07–F08), chronological
+monitor ordering and stationary select text (F09–F10) and digest-bound catalogue cache
+availability (F17). Test proof restored for UDP-fallback traps, narrow-settings
+layout and module-scoped images (F11, F12, F14). Decision/status references were
+reconciled (F15): the module-instance authority ADR is now ADR-0189 (it had shared
+number 0177 with the grid-axis caption ADR) and remains Proposed. Not delivered and
+recorded in the owning items: per-instance module image values (devices with
+module-qualified stored values refuse download; WP-07, KL-068), the `CollapseIfEmpty`
+value domain and further caption/historical-row questions (WP-05), `-0` in
+device-configuration documents (WP-42) and four open owner questions (OWN-01). No
+hardware or live-bus run. See [WP-48](open-work/WP-48-recent-change-correctness-audit.md).
+
 ## Object numbers without a project row are listed in the last-download summary (21 November 2026; WP-37 S3)
 
 Under the communication-object summary, a second line now names the object
@@ -48,7 +66,7 @@ summary line now compares against every device linked in the address index (each
 once) and states which subset was compared and why the rest was not (loading, failed,
 absent, other program, product unavailable, current unreadable); it says "no address's links
 differ" only when every relevant device has a usable comparison. Web-only (`apps/knx-web`);
-implemented on branch `work/wp48-5-ga-last-download-20261122`, pending review/gate.
+delivered in PR #132 (merge `54ca43ee8`).
 Intercepted-browser tests only; no hardware run.
 
 ## Group-address last-download marks delivered (20 November 2026; WP-37, PR !104)
@@ -63,8 +81,8 @@ receipt `1795199079555335506` (11/11 stages; web-gate 34; vitest 5947/5947
 including 12 new unit + 7 new e2e ga-last-download tests; browser 1481 =
 1384 + 97, 0 unexpected/flaky). With this, all WP-37 slices are on main:
 steps 1–4 (Alpha 21), module-scoped baseline values (17 November 2026,
-schema 22, ADR-0177) and the image-builder module admission (PR !60,
-`b4d141288`, 18 November 2026). Simulator and intercepted-browser tests only;
+schema 22, ADR-0189) and the image-builder admission of base-offset module images (PR !60,
+`b4d141288`, 18 November 2026; devices with stored module-qualified values still refuse, WP-48 F14). Simulator and intercepted-browser tests only;
 no hardware run.
 
 ## Alpha 22 pre-release (source cutoff 15 November 2026)

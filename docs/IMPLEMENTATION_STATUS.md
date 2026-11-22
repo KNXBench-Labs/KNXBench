@@ -53,7 +53,7 @@ number 0177 with the grid-axis caption ADR) and remains Proposed. Not delivered 
 recorded in the owning items: per-instance module image values (devices with
 module-qualified stored values refuse download; WP-07, KL-068), the `CollapseIfEmpty`
 value domain and further caption/historical-row questions (WP-05), `-0` in
-device-configuration documents (WP-42) and four open owner questions (OWN-01). No
+device-configuration documents (WP-42; decided 22 November: still refused) and the remaining open owner questions (OWN-01). No
 hardware or live-bus run. See [WP-48](open-work/WP-48-recent-change-correctness-audit.md).
 
 ## Object numbers without a project row are listed in the last-download summary (21 November 2026; WP-37 S3)

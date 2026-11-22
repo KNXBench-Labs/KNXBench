@@ -59,12 +59,10 @@ against the firmware's own validator are maintained with that firmware.
 
 ## Open decisions
 
-- **Owner/contract question (WP-48.4):** may a device-configuration document contain the
-  JSON number `-0`? The strict parser refuses it (serde_json reads it as a float,
-  "integers without fraction or exponent"); the knx-app test
-  `negative_zero_is_refused_as_a_non_integer_number` pins the current behaviour and the
-  fixture uses `-7`. Pre-existing engine behaviour, unchanged. Also listed in
-  [OWN-01](OWN-01-owner-decisions.md).
+- **Decided 22 November 2026 (WP-48.4):** device-configuration documents keep refusing
+  the JSON number `-0` (strict parser, integers only); no behaviour change. The knx-app
+  test `negative_zero_is_refused_as_a_non_integer_number` and the knx-devconf `-0` case
+  pin it. Record: [OWN-01](OWN-01-owner-decisions.md#decision-recorded--22-november-2026-device-configuration--0).
 - Pixel-accurate device preview (later, owner Q15).
 - Downloading a configuration to a device: needs its own qualification and
   explicit authorisation; not planned here.

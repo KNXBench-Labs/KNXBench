@@ -8,8 +8,11 @@ It is **software-accepted and published on main `8de9487de`**, on base `041df68a
 The parent verified independent Standards/Spec APPROVE, the complete selected
 17-stage gate and exact local/tracking/live publication readback. The runtime gate
 ended at 13:55:07 CET on 14 November 2026; the parent acceptance aggregate was
-recorded at 13:58 CET. This result-only documentation successor still awaits its
-own independent review, complete planner-selected gate and publication.
+recorded at 13:58 CET. This result-only documentation successor was written
+awaiting its own independent review, complete planner-selected gate and
+publication; it is published on main (`1dab91cfa`) and was reviewed
+retrospectively against source on 22 November 2026
+([note](#retrospective-source-review--22-november-2026)), without a new gate.
 It changes no runtime, bindings or tests and runs no builds, tests, gates, browser,
 VM, bus or hardware operations.
 
@@ -40,7 +43,7 @@ publication examples are introduced here.
 ### Fresh integrated runtime results (parent-verified aggregate)
 
 These results belong to the published runtime, not the earlier correction epochs
-or this unaccepted documentation successor:
+or the documentation successor:
 
 - Nested web: **34/34 stages**, targeted/default selection of **103 specs**;
   **1,238 browser cases = 1,143 functional + 95 exclusive**. Production configs
@@ -174,8 +177,69 @@ This successor admits the fresh parent result and exact source binding:
 - `<profile>/evidence/2026-11-13-wp05-14/implementation-wp06/delivery-review01/SOURCE-BINDING.json`
   — eleven SHA-256 source identities and the eight admitted documentation paths.
 
-Next: independent review of this result-only documentation successor, its complete
-planner-selected gate, then separate publication/readback by the parent. Those
-steps are **pending**; runtime acceptance does not pre-accept the docs successor.
+Next (as written on 14 November 2026): independent review of this result-only
+documentation successor, its complete planner-selected gate, then separate
+publication/readback by the parent. The successor was published as `1dab91cfa`
+without those steps being recorded; see the retrospective review below for what
+was and was not done.
 Source-ID statuses/counts are unchanged. WP-41, E4, WP07, root-local and
 foreign-owner stop lines, including WP-12 consent, remain in force.
+
+## Retrospective source review — 22 November 2026
+
+The 14 November text above says this successor awaited independent review, a complete
+planner-selected gate and publication. It is published on main as `1dab91cfa`. On
+22 November 2026 its runtime claims were compared with source (published runtime and
+current `origin/main`). This is a documentation-claim review against source, **not** a
+new gate, test run or acceptance: no counts were re-executed and none are added here;
+the 14 November results stay parent-verified aggregates.
+
+**Source state.** Of the eleven frozen paths, nine are unchanged on `origin/main` since
+the runtime merge `a6b7fda7e` (the caption reader and its tests, `com_object_folders.rs`,
+`http_com_object_folders.rs`, the three bindings, `knx-projection/src/lib.rs`,
+`comObjectView.test.ts`). `query.rs` changed later only for unrelated device-catalogue
+work (`best_matching_language` is untouched) and `apps/knx-server/src/domain.rs` for
+WP-05 parameter-caption work; the folder-caption call site is unchanged.
+
+**Claims checked against source (all consistent):**
+
+- Namespaces: `PROJECT_20`/`PROJECT_23` (`crates/knx-productdb/src/com_object_folder_captions.rs:26-28`);
+  schemas other than 20/23 refused as `UnsupportedSchema` (`:132-135`); project/23 only when
+  `project_schema == 23` and hardware and loaded application are rooted in it (`:246-253`);
+  a distinct product source in another namespace is refused by its ownership link (tests
+  `mixed_and_foreign_product_namespaces_stay_refused_with_todays_issues`,
+  `distinct_product_source_in_another_namespace_than_the_hardware_is_refused`).
+- Language: selection uses the shared rule (`localize`, `:379-402`, calling
+  `query.rs:113`, now `pub(crate)`): exact wins, otherwise the lowest identifier with the
+  prefix `request-`; a longer request does not match a shorter stored identifier. The
+  literal filter is nonblank, at most 4096 bytes, no `{{`/`}}` (`:940`), plus
+  the `TextParameterRefId` exclusion for the declaration (`:948`). A normalized row that
+  disagrees yields `TranslationDisagrees` (`:400`); a missing row does not.
+  The three untranslated reasons are `:86-93`.
+- No language requested: the DTO `language` is optional and absent
+  (`apps/knx-web/src/bindings/ProductFolderCaption.ts`, `com_object_folders.rs:134`).
+- Resource refusal: `Unavailable(ResourceLimit)` is only logged
+  (`apps/knx-server/src/domain.rs:2949-2953`, `captions` stays unset, no default fallback);
+  an exhausted DTO copy budget skips the whole overlay (`:2747-2749`;
+  `apply_product_captions` admits every string in two passes before applying any,
+  `com_object_folders.rs:71-139`). Other unavailable issues are dropped silently
+  (`domain.rs:2954`), as documented.
+- Counts that can be read from source: 29 `#[test]` in the caption reader tests (29/29),
+  12 in `http_com_object_folders.rs` (12/12), 6 `best_matching_language` unit tests in
+  `query.rs`. The 7-test shared-rule lane and server unit 5 were not re-derived.
+
+**Correction found.** `8de9487de` is a documentation-candidate commit with the tree of
+the runtime merge `789ab6143`; it is an ancestor of `v0.1.0-alpha.22` but not of
+`origin/main`, whose history carries the tree-identical commits `a6b7fda7e` (runtime
+merge; tree equals `789ab6143`) and `02cb3beca` (tree equals `8de9487de`). The feature
+commits `90d422a0b`/`9b0d937dc` likewise appear on main as `119e17757`/`6cd37fcd6`.
+So "published on main `8de9487de`" names the Alpha 22 history identity; on main the same
+runtime content is `a6b7fda7e`, and this successor is `1dab91cfa`. The 14 November
+sections keep their original hashes as dated history.
+
+**Not established by this review.** The 14 November runtime gate, corpus and acceptance
+numbers (17/17, 6,187, 97/97, 563) are quoted from the parent aggregate and were not
+repeated. This successor itself never had its own independent review or planner-selected
+gate recorded before publication; the retrospective review replaces neither. WP-06
+broader slices (templates, rename, empty/nested/module folders, recomputed placement)
+stay evidence-gated.

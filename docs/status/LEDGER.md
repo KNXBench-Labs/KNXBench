@@ -319,7 +319,9 @@ main-first `789ab6143` on `041df68a0`. The parent verified Standards/Spec APPROV
 complete selected gate 17/17, frozen inputs/fingerprint, checked user data untouched
 and exact local/tracking/live readback; separate namespace corpus regression 97/97
 is not full manufacturer/reference compatibility. This result-only docs successor
-still awaits independent review, its complete planner-selected gate and publication.
+is published on main (`1dab91cfa`); a retrospective source review on 22 November 2026
+([note](2026-11-14-wp06-folder-caption-language.md#retrospective-source-review--22-november-2026))
+found the claims consistent with source, with hash-identity and no-new-gate caveats.
 [Epochs, amendments and limits](2026-11-14-wp06-folder-caption-language.md) record
 absent no-language provenance, whole-overlay resource refusal, unit-only A7 and
 the installer-bypassing mixed-namespace HTTP fixture. No source-ID row or count

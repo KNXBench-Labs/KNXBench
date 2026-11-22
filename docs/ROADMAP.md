@@ -19,7 +19,7 @@ since 14 November is closed: content-bound CLI-report reconciliation, structural
 ownership, scoped caption provenance, loading/validated configuration editing, honest
 last-download marks, monitor ordering, stationary select text, effective test proofs and
 digest-bound catalogue cache availability are on main. Remaining items (per-instance
-module image values, `CollapseIfEmpty` value domain, four owner questions) sit in
+module image values, `CollapseIfEmpty` value domain, the open owner questions) sit in
 WP-07, WP-05, WP-42 and OWN-01. No new compatibility claim; existing evidence and
 hardware/write-consent boundaries remain unchanged.
 

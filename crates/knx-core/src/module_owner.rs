@@ -1,6 +1,6 @@
 //! Structural resolver from a program-side `Module/@Id` to its one imported `ModuleInstance`.
 //!
-//! Grammar (ADR-0177): `<program prefix>_<RefId>[_MI-<k>]`, where `<RefId>` is the instance's
+//! Grammar (ADR-0189): `<program prefix>_<RefId>[_MI-<k>]`, where `<RefId>` is the instance's
 //! `source.ets_id` (e.g. `MD-2_M-4`). The `RefId` must end the id (before an optional `MI-`
 //! tail) and start at an `_` component boundary, so `MD-2_M-4` never owns `…_MD-2_M-41`. A
 //! carried counter must equal the instance's own `instance_counter()`. Anything that is not

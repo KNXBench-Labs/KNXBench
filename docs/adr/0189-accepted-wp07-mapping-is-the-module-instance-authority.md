@@ -1,8 +1,16 @@
-# ADR 0177: The accepted WP-07 mapping is the module-instance authority
+# ADR 0189: The accepted WP-07 mapping is the module-instance authority
 
 Date: 2026-11-17
 Status: Proposed
 Session: WP-07 (unblocked by owner decision 2026-11-17)
+
+> **Renumbered 2026-11-22 (WP-48.9, finding F15).** This ADR was created as
+> ADR 0177 on 2026-11-17 and collided with
+> [ADR 0177 (grid-axis captions)](0177-grid-axis-text-parameter-captions.md), created
+> earlier the same day, which keeps the number. Dated records written before
+> this note (status records, the ledger, retained limitation dossiers) that say
+> "ADR-0177" in a module-instance, MI-counter or scoped-baseline context mean this
+> ADR; source comments and maintained docs were switched to ADR-0189.
 
 ## Context
 
@@ -112,3 +120,20 @@ whose module instances carry stored, module-qualified parameter values are
 refused at image building (fail-closed: `ParameterValue` download refusal, no
 wrong octets); only unscoped values reach every instantiation. See
 [KL-068](../limitations/KL-068-repeated-module-activation.md).
+
+## Amendment 2026-11-22 (WP-48.9, F15): status and what is accepted
+
+**Status stays Proposed.** The owner's 17 November 2026 decision
+([OWN-01](../open-work/OWN-01-owner-decisions.md#decision-recorded--17-november-2026))
+accepted the counted mapping *witness* as evidence for WP-07's first
+deliverable and lifted the evidence block. It did not accept this ADR's text;
+no later record does either. The implementation described here is on main and
+independently reviewed, but the ADR needs an explicit owner acceptance before it
+is marked Accepted.
+
+**Decision 2 versus the code.** "Ends with `_<RefId>`" is implemented by
+`knx_core::resolve_module_owner` (amendment 2026-11-21): the id is split at its
+rightmost `_MI-`, `<RefId>` must end the remainder and start at an `_`
+boundary, and a carried counter must equal `instance_counter()`. That is a
+stricter reading than a bare suffix test. The remaining `contains` matchers
+named in the Context were replaced; there is no first-match fallback.

@@ -61,7 +61,7 @@ pub(crate) struct DifferingParameterDto {
 }
 
 /// One module-scoped ref whose value at the last download is not its current
-/// value; a side without a value is `null` (WP-37, ADR-0177 key).
+/// value; a side without a value is `null` (WP-37, ADR-0189 key).
 #[derive(Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ScopedDifferingParameterDto {
@@ -136,7 +136,7 @@ fn compare(
     }
     // Module-qualified stored ids are scoped evidence, not unscoped values:
     // the unscoped comparison sees the plain refs only (ADR-0173), the
-    // scoped one sees the decomposed pairs (WP-37, ADR-0177).
+    // scoped one sees the decomposed pairs (WP-37, ADR-0189).
     let unscoped_chosen: std::collections::BTreeMap<String, String> = chosen
         .iter()
         .filter(|(ets_id, _)| {

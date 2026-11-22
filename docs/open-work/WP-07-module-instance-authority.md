@@ -4,7 +4,9 @@
 
 **Evidence route:** clean-room observation is admitted by the owner (8 November 2026; [OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)).
 
-**Implementation status (17 November 2026, ADR-0177):** the authority is wired into all four consumers. `knx_core::ModuleInstance::instance_counter()` is the single reader of the `_MI-<k>` suffix. Evaluation, parameter writes and object reconciliation (`resolve_mi_authority`, the scoped-owner check, `owning_instance`) read the counter from the program-side `Module/@Id` itself when several instances share the `RefId`, so a well-formed `MI-<k>` picks exactly that instance; a missing, malformed or unmatched counter keeps the refuse/undetermined semantics. Identity-keyed module comparison keys module-based objects on `<ets_id>#k=<n>`. Ambiguous mappings still refuse the whole edit without spending IDs or changing native history.
+**Update (22 November 2026, WP-48.2/48.9):** the ownership match is one structural resolver, `knx_core::resolve_module_owner` (exact `RefId` boundary, counter agreement, typed refusals; PR #129, merge `098f13de8`). The authority ADR is ADR-0189 (formerly numbered 0177) and stays Proposed: the owner accepted the witness, not the ADR text.
+
+**Implementation status (17 November 2026, ADR-0189):** the authority is wired into all four consumers. `knx_core::ModuleInstance::instance_counter()` is the single reader of the `_MI-<k>` suffix. Evaluation, parameter writes and object reconciliation (`resolve_mi_authority`, the scoped-owner check, `owning_instance`) read the counter from the program-side `Module/@Id` itself when several instances share the `RefId`, so a well-formed `MI-<k>` picks exactly that instance; a missing, malformed or unmatched counter keeps the refuse/undetermined semantics. Identity-keyed module comparison keys module-based objects on `<ets_id>#k=<n>`. Ambiguous mappings still refuse the whole edit without spending IDs or changing native history.
 
 **Mapping witness (17 November 2026, owner-accepted):** the admitted mapping contract is backed by a real, independently counted witness over eight ETS exports of one fictional project plus two modular corpus projects (42 + 32 + 75 module instances; 292 counted argument values, all matching `Start + Allocates·(k−1)`; RepeatIndex positions counted 149/149): [witness](../research/2026-11-17-wp07-module-mapping-witness.md). The first deliverable below is therefore met at the evidence level. The download-image arithmetic and bus behavior stay out of scope.
 
@@ -36,7 +38,7 @@ evidence. [Epochs, controls and limits](../status/2026-11-14-wp07-unresolved-mod
 
 **Remaining open item (WP-48 F14):** the image builder refuses devices whose
 module instances carry stored, module-qualified parameter values
-(fail-closed, `ParameterValue` download refusal; KL-068, ADR-0177 amendment).
+(fail-closed, `ParameterValue` download refusal; KL-068, ADR-0189 amendment). Base-offset module images are admitted (PR !60); a module `ComObjectRef` still refuses.
 Lift condition: per-instance scoped values wired into `ImageRequest` via the
 evaluator, with per-instance octet tests (the `current_policy_*` pins in
 `module_scoped_image.rs` flip).

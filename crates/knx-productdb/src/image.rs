@@ -796,7 +796,7 @@ fn build_image_selected(
         // The dedup key is scope-aware: two instantiations of one module
         // share the `Parameter` id but write different fields (each resolves
         // its own `BaseOffset` argument), so a plain parameter-id key would
-        // silently drop every instantiation after the first (ADR-0177).
+        // silently drop every instantiation after the first (ADR-0189).
         let scope_key = scope.map(|s| s.node_chain());
         match &scope_key {
             Some(chain) => {
@@ -849,7 +849,7 @@ fn build_image_selected(
             } => {
                 // The instantiation's bound argument gives the base; without
                 // it the module-local relative offset is meaningless and
-                // refused by name (ADR-0177), never guessed.
+                // refused by name (ADR-0189), never guessed.
                 let scope = scope.ok_or_else(|| ImageError::Unsupported {
                     what: format!(
                         "{parameter}: a module Memory (BaseOffset) outside any module scope"
@@ -1608,7 +1608,7 @@ pub(crate) fn field_of<'a>(
 /// instantiation's `base_offset_arg` argument is bound: the argument's
 /// numeric value plus the relative `@Offset`, in the same segment.
 /// Refused by name when the value does not fit a 32-bit offset or the
-/// sum overflows — never guessed (ADR-0177).
+/// sum overflows — never guessed (ADR-0189).
 pub(crate) fn module_field_of(
     parameter: &str,
     placement: &ParameterPlacement,

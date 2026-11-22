@@ -19,7 +19,7 @@ pub type ParameterValues = BTreeMap<String, String>;
 /// One module instantiation's written value: the program-side `Module/@Id`
 /// (e.g. `MD-2_M-1_MI-3`) plus the declared `ParameterRef` id. The stored
 /// module-qualified id is decomposed once, on the write side, via
-/// `instance_counter` (ADR-0177); the baseline keeps the two halves so a
+/// `instance_counter` (ADR-0189); the baseline keeps the two halves so a
 /// re-numbered instance never silently adopts another's evidence.
 pub type ScopedParameterValues = BTreeMap<(String, String), String>;
 

@@ -1042,7 +1042,7 @@ pub fn resolve_unscoped_values(
 /// Keys that do not decompose stay unscoped and are ignored here (they are
 /// reported by [`resolve_unscoped_values`]'s caller as today). A module id
 /// without a parseable `_MI-<k>` counter is skipped, never guessed
-/// (ADR-0177).
+/// (ADR-0189).
 pub fn resolve_scoped_values(
     supplied: &std::collections::BTreeMap<String, String>,
 ) -> std::collections::BTreeMap<(String, String), String> {

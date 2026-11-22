@@ -93,7 +93,7 @@ pub fn decompose_module_qualified(ets_id: &str) -> Option<(String, String, Strin
 /// `MI-` authority for a program-side `module_id`, and if not, exactly
 /// why — never a guess, never a default (D40).
 ///
-/// ADR-0177: with the accepted mapping, the `Module/@Id` itself carries the
+/// ADR-0189: with the accepted mapping, the `Module/@Id` itself carries the
 /// instance counter (`…_<RefId>_M-<m>_MI-<k>`), so a repeated module is
 /// resolved by that counter instead of being ambiguous by construction.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -123,7 +123,7 @@ pub enum MiAuthority {
 }
 
 /// D39 rules 2-3 through the one structural resolver
-/// [`knx_core::resolve_module_owner`] (ADR-0177, amended 2026-11-21): the
+/// [`knx_core::resolve_module_owner`] (ADR-0189, amended 2026-11-21): the
 /// `RefId` must end the program-side `Module/@Id` on a component boundary,
 /// an `MI-` tail the id carries must equal the instance counter, and only
 /// exactly one such instance is `Found` (carried as its decimal counter).
@@ -281,7 +281,7 @@ pub fn evaluate_device(
         // Resolve stored identity even below a skipped Repeat. This does not
         // walk its iterations or decide activation (ADR-0108). The stored
         // `MI-<k>` comparison now goes through the shared authority
-        // (ADR-0177): the instance's counter must equal the candidate's
+        // (ADR-0189): the instance's counter must equal the candidate's
         // `mi_digits`, which is the same all-ASCII-digit check expressed once.
         let carried_id = format!("{module_id}_MI-{mi_digits}");
         let owner = knx_core::resolve_module_owner(&carried_id, module_instances);

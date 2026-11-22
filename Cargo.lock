@@ -1979,7 +1979,7 @@ dependencies = [
 
 [[package]]
 name = "knx-app"
-version = "0.1.0-alpha.3"
+version = "0.1.0-alpha.22"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -2009,7 +2009,7 @@ dependencies = [
 
 [[package]]
 name = "knx-build-stamp"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "tempfile",
 ]
@@ -2041,14 +2041,14 @@ dependencies = [
 
 [[package]]
 name = "knx-core"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "chrono",
 ]
 
 [[package]]
 name = "knx-csv"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "csv",
  "knx-core",
@@ -2072,7 +2072,7 @@ dependencies = [
 
 [[package]]
 name = "knx-devconf"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "serde",
  "serde_json",
@@ -2081,14 +2081,14 @@ dependencies = [
 
 [[package]]
 name = "knx-diff"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "knx-core",
 ]
 
 [[package]]
 name = "knx-edit"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "knx-core",
  "knx-store",
@@ -2098,7 +2098,7 @@ dependencies = [
 
 [[package]]
 name = "knx-etsproj"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "chrono",
  "flate2",
@@ -2136,7 +2136,7 @@ dependencies = [
 
 [[package]]
 name = "knx-net"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "knx-core",
  "libc",
@@ -2147,7 +2147,7 @@ dependencies = [
 
 [[package]]
 name = "knx-productdb"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "base64 0.22.1",
  "crc32fast",
@@ -2169,7 +2169,7 @@ dependencies = [
 
 [[package]]
 name = "knx-projection"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "knx-core",
  "serde",
@@ -2178,7 +2178,7 @@ dependencies = [
 
 [[package]]
 name = "knx-report"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "chrono",
  "knx-core",
@@ -2187,7 +2187,7 @@ dependencies = [
 
 [[package]]
 name = "knx-secure"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "base64 0.22.1",
  "pbkdf2",
@@ -2243,7 +2243,7 @@ dependencies = [
 
 [[package]]
 name = "knx-store"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "chrono",
  "flate2",
@@ -2257,7 +2257,7 @@ dependencies = [
 
 [[package]]
 name = "knx-testsupport"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "zip",
 ]
@@ -5696,7 +5696,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.22"
 dependencies = [
  "cargo_metadata 0.18.1",
  "knx-store",

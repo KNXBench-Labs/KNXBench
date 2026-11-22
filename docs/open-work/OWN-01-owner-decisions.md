@@ -221,6 +221,28 @@ live Docker Hub verification.
   publication after that review was approved on 8 November 2026. The originals
   stay private.
 
+## Open questions carried from WP-48 (22 November 2026)
+
+Surfaced while closing [WP-48](WP-48-recent-change-correctness-audit.md); none blocks
+delivered work, and none is decided here.
+
+- ADR-0189 (the WP-07 module-instance authority, formerly a second ADR 0177) is
+  **Proposed**: the 17 November decision accepted the counted witness, not the ADR
+  text. Accept it, amend it, or leave it Proposed?
+- May a device-configuration document contain the JSON number `-0`? Today it is refused
+  ([WP-42](WP-42-device-configuration-modules.md)).
+- Tooltip wording for a grid-axis caption that falls back to its literal text when the
+  fill origin is an empty value or the template default
+  ([WP-05](WP-05-parameter-layout-fidelity.md)).
+- Should a translated template apply to a Button that also declares
+  `@TextParameterRefId` (WP-05)?
+- Historical Button rows: backfill or a re-import notice? Needs an authentic pre-change
+  database first (WP-05).
+- UI review leads without an active owner: a table-column preference that hides every
+  column, and hidden selection controls (not confirmed defects; no claim of complete
+  keyboard inaccessibility). Lift: a targeted consumer/keyboard check in a future UI
+  package.
+
 ## Deferred by recorded decision (reopen only on a new decision)
 
 - ADR-0039 phases 3–5, sealing the ID allocator (KL-129).

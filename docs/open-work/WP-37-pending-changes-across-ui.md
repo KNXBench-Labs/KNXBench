@@ -5,7 +5,7 @@ External report by the issue reporter, 10 November 2026; triaged 11 November 202
 **done**. The reporter confirmed the area/section/ancestor marks on
 `0.1.0-alpha.21+g6a9336c5` and closed #48. Steps 1–4 shipped in Alpha 21;
 module-scoped parameters shipped 17 November 2026 as the first WP-07-authority
-consumer (native schema 22, ADR-0177 key; see "Module-scoped parameters" below);
+consumer (native schema 22, ADR-0189 key; see "Module-scoped parameters" below);
 the other exclusions below remain outside this closure. [Reporter evidence](../status/2026-11-14-issues36-48-reporter-closure.md).
 **Status update — 20 November 2026:** the group-address views' last-download
 link marks (tree/columns/atlas/matrix) are delivered via PR !104
@@ -249,7 +249,7 @@ programming-flag changes; no hardware, release or deployment authority.
   unscoped refs only, `resolve_unscoped_values`). Module-scoped rows are
   marked by `scopedDiffering`, keyed `(moduleId, refId)` with the
   `Module/@Id` the WP-07 authority carries in its `_MI-<k>` suffix
-  (ADR-0177), compared by `scoped_differences` (schema 22).
+  (ADR-0189), compared by `scoped_differences` (schema 22).
 - **Summary line** (Parameters view only, above the fields, static text, not a
   live region): “{count} values differ from the last download ({time}).” with
   singular/plural, plus “{hidden} of them are not shown with the current
@@ -333,7 +333,7 @@ description after the name.
   set, so they stayed off in ordinary use, and the summary could claim that no address
   differs when only some devices had been compared. WP-48.5 adds the Settings →
   Group addresses switch (off by default: it reads every device's detail) and a
-  coverage-aware summary; pending review/gate on its branch.
+  coverage-aware summary (delivered in PR #132, merge `54ca43ee8`).
 - ~~Differences on object numbers without a selected project row were counted,
   not listed~~ **shipped 21 November 2026 (S3)**: a second line under the
   communication-object summary lists them from the server's `differing`
@@ -346,15 +346,19 @@ description after the name.
   the module-scoped values it wrote as `scoped_values` keyed
   `(Module/@Id, ParameterRef id)` (native schema 22, pure addition
   `device_parameter_baseline_scoped_value`; migration v21→v22), decomposed on
-  the write side via the WP-07 authority's `instance_counter` (ADR-0177) so a
+  the write side via the WP-07 authority's `instance_counter` (ADR-0189) so a
   re-numbered instance is a new key, never a silent overwrite. The comparison
   answers `scopedDiffering` beside `differing` and the panel marks module-scoped
   rows by their section's `moduleId`; a module-scoped write drops only its own
   `(moduleId, refId)` pair, never the unscoped ref's mark. The image builder
-  admits module-scoped parameters as of 18 November 2026 (PR !60,
-  `work/wp37-modules-fix-20261118`), so module-scoped baseline rows can now
-  also come from an offline image plan; no module download to a device exists
-  yet.
+  admits module base-offset images as of 18 November 2026 (PR !60,
+  `work/wp37-modules-fix-20261118`) but refuses devices whose module instances
+  carry stored, module-qualified values (WP-48 F14, fail-closed; per-instance
+  image values are WP-07 work); no module download to a device exists yet.
+- **Carried from WP-48 (22 November 2026):** last-download request fan-out (the
+  group-address marks read every device's detail when the Settings switch is on, WP-48.5)
+  is an unmeasured review lead, not a confirmed defect. Lift: a targeted request-count/
+  latency check on a large project before changing the switch or adding batching.
 - ~~The caption beside an open checked editor is visible but not linked to the
   editor's controls as their description~~ **delivered 21 November 2026**
   (WP-37 S2, web only): while a checked editor is open on a row that carries the

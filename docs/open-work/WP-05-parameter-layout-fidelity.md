@@ -17,6 +17,27 @@ feature at a time, never inferred manufacturer behaviour.
 
 ## Open (each needs its own evidence)
 
+- **Carried from WP-48 (22 November 2026; nothing here is a confirmed defect or an
+  invented rule):**
+  - `Row/@CollapseIfEmpty` value domain: the shipped rule treats any non-empty string as
+    set (`"false"`/`"0"` collapse too); no primary source in the repository gives the
+    attribute's type. Lift: a primary source or an authentic observed rendering; no
+    boolean parsing before that.
+  - A Button with `@TextParameterRefId` and a placeholder takes the fill branch and
+    ignores a requested-language translation of that Button (pre-existing). Owner
+    decision: should a translated template apply there?
+  - Axis-text fallback keeps the literal and reports the unresolved/empty fill. Owner
+    wording decision for the tooltip when the fill origin is `EmptyValue` or
+    `TemplateDefault`.
+  - Historical Button rows (ingested before 19 November 2026) lack `element_id`: the
+    literal label survives, only the language overlay needs it. Backfill versus a
+    re-import notice needs an authentic pre-change database (the 48.3 test simulates
+    the rows by clearing `element_id`).
+  - Repeat-scoped Button coverage (the F02 "Repeat expansion" acceptance item):
+    `Repeat` content is not expanded into scopes, so it stays untested.
+  - Per-definition axis-query budget reuse: needs a targeted performance check before any
+    claim.
+
 - Parameter-driven row/column captions (`TextParameterRefId`): grid axis captions now resolve
   the referenced text parameter (delivered 17 November 2026, ADR-0177; contract updated).
   Since 20 November 2026 (WP-05l) the resolved caption's fill provenance (`textFill` in the

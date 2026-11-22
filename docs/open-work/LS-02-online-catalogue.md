@@ -8,7 +8,13 @@ tests. Alpha 22 and the accepted file-based workflow are not retroactively
 changed; release/deployment remain separate authorizations.
 
 **Ledger:** `FUTURE-05`; per-ID status of record is the
-[ledger](../status/LEDGER.md). Listed in [OPEN_WORK](../OPEN_WORK.md).
+[ledger](../status/LEDGER.md). Not listed in [OPEN_WORK](../OPEN_WORK.md): the row left
+the list on 20 November 2026 when this package closed; a stale-base merge re-added it
+with the pre-delivery text ("delivery pending") until WP-48.9 removed it again.
+
+**Follow-up WP-48.8 (F17):** cache availability in search now follows the verified SHA-256
+of the selected index entry (PR #135, merge `9cd7c0d98`), so a same-id, same-size,
+different-digest revision no longer looks already downloaded. No other scope change.
 
 ## Current owner decisions
 

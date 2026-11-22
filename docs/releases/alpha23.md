@@ -270,15 +270,21 @@ product database; no downgrade path is provided or tested.
 
 | | Alpha 23 |
 |---|---|
-| Commits since Alpha 22 | **291** (**193** without merges), counted up to the version bump |
-| Files changed | **469**, +39,608 / −1,373 lines |
-| Estimated active development time | RELEASE-GATE-PENDING |
-| Rust tests | RELEASE-GATE-PENDING |
-| Frontend unit tests | RELEASE-GATE-PENDING |
-| Browser test executions and their scope | RELEASE-GATE-PENDING |
-| Corpus and predecessor comparison | RELEASE-GATE-PENDING |
-| Release gate and packaging | RELEASE-GATE-PENDING |
+| Commits since Alpha 22 | **293** (**195** without merges) |
+| Files changed | **472**, +39,869 / −1,399 lines |
+| Estimated active development time | about **65 hours** across 59 working blocks (an estimate from commit timestamps: a gap over 45 minutes starts a new block, each block gets 15 minutes of lead time; parallel sessions are counted once) |
+| Rust tests | **9,394** passed, 0 failed, 253 ignored (opt-in private-corpus and hardware tests) |
+| Frontend unit tests | **6,022** passed |
+| Browser test executions and their scope | **1,516** in the fixture browser lanes (1,417 parallel + 99 exclusive), **1,144** across the 16 production configurations, **77** in eight extra release configurations and **24** native-window checks. The lanes overlap in places, so this is executions, not distinct features |
+| Corpus and predecessor comparison | **156/156** corpus tests in 9 targets; **16** opt-in product-corpus tests; a 28-file representative product cross-section installs identically in Alpha 22 and Alpha 23 (28/28) |
+| Release gate and packaging | **24/24** release stages green on the first full run (about 2¼ hours, of which the browser lanes alone took 46 minutes); AppImage and Docker (amd64 + arm64) packaging dry runs green; **0** accidental publications |
 
 ## Acceptance and public verification
 
-RELEASE-GATE-PENDING
+This release was built from commit `81c6bcc629f97b05a044c38ee4e90f135edade33`. Before the tag:
+
+- The complete repository gate and all release-only stages passed on that exact commit, with frozen inputs and untouched user data. Tests ran offline in a loopback-only network namespace.
+- **Project upgrade:** Alpha 22 wrote a real ETS 6 project (schema 21). Alpha 23 opened it, saved it under a new name and reopened it (schema 22). All 647 names survived, the group-address export was byte-identical, and the semantic diff was empty. Alpha 22 then refused the upgraded file and left it unchanged, and the original Alpha 22 file stayed untouched.
+- **Product catalogue upgrade:** a real Alpha 22 catalogue (version 33) moved to version 34, keeping every retained row. Alpha 22 refuses the upgraded catalogue without changing it.
+- **Product cross-section:** the legacy member-name check passed on a 28-file representative cross-section. The full compatibility matrix was replaced by a direct Alpha 22 vs. Alpha 23 installation comparison on that cross-section (28/28 identical); the full 111-file pinned composition did not run.
+- **Not verified:** no real KNX hardware, real gateway or live online-catalogue provider was used for this release's acceptance. Device programming evidence remains simulator and loopback only.

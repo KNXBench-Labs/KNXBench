@@ -303,7 +303,7 @@ test("partial coverage: one compared device and one without a recorded download 
   await expect(summary).toContainText(en["gaWorkspace.lastDownload.reason.absent"].replace("{count}", "1"));
   await expect(summary).toContainText(en["gaWorkspace.lastDownload.noneDifferCompared"]);
   await expect(summary).not.toContainText(en["gaWorkspace.lastDownload.noneDiffer"]);
-  expect([...new Set(state.detailRequests)].sort()).toEqual([1, 2]); // each device read, never a third device
+  expect([...state.detailRequests].sort()).toEqual([1, 2]); // exactly one read per device
   expect(state.unexpected).toEqual([]);
 });
 

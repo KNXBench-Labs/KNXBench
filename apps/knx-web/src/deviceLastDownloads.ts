@@ -59,12 +59,13 @@ export function useDeviceLastDownloads(devices: DeviceNode[], snapshot: object, 
   const source = useMemo(() => ({}), [snapshot, language, projectKey, enabled]);
   const [entries, setEntries] = useState<ReadonlyMap<number, LastDownloadEntry>>(() => new Map());
   const entriesRef = useRef(entries); entriesRef.current = entries;
-  const live = useRef({ source, language, projectKey, mounted: true, generations: new Map<number, number>() });
+  const live = useRef({ source, language, projectKey, mounted: true, generations: new Map<number, number>(), inflight: new Map<number, object>() });
 
   const load = useCallback((deviceId: number) => {
     const l = live.current;
     const generation = (l.generations.get(deviceId) ?? 0) + 1;
     l.generations.set(deviceId, generation);
+    l.inflight.set(deviceId, l.source);
     const requestSource = l.source;
     setEntries(previous => {
       const old = previous.get(deviceId);
@@ -73,6 +74,7 @@ export function useDeviceLastDownloads(devices: DeviceNode[], snapshot: object, 
     });
     const settle = (entry: LastDownloadEntry) => {
       if (!l.mounted || l.generations.get(deviceId) !== generation || l.source !== requestSource) return;
+      l.inflight.delete(deviceId);
       setEntries(previous => new Map(previous).set(deviceId, entry));
     };
     // The read is optional for the marks: a missing or failed comparison marks nothing.
@@ -94,7 +96,7 @@ export function useDeviceLastDownloads(devices: DeviceNode[], snapshot: object, 
     const l = live.current;
     const switched = l.projectKey !== projectKey;
     l.source = source; l.language = language; l.projectKey = projectKey;
-    const forget = (id: number) => l.generations.set(id, (l.generations.get(id) ?? 0) + 1);
+    const forget = (id: number) => { l.generations.set(id, (l.generations.get(id) ?? 0) + 1); l.inflight.delete(id); };
     if (switched || !enabled) {
       for (const id of l.generations.keys()) forget(id);
       if (entriesRef.current.size > 0) setEntries(new Map());
@@ -112,6 +114,7 @@ export function useDeviceLastDownloads(devices: DeviceNode[], snapshot: object, 
     if (!enabled) return;
     for (const device of devices) {
       const entry = entriesRef.current.get(device.id);
+      if (l.inflight.get(device.id) === source) continue; // StrictMode's second effect run must not double-read
       if (entry === undefined || (entry.status !== "failed" && entry.source !== source)) load(device.id);
     }
   }, [source, language, projectKey, devices, load, enabled]);

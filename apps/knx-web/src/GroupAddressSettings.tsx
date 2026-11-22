@@ -10,10 +10,10 @@ export default function GroupAddressSettings() {
     <section className="settings-section settings-section-group-addresses">
       <h2 id="settings-group-addresses" tabIndex={-1}>{t("settings.section.groupAddresses")}</h2>
       <label className="settings-field settings-field-checkbox">
-        <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+        <input type="checkbox" aria-describedby="settings-ga-last-download-hint" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
         <span className="settings-field-label">{t("settings.gaLastDownloadMarks")}</span>
       </label>
-      <span className="settings-field-hint">{t("settings.gaLastDownloadMarksHint")}</span>
+      <span className="settings-field-hint" id="settings-ga-last-download-hint">{t("settings.gaLastDownloadMarksHint")}</span>
     </section>
   );
 }

@@ -103,13 +103,19 @@ fn downloads_dir(dir: &Path) -> PathBuf {
     dir.join(DOWNLOADS_DIR)
 }
 
-/// Removes half-written files an earlier run (or crash) left behind.
+/// Removes half-written files and orphaned digest records an earlier run (or crash) left behind.
 pub(super) fn clear_partial_files(dir: &Path) {
-    let Ok(entries) = std::fs::read_dir(downloads_dir(dir)) else {
+    let downloads = downloads_dir(dir);
+    let Ok(entries) = std::fs::read_dir(&downloads) else {
         return;
     };
     for entry in entries.flatten() {
-        if entry.file_name().to_string_lossy().ends_with(PART_SUFFIX) {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let orphan_record = name
+            .strip_suffix(DIGEST_SUFFIX)
+            .is_some_and(|id| !downloads.join(format!("{id}{FILE_SUFFIX}")).exists());
+        if name.ends_with(PART_SUFFIX) || orphan_record {
+            // `remove_file` unlinks a symlink itself and never follows it.
             let _ = std::fs::remove_file(entry.path());
         }
     }
@@ -412,6 +418,7 @@ impl SourceService {
             .map_err(|_| OnlineError::Storage("the download could not be stored"))?;
         drop(file);
         // A replaced revision must never keep the previous revision's digest metadata.
+        // Defence in depth only: the old record can never match the new index digest anyway.
         let _ = std::fs::remove_file(digest_path(&self.dir, &entry.id));
         partial
             .persist(self.cache_path(&entry.id))

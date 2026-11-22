@@ -225,6 +225,10 @@ async fn tampered_or_linked_digest_metadata_is_not_downloaded() {
         good[..good.len() - 1].to_vec(),
         [good.clone(), b"x".to_vec()].concat(),
         Vec::new(),
+        String::from_utf8(good.clone())
+            .unwrap()
+            .to_uppercase()
+            .into_bytes(),
     ] {
         std::fs::write(&meta, bad).unwrap();
         assert!(!downloaded(&f).await);
@@ -702,4 +706,40 @@ async fn concurrent_password_token_consumers_share_exactly_one_login() {
     let seen = f.server.requests();
     assert_eq!(seen.len(), 1);
     assert_eq!(seen[0].path, "/api/auth/token");
+}
+
+#[tokio::test]
+async fn eviction_removes_the_oldest_file_with_its_digest_record_and_keeps_the_rest() {
+    let f = Fixture::new(vec![one_index(), Script::reply(200, &[], CONTENT)]).await;
+    f.source.sync().await.unwrap();
+    f.token().await;
+    let downloads = f.source_dir().join("downloads");
+    std::fs::create_dir_all(&downloads).unwrap();
+    let base = std::time::SystemTime::now() - Duration::from_secs(10_000);
+    for n in 0..16u64 {
+        for ext in ["bin", "sha256"] {
+            let file = std::fs::File::create(downloads.join(format!("old{n:02}.{ext}"))).unwrap();
+            file.set_modified(base + Duration::from_secs(n)).unwrap();
+        }
+    }
+    start(&f).await;
+    assert_eq!(settled(&f.source).await.state, "done");
+    for ext in ["bin", "sha256"] {
+        assert!(!downloads.join(format!("old00.{ext}")).exists());
+        assert!(downloads.join(format!("old01.{ext}")).exists());
+        assert!(downloads.join(format!("old15.{ext}")).exists());
+    }
+    assert!(downloaded(&f).await);
+}
+
+#[tokio::test]
+async fn opening_a_source_removes_orphaned_digest_records_only() {
+    let f = cached_fixture().await;
+    let downloads = f.source_dir().join("downloads");
+    let orphan = downloads.join("gone.sha256");
+    std::fs::write(&orphan, b"x").unwrap();
+    let reopened = f.reopen();
+    assert!(!orphan.exists());
+    assert!(f.digest_file("sample").exists());
+    assert!(reopened.source("reko").is_ok());
 }

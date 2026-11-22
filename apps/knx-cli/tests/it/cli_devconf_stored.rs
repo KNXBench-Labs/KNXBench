@@ -518,6 +518,11 @@ fn each_sidecar_name_is_refused_independently_and_stays_absent() {
             "{suffix}: {}",
             text(&out.stderr)
         );
+        assert!(
+            text(&out.stderr).contains("sidecar"),
+            "{suffix}: stderr names the project sidecar: {}",
+            text(&out.stderr)
+        );
         assert!(!output.exists(), "{suffix}: still absent");
         assert_eq!(std::fs::read(&project).unwrap(), before, "{suffix}");
     }

@@ -192,7 +192,7 @@ exit 2; a module identity mismatch, an invalid document or an over-long export e
 creates or replaces the output. An output that is the same file as the project or module (also via
 symlink or hard link) or as a SQLite sidecar of the project (`<project>-wal`, `-shm`, `-journal`,
 existing or not, also through a symlinked project or directory) is refused before anything is read
-or opened (exit 2); success could otherwise create or replace a file a later open replays. The
+or opened (exit 2); success could otherwise create or replace a file a later open replays. The check is a pre-open path comparison: behavior against a concurrent writer or a path swapped between check and open (TOCTOU) is unproven and untested. The
 tests' `save_project_with_profile` fixture is private to the CLI test crate; a caller needing a
 project builds it with the same public API sequence (`Project::new`, device insert,
 `Command::SetDeviceConfigProfile`, `knx_store::open_and_migrate`, `save_project`). No bus, device or download is involved.

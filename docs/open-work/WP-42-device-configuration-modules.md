@@ -9,7 +9,7 @@ only as explicitly entered object numbers; structured preview first.
 Decision: [ADR-0175](../adr/0175-device-configuration-modules-are-declarative-data.md).
 Contract: [device configuration modules](../contracts/device-configuration-modules.md).
 
-**Priority:** WP-42.1, WP-42.2 and WP-42.3 delivered 17 Nov 2026 (branch work/wp42-storage-20261117, schema 22); WP-42.4 download/bus integration continues as WP-43.
+**Priority:** WP-42.1, WP-42.2 and WP-42.3 delivered 17 Nov 2026 (branch work/wp42-storage-20261117, schema 22); the offline stored-document export is delivered, physical download/bus integration is not started.
 
 ## Requested outcome
 

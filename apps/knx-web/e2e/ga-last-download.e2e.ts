@@ -250,7 +250,7 @@ async function backToAddresses(page: Page, language: "en" | "de") {
 }
 
 for (const language of ["en", "de"] as const) {
-  test(`${language} fresh profile: marks are off, the Settings checkbox turns them on and off`, async ({ page }) => {
+  test(`${language} fresh profile: marks are off, the Settings checkbox turns them on and off`, { tag: "@exclusive" }, async ({ page }) => {
     const m = language === "en" ? en : de;
     await page.setViewportSize({ width: 1440, height: 1000 });
     const state = await intercept(page, language, usable, { marks: "fresh" });

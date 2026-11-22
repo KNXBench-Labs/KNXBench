@@ -50,7 +50,7 @@ WP-42 delivered the format, the pure `knx-devconf` engine, the `knx devconf`
 CLI (including project-read-only `export-stored`), per-device stored documents
 with module id/version/SHA-256 (WP-42.2) and the structured editor in the
 device panel (WP-42.3). Downloading a configuration to a device is not
-provided here (WP-43).
+provided here; the physical download path remains a separate, unqualified follow-up.
 
 <a id="workspace-density-and-technical-appearance-14-november-2026-wp-41-delivered-on-main"></a>
 

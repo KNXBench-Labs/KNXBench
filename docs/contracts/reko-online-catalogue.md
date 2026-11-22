@@ -196,7 +196,7 @@ but changes the digest therefore reports `downloaded:false` until the new revisi
 acquired. Cache files without a digest record (legacy caches) also report
 `downloaded:false`; the existing download/verify action rehashes such a file once,
 adopts it by writing the record, or removes it (and its record) when the bytes differ,
-without a provider request when the bytes match. `downloaded` is not an import receipt or
+without a provider request when the bytes match. Opening a source also removes digest records whose cache file is gone (never following links). A replaced revision's old record is removed before the new file is stored; that is defence in depth, since an old record can never equal the new digest. `downloaded` is not an import receipt or
 a permanent guarantee that local bytes remain intact (same-size in-place tampering is only
 caught by the revalidation). Reuse/import revalidates bytes. VD1/VD2 stay visible with
 `importable:false`.

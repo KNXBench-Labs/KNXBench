@@ -64,7 +64,7 @@ additional family, recovery or compatibility admission.
 
 ## CLI continuation acceptance
 
-Published main-first merge `44efafa9c` contains the separately authorized journal
+Published main-first merge `44efafa9c` (hash mapping 2026-11-22: alpha-22 history; on current main as `51cf846fc`) contains the separately authorized journal
 and CLI corrections (feature `ff2e45148`). The initial independent review required
 changes; the recovery-barrier correction and its download/replay tests received
 APPROVE. Regression tests were written before the journal and pre-send fixes;

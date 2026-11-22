@@ -16,7 +16,7 @@ GitHub issue.
    once at the top of the section, not repeated per value.
 4. Remove noise sentences that make the UI restless.
 
-## Current basis (source anchors on `origin/main` `9af5c698a`)
+## Current basis (source anchors on `origin/main` `9af5c698a` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `bd8a1f547`))
 
 - Rename: `inspector.priorityEdit.none` in `messages/de.ts:2089`
   ("Nicht von dir festgelegt") and `messages/en.ts:2096` ("Not set by you");

@@ -1,6 +1,6 @@
 # S2-05 E15: changed-caption persistence failure — 3 November 2026
 
-**SOFTWARE ACCEPTED — source `f5c65ea99`, main-first `99f7e65dd`.**
+**SOFTWARE ACCEPTED — source `f5c65ea99`, main-first `99f7e65dd` (hash mapping 2026-11-22: alpha-22 history; on current main as `b0ad55b35`).**
 Independent review and both complete selected 14-stage package gates passed.
 This fixture-only follow-up exercises a named portion of the caption rule's E15
 obligation, not all of E15 or S2-05. It changes no production behavior, source

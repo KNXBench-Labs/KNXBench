@@ -30,7 +30,7 @@ a channel after evaluation, rather than accidentally taking the genuine
 unscoped `Inactive` path. `NotEvaluated` without an evaluable program and the
 existing unscoped/resolved controls stay unchanged. Corrected source
 `8873e0150f` has retained focused 17 unit + 9 HTTP passes and independent F1
-closure. The main-first slice is software-accepted and published as `e31f0e062`
+closure. The main-first slice is software-accepted and published as `e31f0e062` (hash mapping 2026-11-22: alpha-22 history; on current main as `da2b12808`)
 after the complete selected gate14/14 (Rust2090passed/73ignored, separate
 corpus51/51; frozen inputs and checked user data untouched). No deployment or
 native UI claim.

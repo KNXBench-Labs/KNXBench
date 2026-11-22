@@ -1,6 +1,6 @@
 # browser_tmp spawn/signal window
 
-Delivered on 26 October 2026 as main-first merge `ed156ef9b` on `fb26c47c3`
+Delivered on 26 October 2026 as main-first merge `ed156ef9b` (hash mapping 2026-11-22: alpha-22 history; on current main as `1fb35e6d8`) on `fb26c47c3`
 (feature `2adbf63f5`, test/documentation correction `b12d93bc5`). Independent
 whole-feature review and focused correction review: APPROVE. Local, tracking and
 live `main` read back equal to `ed156ef9b`.

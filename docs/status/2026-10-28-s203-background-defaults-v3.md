@@ -1,7 +1,7 @@
 # S2-03 delivery: defaults v3 and explicit-Background admission (28 October 2026)
 
 Result record for [S2-03](../open-work/S2-03-up258-image-interpretation.md).
-Published main-first as `d39668393` on base `6c2247161`: feature `3ed49015a`
+Published main-first as `d39668393` (hash mapping 2026-11-22: alpha-22 history; on current main as `7300a91aa`) on base `6c2247161`: feature `3ed49015a`
 (defaults profile v3) and follow-up `4f462822f` (explicit-`Background`
 admission plus review test gaps).
 

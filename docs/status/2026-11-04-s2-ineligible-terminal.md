@@ -10,7 +10,7 @@ counts, source identities and historical exclusions are not upgraded.
 
 ## Current disposition
 
-**Bounded fixture package accepted and published main-first as `633d669e3`
+**Bounded fixture package accepted and published main-first as `633d669e3` (hash mapping 2026-11-22: alpha-22 history; on current main as `dd85a0130`)
 (source `b8ac9826e`).** Independent review, corrected focused execution and both
 complete selected 14-stage gates passed. This test-only package strengthens one
 E16 cross. Production behavior, protocols, policies and dependencies are unchanged.

@@ -4,7 +4,7 @@ Observed: 26 October 2026.
 
 ## Delivered boundary
 
-Published main-first merge `a8004cb2e` on `8459b5fe8` (feature `46c38df26`).
+Published main-first merge `a8004cb2e` (hash mapping 2026-11-22: alpha-22 history; on current main as `d589d971d`) on `8459b5fe8` (feature `46c38df26`).
 `knx device download`, `knx device restore` and `knx device service-control`
 now use the existing `tunnel_runtime()` helper, as the System-2 commands
 already do. Its two worker threads can service the tunnel's existing receive

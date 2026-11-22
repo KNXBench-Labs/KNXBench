@@ -21,7 +21,7 @@ the inspector. Requirements:
    reduced-motion preference disables the scroll (show full value or ellipsis
    statically instead).
 
-## Current basis (source anchors on `origin/main` `9af5c698a`)
+## Current basis (source anchors on `origin/main` `9af5c698a` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `bd8a1f547`))
 
 - Select styling candidates: `apps/knx-web/src/styles.css:927`
   (`.parameter-field select`), `:982-983` (functions panel), `:1154`

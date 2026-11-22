@@ -1,6 +1,6 @@
 # Evaluated parameter navigation — software acceptance
 
-Accepted and published on main on 14 November 2026 as `2867ee1b5`.
+Accepted and published on main on 14 November 2026 as `2867ee1b5` (hash mapping 2026-11-22: alpha-22 history; on current main as `4780e6a38`).
 This is a bounded main-only successor after the Alpha 21 cutoff, not a release,
 native/reference-tool compatibility, hardware or whole-WP-05 acceptance.
 

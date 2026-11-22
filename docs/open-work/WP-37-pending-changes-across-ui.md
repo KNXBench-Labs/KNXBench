@@ -307,7 +307,7 @@ description after the name.
 
 ## Acceptance of steps 3 UI and 4 (12 November 2026)
 
-- Step 3 UI `6817638aa` and step 4 `54d243ae8` are on main with exact remote
+- Step 3 UI `6817638aa` and step 4 `54d243ae8` (hash mapping 2026-11-22: alpha-22 history; on current main as `72f75b341`) are on main with exact remote
   readback. Both independent reviews APPROVE; semantic mutants were killed and
   no-op controls passed in disposable review copies.
 - Each selected package gate passed 11/11 stages, including a 37/37-stage web

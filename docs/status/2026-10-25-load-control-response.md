@@ -2,7 +2,7 @@
 
 ## Published source
 
-`e4f5e7c6f` is published on `main` with matching live and tracking-ref readback.
+`e4f5e7c6f` (hash mapping 2026-11-22: alpha-22 history; on current main as `efb742b95`) is published on `main` with matching live and tracking-ref readback.
 Main-first parents are upstream `d30681c17` and feature `8d6bde1b7`. The delivered
 region reader and other owners' reserved paths are unchanged. The contract index
 preserves both additive entries; removing only the new row recovers the upstream

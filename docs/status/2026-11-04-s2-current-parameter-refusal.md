@@ -1,6 +1,6 @@
 # S2-05 E13: malformed current parameter at mounted settlement — 4 November 2026
 
-**SOFTWARE ACCEPTED — source `c0c7d1da2`, main-first `37fcc9b50`.**
+**SOFTWARE ACCEPTED — source `c0c7d1da2`, main-first `37fcc9b50` (hash mapping 2026-11-22: alpha-22 history; on current main as `8b59d8c8a`).**
 Independent review and both complete selected 14-stage package gates passed.
 This test-only characterization exercises the existing current-request refusal
 at the mounted terminal path. It changes no production behavior, source

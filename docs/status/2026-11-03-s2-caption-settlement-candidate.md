@@ -1,6 +1,6 @@
 # S2-05 caption-only settlement — bounded software acceptance, 3 November 2026
 
-**SOFTWARE ACCEPTED — source `d77f77be9`, main-first `288bd8005`.**
+**SOFTWARE ACCEPTED — source `d77f77be9`, main-first `288bd8005` (hash mapping 2026-11-22: alpha-22 history; on current main as `9c15583a2`).**
 Independent review and both complete selected 14-stage package gates passed.
 This accepts only the software caption rule, not general source equivalence,
 a release, deployment, physical device support or all of S2-05. Physical

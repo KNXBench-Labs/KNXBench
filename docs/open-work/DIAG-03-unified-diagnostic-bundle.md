@@ -133,7 +133,7 @@ checks green. Fresh independent read-only reviews went from CHANGES_REQUIRED
 real router/built-web join with screenshots, CLI installed-binary boundaries,
 raw System-2 P1/P2, Original14 and publication.
 
-**31 October real join and installed CLI:** on `origin/main` `2bec7dd8a` a
+**31 October real join and installed CLI:** on `origin/main` `2bec7dd8a` (hash mapping 2026-11-22: alpha-22 history; on current main as `4d934cbfb`) a
 private loopback namespace ran a simulator gateway, the real server and the
 production web build. A real serial-number lookup was recorded; the wizard
 (problem type programming) picked it by default and exported a ZIP whose

@@ -2,7 +2,7 @@
 
 ## Delivered capability and boundaries
 
-Published main-first successor **`edc6c90d5`** adds an explicit, passive Linux
+Published main-first successor **`edc6c90d5`** (hash mapping 2026-11-22: alpha-22 history; on current main as `5733ed7f1`) adds an explicit, passive Linux
 server/container-local USB-serial candidate list to the existing shared settings,
 status-bar and monitor transport fields. `GET /api/bus/serial-candidates` inspects
 bounded by-id symlinks and metadata, never opens/probes a port or discovers IP

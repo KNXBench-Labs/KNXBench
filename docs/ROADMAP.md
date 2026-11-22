@@ -107,7 +107,7 @@ The bounded source-only read overlay distinguishes unresolved own module
 authority from genuinely unscoped objects: after evaluation it reports
 `Undetermined`, not accidental `Inactive`, with no channel. Corrected source
 `8873e0150f` is independently reviewed with retained focused 17 unit + 9 HTTP
-passes. Main-first `e31f0e062` is now software-accepted and published after the
+passes. Main-first `e31f0e062` (hash mapping 2026-11-22: alpha-22 history; on current main as `da2b12808`) is now software-accepted and published after the
 complete selected 14-stage gate: Rust 2090 passed / 73 ignored and separate
 corpus 51/51, inputs frozen and checked user data untouched. Ships in Alpha 22;
 no deployment, new native UI or broader module authority.
@@ -122,7 +122,7 @@ outside the slice. Whole WP-07 remains evidence-blocked; no KL-068 closure.
 ## Parameter navigation hierarchy (14 November 2026; ships in Alpha 22)
 
 The bounded nearest evaluated display-container → leaf slice is independently
-reviewed, software-accepted and published on main as `2867ee1b5`. The selected
+reviewed, software-accepted and published on main as `2867ee1b5` (hash mapping 2026-11-22: alpha-22 history; on current main as `4780e6a38`). The selected
 15-stage package gate and fresh fictional producer/captured-response browser
 composition passed; this ships in Alpha 22. Broader nested blocks, empty
 containers, Repeat, module semantics and callbacks remain outside this slice.
@@ -193,7 +193,7 @@ moves 16 → 19 and the product database 31 → 32; Alpha 19 refuses both. No ha
 support, recovery guarantee or ETS equivalence follows; the allocation mismatch of
 issues #30/#22 is unresolved and both stay open.
 [Release scope and boundaries](releases/alpha20.md).
-Work merged on main after `dfb3f88b8` belongs to the next alpha.
+Work merged on main after `dfb3f88b8` (hash mapping 2026-11-22: alpha-22 history; on current main as `215cad011`) belongs to the next alpha.
 
 <a id="serverweb-scan-successor-candidate-10-november-2026"></a>
 
@@ -236,7 +236,7 @@ Server/Web successor above is now separately software-accepted on main.
 The captured saved-instance successor now has a separate core fact, native17
 overlay, history and required read-only GET field. It retains old observations
 as NotCaptured rather than backfilling them. Focused proofs and independent
-review pass; main-first `ed0cf7737` is published after the full selected
+review pass; main-first `ed0cf7737` (hash mapping 2026-11-22: alpha-22 history; on current main as `a6f240a34`) is published after the full selected
 17-stage gate ([delivery record](status/2026-11-06-saved-instance-priority.md)).
 This is a captured saved-source fact. A read-only object-editor row, a project
 comparison field and a documentation-report column now consume it. A read-only
@@ -289,7 +289,7 @@ namespace confinement, permanent paths or physical/power-loss recovery. Ships in
 
 The bounded WP-06 implementation displays saved `Node/@Text` alongside folder IDs
 and searches the admitted text without changing grouping identity. Published as
-main-first `61e28d225` (source `e4aa31945`), after independent review, branch and
+main-first `61e28d225` (hash mapping 2026-11-22: alpha-22 history; on current main as `00d871e96`) (source `e4aa31945`), after independent review, branch and
 integrated selected package gates and an actual isolated server build/version
 check. It does not resolve manufacturer captions, source templates, module
 placement or staleness. Other WP-06 requirements stay evidence-gated; this is
@@ -300,7 +300,7 @@ not native or hardware acceptance. Ships in Alpha 20.
 
 ## Finite System-2 E1–E17 software consolidation in Alpha 20
 
-Main-first `cee41bf0d` closes the named finite caption-class adversarial, actual-worker
+Main-first `cee41bf0d` (hash mapping 2026-11-22: alpha-22 history; on current main as `38babefc5`) closes the named finite caption-class adversarial, actual-worker
 contention/read-lease, lifecycle/history, original-recovery conservation and size/large-project
 software obligations after independent review, two compiled discriminating controls and
 the complete selected 14-stage integrated gate. This is not general source equivalence
@@ -322,7 +322,7 @@ explicit passive/active selection through the shared session. Published main-fir
 `eab79cc5b` passed correction review, the selected package gate and all 16 affected
 production configurations. Bound group sends, reserved cleanup and conservative
 startup uncertainty are included. A [passive USB-serial candidate listing](research/2026-11-05-passive-serial-candidates.md)
-successor is software-accepted on main as `edc6c90d5`: explicit by-id
+successor is software-accepted on main as `edc6c90d5` (hash mapping 2026-11-22: alpha-22 history; on current main as `5733ed7f1`): explicit by-id
 metadata only, no port probe or compatibility inference.
 [Acceptance and source-bound verification](status/2026-11-05-wp26-passive-serial-candidates.md). Complete USB enumeration,
 wider physical acceptance, extended frames and other USB protocols remain open.
@@ -944,14 +944,14 @@ The release-cutoff sections below retain their original scope.
 ## Project encrypted-directory integrity delivered (20 October 2026)
 
 The [WP-16 follow-up](contracts/project-encrypted-directory-admission.md) is
-published on `main` as `cf5b0fb0`: bit-0 project directories explicitly refuse as
+published on `main` as `cf5b0fb0` (hash mapping 2026-11-22: alpha-22 history; on current main as `851fcc9f9`): bit-0 project directories explicitly refuse as
 unsupported instead of skipping cipher-header checks. Maintained scoped14/14GREEN,
 2,638 Rust passes and149/149selected corpus cases; no new cipher, schema or
 release artifact. The bit-0 claim is released. The
 [24 October bit-6-only consistency amendment](research/2026-10-24-zip-bit6-flag-consistency.md)
 is implemented with original-source regressions and focused corrected tests;
 independent review accepts with zero Critical/Important findings; package acceptance
-is delivered on `main` as `daef61b74` with the verified integrated 14-stage gate
+is delivered on `main` as `daef61b74` (hash mapping 2026-11-22: alpha-22 history; on current main as `c9f1c3572`) with the verified integrated 14-stage gate
 and exact live publication readback. The claim is released. The
 [26 October AES metadata amendment](research/2026-10-26-zip-aes-extra-field-consistency.md)
 (delivered as `161e3b14b`, reviewed, integrated 14/14 gate green) refuses contradictory WinZip AES metadata by name in every project and product
@@ -1107,7 +1107,7 @@ native working-history persistence, not an automation interpreter. No generated
 selection, UI/MCP writer, root Save, bus capability or release follows. Broader
 macros and the separately approved AP6/AP7 remain distinct later work; final source
 assembly18 and integrated documentation8 stages have passed; source publication/readback
-on main `f70183f0` is verified in the [evidence](evidence/offline-name-recipe-2026-10-12.json).
+on main `f70183f0` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `761024824`, same patch, trees differ) is verified in the [evidence](evidence/offline-name-recipe-2026-10-12.json).
 
 
 ## GitHub release notification source feature (2026-10-11)

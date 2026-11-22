@@ -2,7 +2,7 @@
 
 ## Published source
 
-`87d71d4aa` is published on `main` with matching live and tracking-ref readback.
+`87d71d4aa` (hash mapping 2026-11-22: alpha-22 history; on current main as `2af6604b2`) is published on `main` with matching live and tracking-ref readback.
 The main-first merge preserves upstream `ef7589476` outside seven reviewed paths.
 The shared image value check now refuses an unreadable declared TypeNumber bound
 instead of silently removing it ([contract](../contracts/parameter-number-bound-admission.md)).

@@ -51,7 +51,7 @@ CLI/source/payload commits remain local; no later-native13 integration is claime
 
 ## Session follow-up reconciliation (2026-10-11)
 
-Fresh fetched `origin/main` remains `0bed9e2a82315bb1e1cf2d4d851b49347d5b631b`.
+Fresh fetched `origin/main` remains `0bed9e2a82315bb1e1cf2d4d851b49347d5b631b` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `5701ee45f`, same patch, trees differ).
 The79app/server source paths do not publish InitialNativeAdmission. The separate
 dirty import-lifecycle checkout now contains `preflight_initial_save`, admission
 publication and its two focused test files; this is a current source observation,

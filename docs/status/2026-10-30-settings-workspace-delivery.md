@@ -21,7 +21,7 @@ content, including while Settings is open.
 
 ## Source and publication
 
-The main-first runtime merge is `fd1dfa0e41175b9ad792d53fcdc09de779a25e91`,
+The main-first runtime merge is `fd1dfa0e41175b9ad792d53fcdc09de779a25e91` (hash mapping 2026-11-22: alpha-22 history; on current main as `fac158209`),
 built on `72db561a459e0e36e55d52a42725ab2ba1d7bef6`. It includes:
 
 - `a6bcc00326ee6bf4bac27ac11a05a99dbe0422be`: center page, state retention,

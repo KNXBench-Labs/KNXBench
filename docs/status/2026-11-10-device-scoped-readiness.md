@@ -75,7 +75,7 @@ review and the complete package gate.
 
 ## Source delivery and acceptance
 
-Source `bf85a5b69` is published on `main`, following the separately delivered
+Source `bf85a5b69` (hash mapping 2026-11-22: alpha-22 history; on current main as `6cc9d0a01`) is published on `main`, following the separately delivered
 parameter-reply correction `1bb99ac26`. The parent read back the exact remote
 revision and the application, server, Download panel and API-helper GitHub blobs.
 No release or deployment was made.

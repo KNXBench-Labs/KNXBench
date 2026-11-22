@@ -4,7 +4,7 @@ Observed: 30 October 2026.
 
 ## Current disposition
 
-**Historical main-first software acceptance is recorded on `2bec7dd8a`, which
+**Historical main-first software acceptance is recorded on `2bec7dd8a` (hash mapping 2026-11-22: alpha-22 history; on current main as `4d934cbfb`), which
 is contained in the inspected main history.** The retained 31 October gate
 completed 14/14 selected stages. The [4 November reconciliation](#historical-acceptance-reconciliation--4-november-2026)
 qualifies the missing separate branch-green and original final-smoke binary

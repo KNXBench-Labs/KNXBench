@@ -1,6 +1,6 @@
 # S2-04 — System-2 server: tunnel lost after the durable checkpoint
 
-**Priority:** P1. **Status:** System-2 fix published on `main` as `1ab4ad6a5`;
+**Priority:** P1. **Status:** System-2 fix published on `main` as `1ab4ad6a5` (hash mapping 2026-11-22: alpha-22 history; on current main as `4a4981a8a`);
 ordinary download/service-control follow-up published as `ca940e2ed`;
 individual-address settler hardening published as `c59d14280`. **Closed
 15 November 2026** (removed from [OPEN_WORK](../OPEN_WORK.md)): the tunnel held to
@@ -137,7 +137,7 @@ operation holds a tunnel (for example a project save during a bus monitor sessio
 
 ## Follow-up software delivery (27 October 2026)
 
-- Main-first merge `ca940e2ed`, feature `9103c80db` and correction `51f7598b5`.
+- Main-first merge `ca940e2ed` (hash mapping 2026-11-22: alpha-22 history; on current main as `eaec0252d`), feature `9103c80db` and correction `51f7598b5`.
   Whole-feature review found the overbroad audit claim and missing discrimination;
   focused correction review APPROVE. Individual-address settlement is explicitly
   retained below, not silently claimed fixed.
@@ -167,7 +167,7 @@ The rest of the programming future runs as before; a current-thread runtime
 keeps the inline path.
 
 - Feature `5efcf506a`, correction `cc3588d4f` (documentation wording, test hang
-  guard), main-first merge `c59d14280`. Independent review APPROVE.
+  guard), main-first merge `c59d14280` (hash mapping 2026-11-22: alpha-22 history; on current main as `c73fd4063`). Independent review APPROVE.
 - Witness `a_blocking_address_settler_leaves_tunnel_tasks_running`: a one-worker
   `multi_thread` runtime, a 300 ms synchronous stall ahead of the real settler and a
   spawned ticker; at least ten ticks are required during the stall (about 50

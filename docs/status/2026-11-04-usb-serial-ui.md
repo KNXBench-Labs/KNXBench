@@ -213,7 +213,7 @@ replace the final integrated gate or make the failed attempt green.
 
 ## Integrated acceptance and publication (5 November 2026)
 
-Main-first `eab79cc5b`, first parent `8f1a933f2`, was published and its live and
+Main-first `eab79cc5b` (hash mapping 2026-11-22: alpha-22 history; on current main as `fb73a1ff4`), first parent `8f1a933f2`, was published and its live and
 tracking refs read back exactly. The complete selected 15-stage package gate
 passed with frozen inputs and checked, untouched user data:
 

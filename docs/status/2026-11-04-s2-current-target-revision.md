@@ -4,7 +4,7 @@ Observed: 4 November 2026.
 
 ## Current disposition
 
-**Bounded fixture package accepted and published main-first as `fb1facc41`
+**Bounded fixture package accepted and published main-first as `fb1facc41` (hash mapping 2026-11-22: alpha-22 history; on current main as `04cc47ba3`)
 (source `03bc5e57d`).** Independent review, focused execution and both complete
 selected 14-stage gates passed. This is a fixture-only strengthening, not a new
 production behavior or overall E14 acceptance. No production

@@ -84,7 +84,7 @@ calibration was parent-controlled, not independent runtime review.
 
 ## Maintained acceptance and publication
 
-Source `abc09a82a` is published main-first as `18ae7406b`. Independent
+Source `abc09a82a` (hash mapping 2026-11-22: alpha-22 history; on current main as `8e6522b5a`) is published main-first as `18ae7406b` (hash mapping 2026-11-22: alpha-22 history; on current main as `81da9e023`). Independent
 whole-package source review and its one-line expectation correction both approved.
 The complete selected branch and main-first gates each passed 14/14 stages with
 frozen inputs, valid zero-exit stage proofs and checked, untouched real user data.

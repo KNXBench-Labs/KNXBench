@@ -2,7 +2,7 @@
 
 ## Published source
 
-`fa4c18213` is published on `main`, with matching live and tracking-ref readback.
+`fa4c18213` (hash mapping 2026-11-22: alpha-22 history; on current main as `edcd5e885`) is published on `main`, with matching live and tracking-ref readback.
 The main-first parents are upstream `ec766a9b2` and feature `33551a563`.
 Upstream issue #30 web changes and community updates are preserved unchanged.
 The [contract](../contracts/download-settlement-source-freshness.md) defines the

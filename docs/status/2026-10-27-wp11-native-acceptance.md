@@ -11,7 +11,7 @@ first-slice cutoff; the maintained WP-11 detail owns the current remainder.
 
 ## Delivery and package checks
 
-Published on main as `cc9d8fab2168d10e788e89026dbc58c1d229bd94`
+Published on main as `cc9d8fab2168d10e788e89026dbc58c1d229bd94` (hash mapping 2026-11-22: alpha-22 history; on current main as `55abaab65`)
 (feature `f4f112fe5`) after independent Claude review and correction re-review
 APPROVE. Branch and main-first integrated change-scoped package gates each
 passed all 13 planned stages with frozen inputs and no touched/unchecked user

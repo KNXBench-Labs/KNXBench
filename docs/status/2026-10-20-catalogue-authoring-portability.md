@@ -53,7 +53,7 @@ are not summed; the later complete scoped package gate is recorded separately.
 
 ## Package acceptance
 
-Delivered on `main` as main-first `0dbef5cf` (feature `4b7b8db0`); immediate
+Delivered on `main` as main-first `0dbef5cf` (hash mapping 2026-11-22: alpha-22 history; on current main as `36e45b0a4`) (feature `4b7b8db0`); immediate
 local/tracking/live readback matched. Maintained scoped gate13/13 passed:
 1,057 Rust tests, zero failures, 53 ignored in the ordinary run; 51/51 selected
 corpus cases separately executed; 323 registered tooling tests with one existing

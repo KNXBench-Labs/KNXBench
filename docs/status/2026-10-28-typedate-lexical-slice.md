@@ -1,6 +1,6 @@
 # WP-08 — TypeDate lexical slice (28 October 2026 source delivery)
 
-Published main-first merge `4beabe531` (code `b5dc92aa8`, feature documentation
+Published main-first merge `4beabe531` (hash mapping 2026-11-22: alpha-22 history; on current main as `6fd5c6568`) (code `b5dc92aa8`, feature documentation
 `c57ba4147`) on `58375375b`. Local candidate, tracking ref and live `main`
 readback matched after publication. This is source delivery, not a release,
 native date-editor acceptance or device compatibility claim.

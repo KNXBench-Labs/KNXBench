@@ -17,7 +17,7 @@ and [scope advice](../contracts/device-programming-support-guidance.md).
 The application-identity candidate `afb92302c` passed independent source review
 and all 16 selected maintained package-gate stages: 6,440 Rust tests passed
 (225 ignored), 62 binding tests and 155/155 selected corpus tests. Main advanced
-with documentation only. Main-first `02c437110` preserved the accepted runtime
+with documentation only. Main-first `02c437110` (hash mapping 2026-11-22: alpha-22 history; on current main as `509cb042d`) preserved the accepted runtime
 inputs exactly and passed all 14 stages selected by the retained delta plan,
 including its broader web selection. These are original acceptance plus delta
 acceptance, not a freshly repeated complete runtime gate on the published SHA.

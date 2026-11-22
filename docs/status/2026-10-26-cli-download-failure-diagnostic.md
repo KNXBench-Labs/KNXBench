@@ -4,7 +4,7 @@ Observed: 26 October 2026.
 
 ## Delivered boundary
 
-Published main-first merge `23e1ff3ec` on base `62089b033` (feature `a1b26ed06`,
+Published main-first merge `23e1ff3ec` (hash mapping 2026-11-22: alpha-22 history; on current main as `65a0ff7a1`) on base `62089b033` (feature `a1b26ed06`,
 documentation `a75e0a6dc`, review corrections `e5cfa1e7b`). `knx device download`
 and `knx device restore` now build the same payload-free `DownloadFailure` as
 the server worker, from the executor's own terminal error and progress:

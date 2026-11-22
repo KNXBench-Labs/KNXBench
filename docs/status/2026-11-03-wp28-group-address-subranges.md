@@ -2,7 +2,7 @@
 
 ## Result — 3 November 2026
 
-**Delivered on main:** `e1d6f916e`. A local range selection in Columns or Atlas
+**Delivered on main:** `e1d6f916e` (hash mapping 2026-11-22: alpha-22 history; on current main as `4d4749091`). A local range selection in Columns or Atlas
 replaces the initial Explorer scope instead of intersecting unrelated ranges.
 Every later Explorer range activation resets local navigation, including a fresh
 activation of the same numeric range ID. Address selection does not reset it.
@@ -32,7 +32,7 @@ local range selection, not every descendant or the all-ranges overview.
 
 ## Integrated acceptance
 
-Main-first `93873f86b` on published catalogue prerequisite `5296e56c5` has exactly
+Main-first `93873f86b` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `0901e62dd`, compared paths only) on published catalogue prerequisite `5296e56c5` has exactly
 the feature candidate's tree. The four reviewed WP-28 files match the retained
 focused source hashes. Its complete selected package gate passed all 11 stages,
 with frozen inputs and checked, unchanged user data:
@@ -67,7 +67,7 @@ footer cases raced settings hydration while dismissing a late-night toast. A
 local test readiness check waits for the actual UI language before using the
 unchanged shared helper. Independent review approved; the three cases passed five
 repetitions each in default and communication production configurations. That
-identical prerequisite correction reached main in `f3366cfe9` and was dropped as
+identical prerequisite correction reached main in `f3366cfe9` (hash mapping 2026-11-22: alpha-22 history; on current main as `924b20ea2`) and was dropped as
 a duplicate when rebasing WP-28. No notification overlap or no-connect assertion
 was removed. Earlier browser assertion/fixture mistakes remain separate failed
 attempts, not product-regression REDs or accepted gate stages.

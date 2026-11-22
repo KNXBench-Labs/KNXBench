@@ -47,7 +47,7 @@ retirement must be recorded only after execution.
 
 ## Verified delivery and retirement
 
-Delivered as main-first `c7a6aa8e` (feature `0a3ce3aa`) onto `b481842f`.
+Delivered as main-first `c7a6aa8e` (hash mapping 2026-11-22: alpha-22 history; on current main as `513b3670b`) (feature `0a3ce3aa`) onto `b481842f`.
 Maintained change-scoped gate: all 11 parent and 29 web stages pass, including
 build, 22 derived typechecks, 4,136 Vitest cases and the complete 863-case
 default browser inventory (798 functional / 65 exclusive). All 340 registered

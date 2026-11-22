@@ -16,7 +16,7 @@ interoperability with any gateway. No live bus, hardware, tag, release or
 
 ## Source and independent review
 
-Feature `c6c44f2e3` was integrated main-first on `f9cfa27be`, followed by the
+Feature `c6c44f2e3` was integrated main-first on `f9cfa27be` (hash mapping 2026-11-22: alpha-22 history; on current main as `d7889be98`), followed by the
 browser-lane metadata correction `7d0161f31` and scoped Web closure `6b27d5b1a`.
 The independent execution-backed review approved integration after targeted
 compiled semantic mutations, baseline/restored controls and an inert control.

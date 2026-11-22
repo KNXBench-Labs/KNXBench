@@ -2,7 +2,7 @@
 
 ## Published source and contract
 
-`6c9ca2d7d` is published on `main` with matching live and tracking-ref readback.
+`6c9ca2d7d` (hash mapping 2026-11-22: alpha-22 history; on current main as `b6103facf`) is published on `main` with matching live and tracking-ref readback.
 The main-first merge preserves upstream `a8304e9a3` outside fourteen reviewed paths.
 [ADR-0153](../adr/0153-regular-download-stop-ends-at-first-change.md) narrows the
 existing server shutdown policy only before the first regular download mutation

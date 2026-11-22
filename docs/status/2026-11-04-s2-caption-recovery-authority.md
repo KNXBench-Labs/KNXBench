@@ -3,7 +3,7 @@
 Observed: 4 November 2026. Test-only S2-05/E11/E16 follow-up, not a production
 recovery change, release, hardware result or complete evidence-matrix closure.
 
-**Source delivery accepted:** test source `806b25236` is published main-first as
+**Source delivery accepted:** test source `806b25236` (hash mapping 2026-11-22: alpha-22 history; on current main as `680b026fe`) is published main-first as
 `77edfc3b3` after independent static correction closure and both complete selected
 14-stage gates. This record describes that bounded source acceptance, not a new
 release or broader recovery permission.

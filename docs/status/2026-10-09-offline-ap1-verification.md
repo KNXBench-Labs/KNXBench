@@ -2,7 +2,7 @@
 
 Owner-authorized commit, fresh-main integration, renewed gates and main push.
 Feature `38d8eb4584c6e0e36db48f1aed882eeb90e8469c`; first merge `e9cebedbd2dc08569f58f33953c3c0caec9c4f29`;
-latest-main integration `d639c5f8a3c069afd21f507daa456fb3d51e10b9`. Name-editing main
+latest-main integration `d639c5f8a3c069afd21f507daa456fb3d51e10b9` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `26662e326`, same parents and changed paths, trees differ). Name-editing main
 `a03705dea032ff1e7443a6641f80ada198a52224` and prior native-history work are preserved.
 [Machine receipt](../evidence/offline-ap1-integration-2026-10-09.json),
 [contract](../OFFLINE_PROCEDURE_RESOLUTION.md), ADR-0098.

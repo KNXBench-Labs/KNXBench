@@ -128,7 +128,7 @@ or undecided leaves, template replacements, a placeholder in a selected translat
 back to the leaf's source text and is named in the panel diagnostics; a placeholder in the
 leaf's source text is filled from its own `@TextParameterRefId` since 19 November 2026), other ETS versions, languages and products.
 The slice does not close the package.
-Accepted on main `da7d667d1`: [software acceptance](../status/2026-11-09-conditional-block-captions.md),
+Accepted on main `da7d667d1` (hash mapping 2026-11-22: alpha-22 history; on current main as `1cd7cf3ec`): [software acceptance](../status/2026-11-09-conditional-block-captions.md),
 including the scoped gate, preserved failed runs and next-release ProductDB obligation.
 
 ## Done when (per admitted feature)

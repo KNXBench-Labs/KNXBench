@@ -2,7 +2,7 @@
 
 ## Delivery (2 November 2026)
 
-Backend prerequisite `87440d6b3` is published main-first as `038845ef8`.
+Backend prerequisite `87440d6b3` (hash mapping 2026-11-22: alpha-22 history; on current main as `cd50f6f76`) is published main-first as `038845ef8` (hash mapping 2026-11-22: alpha-22 history; on current main as `71371424e`).
 Local, tracking and live remote references were read back equal. This delivers
 only monitor-start admission, not the status-bar controller or menu.
 

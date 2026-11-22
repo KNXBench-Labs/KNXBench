@@ -2,7 +2,7 @@
 
 ## Published contract
 
-Main-first **`703ec2904`** is published. Local, tracking and live `main` were
+Main-first **`703ec2904`** (hash mapping 2026-11-22: alpha-22 history; on current main as `11953086d`) is published. Local, tracking and live `main` were
 read back equal after the push. The planner, runner, bounded data-fact helper,
 tests and [ADR-0144](../adr/0144-change-scoped-gates-tagged-browser-lanes-bundled-rust-tests.md)
 now select work by the actual changed inputs rather than treating every web

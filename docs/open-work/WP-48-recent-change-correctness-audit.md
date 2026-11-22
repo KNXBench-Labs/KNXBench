@@ -385,6 +385,13 @@ until the new revision is acquired; the current matching cache must stay reusabl
 Keep import-time size/hash checks. This is not an unverified-byte installation finding:
 modern streaming imports check the digest, and legacy imports rehash the cached file.
 
+Implementation note (WP-48.8): a verified download atomically writes `downloads/<id>.sha256`
+next to the cached file (same symlink/hardlink/size-bound open as the file); search reports
+`downloaded` only when file metadata and that record match the current index digest, with no
+hashing. Legacy files without a record report not-downloaded until the download action
+rehashes and adopts them (no network) or removes them; verification failure and eviction
+remove both files. Import-time checks are unchanged.
+
 ## Verification leads — not confirmed runtime defects
 
 1. **Module image authority:** `b4d141288`/`e0738472a` admit base-offset module images;
@@ -484,7 +491,7 @@ session coordinates, reviews source/PR plus gate receipts, then integrates each 
 | WP-48.5 | Usable, honest last-download address marks; F07–F08 — implemented on branch `work/wp48-5-ga-last-download-20261122`, pending review/gate | None |
 | WP-48.6 | Correct monitor ordering and stationary readable select controls; F09–F10 — implemented on branch `work/wp48-6-monitor-select-20261122`, pending review/gate | None |
 | WP-48.7 | Effective UDP/settings regressions and per-instance image proof; F11–F12, F14 — implemented on branch `work/wp48-7-test-proof-20261122`, pending review/gate; F14 also records that per-instance image values are not implemented | None; producer changes may coordinate with 48.2 |
-| WP-48.8 | Catalogue cache availability follows the selected digest; F17 | None |
+| WP-48.8 | Catalogue cache availability follows the selected digest; F17 — implemented on branch `work/wp48-8-catalogue-digest-20261122`, pending review/gate | None |
 | WP-48.9 | Resolve evidence/compatibility leads and reconcile remaining decision/status references; remaining F15 | Existing source evidence for semantic/write claims; status closeout follows the relevant earlier slices |
 
 Per-slice completion requires regression coverage of the stated acceptance cases,

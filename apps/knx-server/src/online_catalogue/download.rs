@@ -1,7 +1,7 @@
 //! Credentialed download of one catalogue file into a verified, size-bounded local cache.
 
 use std::fs::{DirBuilder, File};
-use std::io::Read;
+use std::io::{Read, Write};
 use std::os::unix::fs::{DirBuilderExt, MetadataExt};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::Ordering;
@@ -21,6 +21,8 @@ use super::transport::{IDLE_TIMEOUT, SMALL_BODY_BYTES};
 const DOWNLOADS_DIR: &str = "downloads";
 const PART_SUFFIX: &str = ".part";
 const FILE_SUFFIX: &str = ".bin";
+/// Marks a cached file as verified: `<id>.sha256` holds the digest it was verified against.
+const DIGEST_SUFFIX: &str = ".sha256";
 /// The cache keeps at most this many verified files and bytes; the oldest go first.
 const MAX_CACHED_FILES: usize = 16;
 const MAX_CACHED_BYTES: u64 = 2 * MAX_FILE_BYTES;
@@ -113,19 +115,62 @@ pub(super) fn clear_partial_files(dir: &Path) {
     }
 }
 
-pub(super) fn is_cached_at(dir: &Path, entry: &Entry) -> bool {
-    std::fs::symlink_metadata(downloads_dir(dir).join(format!("{}{FILE_SUFFIX}", entry.id)))
+fn file_path(dir: &Path, id: &str) -> PathBuf {
+    downloads_dir(dir).join(format!("{id}{FILE_SUFFIX}"))
+}
+
+fn digest_path(dir: &Path, id: &str) -> PathBuf {
+    downloads_dir(dir).join(format!("{id}{DIGEST_SUFFIX}"))
+}
+
+/// The cached file is a private regular file of the advertised size (metadata only).
+fn file_usable(dir: &Path, entry: &Entry) -> bool {
+    std::fs::symlink_metadata(file_path(dir, &entry.id))
         .is_ok_and(|m| m.is_file() && m.nlink() == 1 && m.len() == entry.size)
+}
+
+/// The retained digest metadata names exactly `entry.sha256`; it is never followed through a
+/// symlink or hardlink and is read within a fixed bound.
+fn digest_recorded(dir: &Path, entry: &Entry) -> bool {
+    let expected = format!("{}\n", entry.sha256);
+    let cap = expected.len() as u64;
+    let Ok(file) = super::store::open_regular(&digest_path(dir, &entry.id), cap) else {
+        return false;
+    };
+    let mut bytes = Vec::new();
+    file.take(cap + 1).read_to_end(&mut bytes).is_ok() && bytes == expected.as_bytes()
+}
+
+/// Atomically records the digest a cached file was verified against.
+fn record_digest(dir: &Path, id: &str, digest: &str) -> std::io::Result<()> {
+    let mut temporary = tempfile::Builder::new()
+        .prefix("digest-")
+        .suffix(PART_SUFFIX)
+        .tempfile_in(downloads_dir(dir))?;
+    temporary.write_all(format!("{digest}\n").as_bytes())?;
+    temporary.as_file().sync_all()?;
+    temporary
+        .persist(digest_path(dir, id))
+        .map(|_| ())
+        .map_err(|e| e.error)
+}
+
+/// Removes a cached file together with its digest metadata.
+fn remove_cached(dir: &Path, id: &str) {
+    let _ = std::fs::remove_file(file_path(dir, id));
+    let _ = std::fs::remove_file(digest_path(dir, id));
+}
+
+/// Whether the cache holds the selected revision: a regular file of the advertised size whose
+/// retained verified digest equals the index digest. Metadata only, never hashes the file.
+/// Legacy files without digest metadata are not reported until `verified_copy` adopts them.
+pub(super) fn is_cached_at(dir: &Path, entry: &Entry) -> bool {
+    file_usable(dir, entry) && digest_recorded(dir, entry)
 }
 
 impl SourceService {
     fn cache_path(&self, entry_id: &str) -> PathBuf {
-        downloads_dir(&self.dir).join(format!("{entry_id}{FILE_SUFFIX}"))
-    }
-
-    /// Whether a file of the advertised size is stored (verified when it was written).
-    pub(super) fn is_cached(&self, entry: &Entry) -> bool {
-        is_cached_at(&self.dir, entry)
+        file_path(&self.dir, entry_id)
     }
 
     pub(super) fn download_running(&self) -> bool {
@@ -231,22 +276,24 @@ impl SourceService {
     }
 
     async fn verified_copy(&self, entry: &Entry) -> bool {
-        if !self.is_cached(entry) {
+        if !file_usable(&self.dir, entry) {
             return false;
         }
-        let path = self.cache_path(&entry.id);
-        let expected = entry.sha256.clone();
-        let size = entry.size;
-        let removed = path.clone();
-        let ok = tokio::task::spawn_blocking(move || {
-            digest_of(&path, size).is_ok_and(|digest| digest == expected)
+        // A fresh hash also adopts a legacy file that has no digest metadata yet.
+        let dir = self.dir.clone();
+        let entry = entry.clone();
+        tokio::task::spawn_blocking(move || {
+            let ok = digest_of(&file_path(&dir, &entry.id), entry.size)
+                .is_ok_and(|digest| digest == entry.sha256);
+            if !ok {
+                remove_cached(&dir, &entry.id);
+            } else if !digest_recorded(&dir, &entry) {
+                let _ = record_digest(&dir, &entry.id, &entry.sha256);
+            }
+            ok
         })
         .await
-        .unwrap_or(false);
-        if !ok {
-            let _ = std::fs::remove_file(removed);
-        }
-        ok
+        .unwrap_or(false)
     }
 
     async fn run_download(
@@ -364,9 +411,15 @@ impl SourceService {
             .await
             .map_err(|_| OnlineError::Storage("the download could not be stored"))?;
         drop(file);
+        // A replaced revision must never keep the previous revision's digest metadata.
+        let _ = std::fs::remove_file(digest_path(&self.dir, &entry.id));
         partial
             .persist(self.cache_path(&entry.id))
             .map_err(|_| OnlineError::Storage("the download could not be stored"))?;
+        if record_digest(&self.dir, &entry.id, &entry.sha256).is_err() {
+            remove_cached(&self.dir, &entry.id);
+            return Err(OnlineError::Storage("the download could not be stored"));
+        }
         let keep = entry.id.clone();
         let dir = directory;
         let _ = tokio::task::spawn_blocking(move || evict(&dir, &keep)).await;
@@ -479,7 +532,8 @@ fn evict(dir: &Path, keep: &str) {
         if is_keep {
             continue;
         }
-        if std::fs::remove_file(path).is_ok() {
+        if std::fs::remove_file(&path).is_ok() {
+            let _ = std::fs::remove_file(path.with_extension(&DIGEST_SUFFIX[1..]));
             count -= 1;
             bytes -= len;
         }

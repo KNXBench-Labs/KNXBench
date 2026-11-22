@@ -81,6 +81,12 @@ impl Fixture {
             .join(format!("{id}.bin"))
     }
 
+    pub fn digest_file(&self, id: &str) -> PathBuf {
+        self.source_dir()
+            .join("downloads")
+            .join(format!("{id}.sha256"))
+    }
+
     pub fn key_file(&self) -> PathBuf {
         self.temp
             .path()

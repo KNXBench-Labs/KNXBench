@@ -1,6 +1,6 @@
 # WP-06 — Communication-object organisation: remaining slices
 
-**Status:** Saved schema-20 text display delivered; bounded literal installed-product declaration fallback and captured saved-instance priority foundation software-accepted on main. WP06-S1 same-schema namespace/explicit-language caption runtime is independently reviewed, software-accepted and published on main `8de9487de`; its result-only documentation successor awaits independent review, complete planner-selected gate and publication. Broader slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** Saved schema-20 text display delivered; bounded literal installed-product declaration fallback and captured saved-instance priority foundation software-accepted on main. WP06-S1 same-schema namespace/explicit-language caption runtime is independently reviewed, software-accepted and published on main `8de9487de`; its result-only documentation successor is published on main (`1dab91cfa`) and was reviewed retrospectively against source on 22 November 2026 ([note](../status/2026-11-14-wp06-folder-caption-language.md#retrospective-source-review--22-november-2026); not a new gate). Broader slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 **Evidence route (8 November 2026):** clean-room observation is admitted by the owner ([OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)); no observation has been made for this package yet.
 
@@ -35,7 +35,9 @@ requirements below or any hardware/native/release/deployment acceptance.
 
 The [WP06-S1 result](../status/2026-11-14-wp06-folder-caption-language.md)
 records corrected source `9b0d937dc`, main-first integration `789ab6143` and
-published runtime `8de9487de` on `041df68a0`. Independent correction review APPROVE
+published runtime `8de9487de` on `041df68a0` (the Alpha 22 history identity; the
+tree-identical runtime merge on main is `a6b7fda7e`, see the
+[22 November source review](../status/2026-11-14-wp06-folder-caption-language.md#retrospective-source-review--22-november-2026)). Independent correction review APPROVE
 closes F1/F2/F3/F5; retained focused GREEN is captions 29, shared language rule 7,
 HTTP 12 and server unit 5 (filtered/overlapping, not additive). The parent verified
 Standards/Spec APPROVE, complete selected gate 17/17, nested web 34/34 and exact

@@ -51,7 +51,7 @@ named members, and print that canonical target. They never climb to a parent
 or fall back to the build tree. Required source/documentation scan roots must
 be nonempty; layering requires every checked policy root as a workspace member
 and resolved node. Corpus-gate output now includes actual Rust-file coverage.
-See [verification targets](../history/../VERIFICATION.md) and `xtask/tests/it/gate_scope.rs`.
+See [verification targets](../history/../VERIFICATION.md) and `xtask/tests/gate_scope.rs`.
 
 AR01 reproduced the old success over zero sources after deleting its own build
 worktree, then verified new deleted-target refusal, valid/wrong targets,

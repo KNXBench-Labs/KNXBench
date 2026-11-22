@@ -51,7 +51,7 @@ CREATE TABLE device_link_baseline_link (
 /// Native schema 22 (WP-37): module-scoped values a completed download wrote,
 /// keyed by `(Module/@Id, ParameterRef id)` — the WP-07 authority's
 /// `instance_counter` already lives inside `module_id`, so a re-numbered
-/// instance is a different key, never a silent overwrite (ADR-0177).
+/// instance is a different key, never a silent overwrite (ADR-0189).
 pub(crate) const SCOPED_TABLES: &str = "CREATE TABLE device_parameter_baseline_scoped_value (
     device_id INTEGER NOT NULL REFERENCES device_parameter_baseline(device_id),
     module_id TEXT NOT NULL CHECK(length(module_id) > 0),

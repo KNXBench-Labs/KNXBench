@@ -1,5 +1,5 @@
 //! Discriminating tests for the module-scoped parameter admission path in
-//! the image builder (ADR-0177): a module-local `Memory/@BaseOffset`
+//! the image builder (ADR-0189): a module-local `Memory/@BaseOffset`
 //! placement resolves per instantiation from the bound argument, and every
 //! refusal branch names its cause. Synthetic fixture only — no manufacturer
 //! runtime semantics.
@@ -178,7 +178,7 @@ fn module_scoped_com_object_ref_still_refuses_by_name() {
 // ---------------------------------------------------------------------------
 // WP-48 F14: per-instance value ownership versus the image seam's unscoped policy.
 //
-// Verified policy (ADR-0177, `image.rs` value lookup): `build_download_image` consumes
+// Verified policy (ADR-0189, `image.rs` value lookup): `build_download_image` consumes
 // `ImageRequest.values` as an unscoped map keyed by declared `ParameterRef` id. Each
 // instantiation resolves its own `BaseOffset`, but a value is looked up scoped first and
 // then falls back to the unscoped (program-level) value; no caller populates the scoped
@@ -338,7 +338,7 @@ fn evaluator_refuses_mi_counter_mismatch_and_refid_collision() {
     assert_eq!(scoped_value(&evaluation, "X_MD-1_M-1"), Some("1"));
 
     // Two instances claiming the same `RefId` and counter make the owner ambiguous
-    // (ADR-0177 amended 2026-11-21 via `knx_core::resolve_module_owner`); an instance of
+    // (ADR-0189 amended 2026-11-21 via `knx_core::resolve_module_owner`); an instance of
     // another module (`M-2`) is no owner of an `M-1` key either.
     let collision = [
         module_instance(1, "MD-1_M-1"),

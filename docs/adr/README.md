@@ -182,8 +182,7 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0174](0174-last-downloaded-links-and-flags.md) | The project remembers the links and object flags a verified download wrote | Accepted | 2026-11-12 |
 | [0175](0175-device-configuration-modules-are-declarative-data.md) | Device configuration modules are declarative data | Accepted | 2026-11-15 |
 | [0176](0176-manual-reko-catalogue-acquisition.md) | Reko supplies files; the existing catalogue importer still decides | Delivered on main `c079ec8d6`; not in Alpha 22 | 2026-11-16 |
-| [0177](0177-accepted-wp07-mapping-is-the-module-instance-authority.md) | The accepted WP-07 mapping is the module-instance authority | Proposed | 2026-11-17 |
-| [0177](0177-grid-axis-text-parameter-captions.md) | Grid-axis captions resolve their declared text parameter (number shared with the WP-07 row above) | Accepted implementation direction | 2026-11-17 |
+| [0177](0177-grid-axis-text-parameter-captions.md) | Grid-axis captions resolve their declared text parameter | Accepted implementation direction | 2026-11-17 |
 | [0178](0178-rel01-catalogue-defines-the-beta-exit.md) | The REL-01 catalogue defines the beta exit | Accepted | 2026-11-20 |
 | [0179](0179-external-cli-download-reconciliation.md) | An external CLI download report reconciles pending marks only on authoritative match | Proposed | 2026-11-20 |
 | [0180](0180-exact-0702h-run-state-observation.md) | Exact `0702h` joins the descriptor-qualified run-state observation | Accepted | 2026-11-20 |
@@ -195,3 +194,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0186](0186-report-summary-keeps-the-run-state-reason.md) | The download-report summary keeps the run-state reason | Accepted | 2026-11-21 |
 | [0187](0187-download-refusal-categories-have-a-drift-pin.md) | Download refusal categories have a cross-layer drift pin | Accepted | 2026-11-21 |
 | [0188](0188-prg01-whole-mutation-recovery-scope.md) | Whole-mutation recovery stays bounded to memory regions | Accepted | 2026-11-21 |
+| [0189](0189-accepted-wp07-mapping-is-the-module-instance-authority.md) | The accepted WP-07 mapping is the module-instance authority (created as a second 0177, renumbered 2026-11-22) | Proposed | 2026-11-17 |

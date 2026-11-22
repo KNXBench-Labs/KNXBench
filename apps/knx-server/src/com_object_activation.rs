@@ -160,7 +160,7 @@ fn decide<'a>(
         // object, so neither `Active` nor `Inactive` is known (WP07).
         ObjectScope::UnresolvedModule => (ComObjectActivation::Undetermined, None),
         ObjectScope::Module(own) => {
-            // ADR-0177: repeated instances are told apart by their `MI-`
+            // ADR-0189: repeated instances are told apart by their `MI-`
             // counter via owning_instance, which reads the counter from the
             // `Module/@Id` itself when the `RefId` is shared; the object is
             // Active when a scoped hit resolves to this instance. A hit
@@ -189,7 +189,7 @@ fn decide<'a>(
 
 /// The one device `ModuleInstance` a scoped activation belongs to, by the
 /// innermost scope's `Module/@Id`, through the shared structural resolver
-/// [`knx_core::resolve_module_owner`] (ADR-0177): zero, malformed, duplicate,
+/// [`knx_core::resolve_module_owner`] (ADR-0189): zero, malformed, duplicate,
 /// conflicting or counter-mismatching candidates resolve to `None`, never a
 /// guess.
 fn owning_instance<'a>(
@@ -197,7 +197,7 @@ fn owning_instance<'a>(
     device_instances: &'a [knx_core::ModuleInstance],
 ) -> Option<&'a knx_core::ModuleInstance> {
     let module_id = hit.scope.as_ref()?.module_id.as_deref()?;
-    // One structural resolver (ADR-0177): exact RefId boundary, MI-counter
+    // One structural resolver (ADR-0189): exact RefId boundary, MI-counter
     // agreement, refusal on zero/malformed/duplicate/conflicting candidates.
     match knx_core::resolve_module_owner(module_id, device_instances) {
         knx_core::ModuleOwner::Resolved(instance) => Some(instance),
@@ -789,7 +789,7 @@ mod tests {
         assert_eq!(activation, activation_before);
     }
 
-    /// ADR-0177: two instances sharing one `RefId` are told apart by their
+    /// ADR-0189: two instances sharing one `RefId` are told apart by their
     /// `MI-` counters. The fixture's single expansion spells
     /// `Module/@Id` "A_MD-1_M-1" — no `MI-` component — while both imported
     /// instances share `RefId` "MD-1_M-1", so the tie-break has no counter
@@ -826,7 +826,7 @@ mod tests {
         assert_eq!(nodes[1].activation, ComObjectActivation::Undetermined);
     }
 
-    /// ADR-0177: a second expansion of the same `RefId` carrying a different
+    /// ADR-0189: a second expansion of the same `RefId` carrying a different
     /// `MI-` counter activates the instance with that counter, not the other.
     #[test]
     fn a_second_expansion_with_a_different_counter_activates_its_own_instance() {
@@ -879,7 +879,7 @@ mod tests {
         // Both expansions' `Module/@Id`s end with the same RefId
         // ("A_MD-1_M-1_MI-1" / "A_MD-1_M-1_MI-2" both end with "_MD-1_M-1"),
         // so each matches both imported instances; the accepted mapping
-        // (ADR-0177) then breaks the tie with the `MI-` digits the
+        // (ADR-0189) then breaks the tie with the `MI-` digits the
         // `Module/@Id` itself carries — expansion 1 activates instance 10,
         // expansion 2 activates instance 11, neither is left undetermined.
         assert_eq!(nodes[0].activation, ComObjectActivation::Active);
@@ -888,7 +888,7 @@ mod tests {
         assert!(nodes[1].channel.is_some());
     }
 
-    /// ADR-0177: with the accepted mapping, two instances sharing one
+    /// ADR-0189: with the accepted mapping, two instances sharing one
     /// `RefId` are told apart by their `MI-` counters, so a ref no
     /// expansion activates is known to be `Inactive` for the object's own
     /// instance — the old D40 blanket `Undetermined` is lifted.

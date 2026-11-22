@@ -310,7 +310,7 @@ impl Parser<'_> {
                     // `code.parameters`, keyed by its module-local `@Id`: a
                     // module-local `Memory/@BaseOffset` is kept as
                     // [`ParameterPlacement::ModuleMemory`] so the image builder
-                    // can resolve it per instantiation (ADR-0177). A non-empty
+                    // can resolve it per instantiation (ADR-0189). A non-empty
                     // parameter subtree is consumed here (through its closing
                     // tag), so the trailing `skip` must not run again.
                     let id = child.attributes.get("Id").map(str::to_string);

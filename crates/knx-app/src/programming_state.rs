@@ -67,7 +67,7 @@ pub struct WrittenParameters {
     pub values: ParameterValues,
     /// Module-scoped values the written request carried, decomposed into
     /// `(Module/@Id, ParameterRef id)` by the write side's
-    /// `instance_counter` authority (ADR-0177); empty when the run wrote
+    /// `instance_counter` authority (ADR-0189); empty when the run wrote
     /// none (WP-37). Recorded verbatim in the baseline, never merged into
     /// `values`.
     pub scoped_values: ScopedParameterValues,

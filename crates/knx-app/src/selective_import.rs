@@ -34,7 +34,7 @@ fn source_limit_message() -> String {
 /// outside `Project`: no model field changes, a copied device gets a fresh id
 /// and so no baseline, and the merge never touches the destination's.
 /// v21 (ADR-0174) adds only file-level flag/link evidence, not Project fields.
-/// v22 (WP-37, ADR-0177 key) adds only file-level module-scoped baseline rows,
+/// v22 (WP-37, ADR-0189 key) adds only file-level module-scoped baseline rows,
 /// not Project fields: the merge allocates fresh ids, so no copied device
 /// inherits one, and the destination's scoped evidence is untouched.
 /// The existing device/object/module/parameter/GA reference closure is unchanged:

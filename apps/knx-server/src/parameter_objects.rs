@@ -184,10 +184,10 @@ pub(crate) fn include_missing(
     for active in &evaluation.activation.com_object_refs {
         // Instance construction for new module scopes needs a separate, exact
         // ModuleInstance authority; do not invent one from a declaration.
-        // ADR-0177: the one resolved owner must also carry a well-formed
+        // ADR-0189: the one resolved owner must also carry a well-formed
         // instance counter — a malformed `MI-` suffix is not an owner, so
         // the whole edit refuses here instead of guessing a number.
-        // ADR-0177: when several instances share the `RefId`, the
+        // ADR-0189: when several instances share the `RefId`, the
         // `Module/@Id`'s own `MI-<k>` tail picks the owning instance.
         if let Some(scope) = &active.scope {
             let module_id = scope.module_id.as_deref();

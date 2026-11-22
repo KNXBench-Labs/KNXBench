@@ -198,7 +198,7 @@ fn module_instance(k: u32) -> ModuleInstance {
     }
 }
 
-/// ADR-0177: a repeated module whose program-side `Module/@Id` carries the
+/// ADR-0189: a repeated module whose program-side `Module/@Id` carries the
 /// instance counter (`…_MI-2`) is resolved to the instance with that
 /// counter — no longer `Ambiguous` by construction.
 #[test]
@@ -214,7 +214,7 @@ fn a_repeated_module_id_with_a_well_formed_mi_counter_resolves_to_that_instance(
     ));
 }
 
-/// ADR-0177: a counter no imported instance carries, or a missing/malformed
+/// ADR-0189: a counter no imported instance carries, or a missing/malformed
 /// `MI-` tail, keeps the repeated module ambiguous — never guessed.
 #[test]
 fn a_repeated_module_id_without_a_matching_counter_stays_ambiguous() {

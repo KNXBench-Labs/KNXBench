@@ -21,7 +21,7 @@ export function differingByRef(lastDownload: LastDownload | undefined): Readonly
 /**
  * WP-37: differing module-scoped refs by `"<moduleId>#<refId>"`, only for a
  * usable comparison. Feeds module-scoped sections, whose `scope.moduleId`
- * is the `Module/@Id` the server's key carries (ADR-0177).
+ * is the `Module/@Id` the server's key carries (ADR-0189).
  */
 export function differingByScopedRef(lastDownload: LastDownload | undefined): ReadonlyMap<string, DownloadedValue> {
   if (lastDownload?.state !== "usable") return new Map();

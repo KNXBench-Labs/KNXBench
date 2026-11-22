@@ -293,7 +293,7 @@ pub enum ParameterPlacement {
     Property(PropertyPlacement),
     /// A `ModuleDef/Static` parameter's `Memory` carrying `BaseOffset`: the
     /// absolute octet is the bound argument's value plus `@Offset`, per
-    /// instantiation (owner-accepted WP-07 witness, ADR-0177; inference —
+    /// instantiation (owner-accepted WP-07 witness, ADR-0189; inference —
     /// not hardware-verified).
     ModuleMemory {
         /// `Memory/@CodeSegment`.
@@ -1220,7 +1220,7 @@ pub(super) fn memory_placement(element: &Element) -> Option<MemoryPlacement> {
 /// A `Memory` carrying `BaseOffset` inside a `ModuleDef/Static`: the base
 /// octet comes from the named bound argument, per instantiation, so the
 /// placement stays relative until the image builder resolves it
-/// (ADR-0177; inference — not hardware-verified).
+/// (ADR-0189; inference — not hardware-verified).
 pub(super) fn module_memory_placement(element: &Element) -> Option<ParameterPlacement> {
     let a = &element.attributes;
     if element.name != "Memory" {

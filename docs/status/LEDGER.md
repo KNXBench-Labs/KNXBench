@@ -396,7 +396,8 @@ guessed — ADR-0177), so a re-numbered instance is a new key. The
 last-download comparison answers `scopedDiffering` beside `differing`
 (`scoped_differences`, exact raw compare) and the web panel marks module-scoped
 rows by their section's `moduleId`; a module-scoped write drops only its own
-scoped pair. The image builder still refuses module instances, so no module
+scoped pair. The image builder still refuses module instances (superseded: base-offset
+module images are admitted since 18 November 2026, see the section below), so no module
 download exists yet. ETS import is unchanged (module-qualified ids stay
 verbatim in `values`). Not claimed: module downloads, image arithmetic on the
 wire, bus behavior, device readback, bus/device writes.

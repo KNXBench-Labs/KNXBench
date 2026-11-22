@@ -346,7 +346,7 @@ fn semantic_com_object(project: &Project, c: &ComObjectInstance) -> SemanticComO
         .module_instance
         .and_then(|id| project.devices.module_instance(id))
         .map(|m| {
-            // ADR-0177: the identity-keyed comparison keys a module-based
+            // ADR-0189: the identity-keyed comparison keys a module-based
             // object on its instance's `MI-` counter (the accepted WP-07
             // witness's `k`), so two instances of one `Module` never merge
             // into one row. A malformed suffix keeps the plain `ets_id` —
@@ -709,7 +709,7 @@ mod tests {
         );
     }
 
-    /// ADR-0177: the identity key carries the instance counter, so a
+    /// ADR-0189: the identity key carries the instance counter, so a
     /// changed `MI-` index is a different module object, not a field change
     /// on the same one. The fixture's object number is 0 on both sides —
     /// only the counter distinguishes them.

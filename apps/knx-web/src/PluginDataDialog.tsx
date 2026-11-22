@@ -6,6 +6,7 @@ import { pickOpenPath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useTranslate } from "./i18n";
+import { isProjectSaving, projectSavingMessage } from "./projectSaving";
 import {
   addressDifference, classifyAdoptionError, pairKey, refusalMessage, visiblePairs,
   type AdoptionApplyResponse, type AdoptionCandidate, type AdoptionDevice, type AdoptionError,
@@ -139,6 +140,11 @@ export default function PluginDataDialog({ tree, deviceId, onTreeUpdate, onClose
       onTreeUpdate(result.project);
       setDone(result); setShown(null); setConsent(false); setPassword("");
     } catch (e) {
+      if (isProjectSaving(e)) {
+        // A Save is writing: nothing was adopted and the plan stays valid for a retry.
+        setError({ kind: "other", message: projectSavingMessage(e) ?? "" });
+        return;
+      }
       const failure = classifyAdoptionError(e);
       const answered = typeof (e as { status?: unknown } | null)?.status === "number";
       // The server drops a plan it refuses. Without an answer, cancelling is

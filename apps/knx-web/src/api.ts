@@ -25,6 +25,7 @@ import { notifySessionExpired } from "./session";
 import { admitHistoryPage, assertHistoryBounds, HistoryContractError, type HistoryPage } from "./activityHistory";
 import { admitActivitySnapshot, type ActivitySnapshot } from "./liveActivity";
 import { gatewayRefusalMessage } from "./gatewayRefusal";
+import { projectSavingMessage } from "./projectSaving";
 import { parseFlowSnapshot, type FlowSnapshot } from "./flowWire";
 import { admitMonitorExportPreview, type MonitorExportRequest, type MonitorExportPreview } from "./monitorExport";
 
@@ -3172,7 +3173,7 @@ export function validationHint(e: unknown): ValidationHint | null {
 /// the untouched server detail remains on `Error.message` and `body.detail`.
 export function errorMessage(e: unknown): string {
   if (!(e instanceof Error)) return String(e);
-  const refusal = gatewayRefusalMessage(e);
+  const refusal = gatewayRefusalMessage(e) ?? projectSavingMessage(e);
   if (refusal) return refusal;
   const hint = validationHint(e);
   return hint ? `${e.message} — ${hint.syntax}: ${hint.example}` : e.message;

@@ -132,13 +132,18 @@ Tests: `an_edit_during_a_save_is_answered_and_journaled_after_it`,
 
 Remaining limits:
 
-- Edits that write the file in their own transaction still wait for a save:
-  manual parameter-baseline marks that change a baseline, note and
-  instruction apply, naming recipes, device-compare adoption, selective import
-  apply and plugin-data writes; so do the project-history panel and its
-  version actions. They need the file and the journal generation, which the
-  save holds. Since 13 November every one of them waits off the runtime (see
-  below), so the wait no longer ties up a runtime worker.
+- Edits that write the file in their own transaction (manual
+  parameter-baseline marks that change a baseline, note, instruction and
+  device-configuration-profile apply, naming recipes, device-compare adoption,
+  selective import apply, plugin-data writes, the project-history panel and its
+  version actions) no longer wait for a save and no longer hold the project
+  lock while one runs: since 22 November 2026 they answer `409 projectSaving`
+  at once and change nothing ([section below](#22-november-2026-file-transaction-routes-refuse-during-a-save-instead-of-waiting)).
+  Left blocking on purpose: the programming-state settlement after a download
+  and the catalogue device creation (both persist synchronously under the
+  project lock; settlement records a hardware fact and must not be refused),
+  and Save, Save As, Open, New and whole-project replacement, which are the
+  file writers themselves.
 - The System-2 download worker's source checks, observed-evidence admission
   and terminal project settlement already ran off the runtime. Its remaining
   final project-binding wait does too since 13 November (WP-31h, below).
@@ -503,3 +508,45 @@ token match) fails exactly its case: a tunnel is asked for, or the run answers
 fails the existing after-the-read runtime case. Limits: the reporter's
 original error and proxy question remain open; this is not an exhaustive
 route audit, and no real gateway or device was used.
+
+### 22 November 2026: file-transaction routes refuse during a save instead of waiting
+
+Owner decision (option B of the design note): an immediate, retryable refusal,
+no automatic retry, server and web in one package.
+
+- **Cause.** These routes took `state.project`, then blocked on the store path
+  and the history generation, which a running save holds for seconds. One such
+  request therefore also held the project lock for the rest of the save, and
+  device reads and ordinary edits queued behind it.
+- **Now.** One helper, `StorePath::lock_unless_saving`, is called with the
+  project lock held. A busy store path means a save is writing (a save takes the
+  path while it holds the project, so a free path with the project held means
+  none can start); the route returns `409` with kind `projectSaving` and the
+  message "The project is being saved; try again in a moment", before it
+  changes anything or consumes a preview token. The history generation lock
+  after it stays blocking: a save holds the generation only while it holds the
+  store path, so with the path held it waits at most for one background journal
+  write, the same wait every ordinary edit has. Lock order is unchanged.
+- **Routes.** Note, instruction, device-configuration-profile and naming-recipe
+  apply; device-compare adoption apply; selective import apply (refused before
+  its snapshot, so the revision recheck stays only as a defence); plugin-data
+  apply (refused before its plan is taken from the slot, so the plan survives);
+  manual baseline marks that would change a baseline (marks that change none
+  keep the background journal path); the project-history panel read and all
+  four version actions. Without a running save nothing changes.
+- **Web.** `projectSaving` is worded through the `projectSaving.retry` message
+  (English, German; the Boarisch and Klingon sets are curated subsets that fall
+  back to English). Note, name-recipe, plug-in data and selective-import
+  dialogs keep their preview for the retry; the instruction editor, device
+  configuration panel, history dialog, comparison adoption and the baseline
+  mark show the message where they already show errors.
+- **Tests.** Server: one test per route holds the store path as a save does,
+  requires the `409` within five seconds, a free project lock, an unchanged
+  project or file and, after the hold, success with the same token. Reverting
+  the note route to the blocking lock fails its test at the five-second
+  backstop. Web: unit tests for the mapping and the notes editor, and a
+  Playwright fixture spec (note apply refused, draft kept, retry applies).
+- **Not covered.** Programming-state settlement and catalogue device creation
+  still wait for a running save (see Remaining limits). A save that ends
+  between a request's refusal check and its own file write is excluded by
+  construction (the project lock is held), not by a timing test.

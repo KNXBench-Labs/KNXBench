@@ -4,6 +4,7 @@ import * as api from "./api";
 import { useTranslate } from "./i18n";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { snapshotContextFromTree, type SnapshotContext } from "./snapshotIdentity";
+import { isProjectSaving, projectSavingMessage } from "./projectSaving";
 import { createDevconfClient, type DevconfAction, type DevconfDeviceView, type DevconfPreview } from "./features/devconf/client";
 
 export interface DeviceConfigPanelProps {
@@ -163,7 +164,7 @@ function DeviceConfigEditor({ deviceId, context, onApplied }: { deviceId: number
   const edit = (change: Partial<Draft>) => { draftVersion.current += 1; if (pending) clearPending(); setDraft((d) => ({ ...d, ...change })); };
 
   const refreshProject = async () => {
-    try { await onApplied(await api.currentProject()); } catch (e) { if (mounted.current) setError(e instanceof Error ? e.message : String(e)); }
+    try { await onApplied(await api.currentProject()); } catch (e) { if (mounted.current) setError(projectSavingMessage(e) ?? (e instanceof Error ? e.message : String(e))); }
   };
 
   const preview = async () => {
@@ -183,7 +184,7 @@ function DeviceConfigEditor({ deviceId, context, onApplied }: { deviceId: number
       if (!mounted.current || !sameContext(latest.current.context, context) || draftVersion.current !== requestedVersion) { void client.cancel(result.token).catch(() => undefined); return; }
       setPending(result);
     } catch (e) {
-      if (mounted.current) setError(e instanceof Error ? e.message : String(e));
+      if (mounted.current) setError(projectSavingMessage(e) ?? (e instanceof Error ? e.message : String(e)));
     } finally {
       if (mounted.current) setBusy(false);
     }
@@ -197,7 +198,7 @@ function DeviceConfigEditor({ deviceId, context, onApplied }: { deviceId: number
       if (mounted.current) setPending(null);
       await refreshProject();
     } catch (e) {
-      if (mounted.current) { setError(e instanceof Error ? e.message : String(e)); setPending(null); }
+      if (mounted.current) { setError(projectSavingMessage(e) ?? (e instanceof Error ? e.message : String(e))); if (!isProjectSaving(e)) setPending(null); }
     } finally {
       if (mounted.current) setBusy(false);
     }
@@ -211,7 +212,7 @@ function DeviceConfigEditor({ deviceId, context, onApplied }: { deviceId: number
       await client.apply(result.token);
       await refreshProject();
     } catch (e) {
-      if (mounted.current) setError(e instanceof Error ? e.message : String(e));
+      if (mounted.current) setError(projectSavingMessage(e) ?? (e instanceof Error ? e.message : String(e)));
     } finally {
       if (mounted.current) setBusy(false);
     }

@@ -5,6 +5,7 @@ import { displayText, formatSelection, literal, replaceText, type Document, type
 import { editorCopy } from "./copy";
 import { usePreviewFocus } from "../usePreviewFocus";
 import styles from "./editor.module.css";
+import { projectSavingMessage } from "../../projectSaving";
 /** `context: null` (no complete project identity) mounts a read-only view: it reads, never writes. */
 export type InstructionEditorProps = Readonly<{ deviceId: number; context: Context | null; language?: "en" | "de"; client?: InstructionClient; onApplied?: (outcome: InstructionApplied) => void; onDirtyChange?: (dirty: boolean) => void }>;
 const defaultClient = createInstructionClient();
@@ -99,7 +100,7 @@ export function InstructionEditor({ deviceId, context, language = "en", client =
       if (generation.current !== active) return;
       planRef.current = null; setPlan(null); markDirty(false);
       callbacks.current.onApplied?.(outcome);
-    } catch (reason) { if (generation.current === active) setError(reason instanceof Error ? reason.message : copy.invalid); }
+    } catch (reason) { if (generation.current === active) setError(projectSavingMessage(reason) ?? (reason instanceof Error ? reason.message : copy.invalid)); }
     finally { if (generation.current === active) setBusy(false); }
   }
   const native = view?.origin === "native";

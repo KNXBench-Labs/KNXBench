@@ -1605,6 +1605,7 @@ export const messages = {
   "gatewayRefusal.busy.busMonitorRunning": "The gateway is busy: a bus monitor session is open. Stop the bus monitor first.",
   "gatewayRefusal.busy.busMonitorClosed":
     "The gateway is busy: the bus monitor lost its connection to {gateway}, but its session is still open. Stop the bus monitor first.",
+  "projectSaving.retry": "The project is being saved. Nothing was changed; try again in a moment.",
   "gatewayRefusal.busy.lineScan":
     "The gateway is busy: a line scan is running ({probed}/{total} addresses probed). Wait for it or cancel it first.",
   "gatewayRefusal.busy.connecting.system2Operation": "The gateway is busy: an experimental System-2 operation is running. Try again when it has ended.",

@@ -6,6 +6,7 @@ import { pickOpenPath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useTranslate } from "./i18n";
+import { isProjectSaving, projectSavingMessage } from "./projectSaving";
 import "./selectiveImport.css";
 import { useFileMenuItemProps } from "./FileMenu";
 
@@ -85,7 +86,10 @@ function ImportDialog({ tree, scope, onTreeUpdate, onClose }: Props & { tree: Pr
         else { setError(t("selectiveImport.uncertain")); }
       }
     } catch (e) {
-      if (epoch.current === id) {
+      if (epoch.current === id && isProjectSaving(e)) {
+        // A Save is writing: nothing was imported and the preview stays valid for a retry.
+        setError(projectSavingMessage(e) ?? "");
+      } else if (epoch.current === id) {
         setError(e instanceof Error ? e.message : String(e)); setPreview(null); setConsent(false);
         if (operation === "apply") {
           // A lost acknowledgement is not proof of rollback. Observe current state,

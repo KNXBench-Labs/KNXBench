@@ -403,6 +403,15 @@ describe("one editing workspace", () => {
     expect(apiCallsIn(serialCandidatesGraph)).toEqual([]);
     expect(mutatingFetchesIn(serialCandidatesGraph)).toEqual([]);
     expect(serialCandidatesGraph.get("serialCandidates.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
+    // WP-31 adds retry-message classification through api.ts. Its only value
+    // dependency is the already-audited translation graph; the helper itself
+    // performs no API call, raw request or project mutation.
+    const savingGraph = valueImportGraph("projectSaving.ts");
+    expect([...savingGraph.keys()].sort()).toEqual(["projectSaving.ts", ...valueImportGraph("i18n.ts").keys()].sort());
+    const savingHelper = new Map([["projectSaving.ts", savingGraph.get("projectSaving.ts")!]]);
+    expect(apiCallsIn(savingHelper)).toEqual([]);
+    expect(mutatingFetchesIn(savingHelper)).toEqual([]);
+    expect(savingHelper.get("projectSaving.ts")).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     expect([...graph.keys()].sort()).toEqual([
       "BusComposeForm.tsx",
       "BusMonitorPanel.tsx",
@@ -485,6 +494,7 @@ describe("one editing workspace", () => {
       "projectHistory.ts",
       "projectMetadata.ts",
       "projectPayloads.ts",
+      "projectSaving.ts", // Pure retry classification and translated copy; no request.
       "recordedDeviceState.ts", // Pure admission only; no IO, writer or device query.
       "serialCandidates.ts", // Pure strict admission of unverified metadata, no IO.
       "serialPreference.ts",

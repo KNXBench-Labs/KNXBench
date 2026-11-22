@@ -12,7 +12,7 @@ use std::process::{Command as Process, Output};
 /// Reusable fixture API (fictional data only): a saved project holding device 1, optionally with
 /// one configuration profile `(module id, version, sha256, document bytes)` written through
 /// `Command::SetDeviceConfigProfile` and `knx_store::save_project`.
-pub fn save_project_with_profile(path: &Path, profile: Option<(&str, &str, &str, &[u8])>) {
+fn save_project_with_profile(path: &Path, profile: Option<(&str, &str, &str, &[u8])>) {
     let mut project = Project::new(Language("en".into()));
     let source = SourceRef {
         path: "synthetic".into(),
@@ -258,9 +258,21 @@ fn module_identity_mismatches_are_refused_one_field_at_a_time() {
 fn missing_device_or_profile_is_unusable_input() {
     let c = case();
     let project = c.good_project();
+    let missing = c.run(&project, "2", &c.sentinel);
+    assert!(
+        text(&missing.stderr).contains("no device 2"),
+        "{}",
+        text(&missing.stderr)
+    );
     c.refused(&project, "2", 2, "no such device");
     let bare = c.dir.path().join("bare.knxdb");
     save_project_with_profile(&bare, None);
+    let bare_out = c.run(&bare, "1", &c.sentinel);
+    assert!(
+        text(&bare_out.stderr).contains("device 1 has no stored configuration profile"),
+        "{}",
+        text(&bare_out.stderr)
+    );
     c.refused(&bare, "1", 2, "device without profile");
     // Positive control: the same project with a profile exports.
     let out = c.run(&project, "1", &c.dir.path().join("ok.bin"));
@@ -373,6 +385,11 @@ fn unknown_export_is_unusable_input_and_writes_nothing() {
         c.sentinel.to_str().unwrap(),
     ]);
     assert_eq!(out.status.code(), Some(2), "{}", text(&out.stderr));
+    assert!(
+        text(&out.stderr).contains("the module has no export \"nope\""),
+        "{}",
+        text(&out.stderr)
+    );
     assert_eq!(std::fs::read(&c.sentinel).unwrap(), b"sentinel");
 }
 
@@ -412,5 +429,175 @@ fn outputs_aliasing_the_project_or_module_are_refused_before_any_write() {
         .is_symlink());
     // Positive control: a distinct output with the same inputs succeeds.
     let out = c.run(&project, "1", &dir.join("distinct.bin"));
+    assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+}
+
+/// Bytes of a file, or `None` when it does not exist.
+fn bytes_if_present(path: &Path) -> Option<Vec<u8>> {
+    std::fs::read(path).ok()
+}
+
+fn sidecar(project: &Path, suffix: &str) -> PathBuf {
+    let mut name = project.as_os_str().to_owned();
+    name.push(suffix);
+    PathBuf::from(name)
+}
+
+#[test]
+fn sidecar_named_output_never_touches_a_wal_project_with_uncheckpointed_commits() {
+    // Fixture only: rusqlite makes the saved project a WAL database holding a committed marker
+    // that exists solely in the -wal file. The command under test uses the store API.
+    let c = case();
+    let project = c.good_project();
+    let holder = rusqlite::Connection::open(&project).unwrap();
+    holder
+        .query_row("PRAGMA journal_mode=WAL", [], |r| r.get::<_, String>(0))
+        .unwrap();
+    holder
+        .query_row("PRAGMA wal_autocheckpoint=0", [], |r| r.get::<_, i64>(0))
+        .unwrap();
+    holder
+        .execute_batch(
+            "CREATE TABLE witness(marker TEXT); INSERT INTO witness VALUES ('committed-in-wal');",
+        )
+        .unwrap();
+    let wal = sidecar(&project, "-wal");
+    let shm = sidecar(&project, "-shm");
+    assert!(
+        std::fs::metadata(&wal).unwrap().len() > 0,
+        "WAL holds the commit"
+    );
+    let before = (
+        std::fs::read(&project).unwrap(),
+        std::fs::read(&wal).unwrap(),
+        std::fs::read(&shm).unwrap(),
+    );
+    for output in [&wal, &shm] {
+        let out = c.run(&project, "1", output);
+        assert_eq!(
+            out.status.code(),
+            Some(2),
+            "{}: {}",
+            output.display(),
+            text(&out.stderr)
+        );
+        assert!(
+            text(&out.stderr).contains("project sidecar"),
+            "{}",
+            text(&out.stderr)
+        );
+        assert_eq!(std::fs::read(&project).unwrap(), before.0);
+        assert_eq!(std::fs::read(&wal).unwrap(), before.1);
+        assert_eq!(std::fs::read(&shm).unwrap(), before.2);
+    }
+    let marker = |conn: &rusqlite::Connection| {
+        conn.query_row("SELECT marker FROM witness", [], |r| r.get::<_, String>(0))
+            .unwrap()
+    };
+    assert_eq!(marker(&holder), "committed-in-wal");
+    drop(holder);
+    // The marker is also what a fresh open recovers from the untouched WAL.
+    assert_eq!(
+        marker(&rusqlite::Connection::open(&project).unwrap()),
+        "committed-in-wal"
+    );
+}
+
+#[test]
+fn each_sidecar_name_is_refused_independently_and_stays_absent() {
+    let c = case();
+    let project = c.good_project();
+    let before = std::fs::read(&project).unwrap();
+    for suffix in ["-wal", "-shm", "-journal"] {
+        let output = sidecar(&project, suffix);
+        assert!(!output.exists(), "{suffix}: starts absent");
+        let out = c.run(&project, "1", &output);
+        assert_eq!(
+            out.status.code(),
+            Some(2),
+            "{suffix}: {}",
+            text(&out.stderr)
+        );
+        assert!(!output.exists(), "{suffix}: still absent");
+        assert_eq!(std::fs::read(&project).unwrap(), before, "{suffix}");
+    }
+    for suffix in ["-wal", "-shm", "-journal"] {
+        assert!(
+            !sidecar(&project, suffix).exists(),
+            "{suffix}: nothing created by refusals"
+        );
+    }
+    // Positive control: a distinct name beside the project (a mere name prefix) is fine.
+    let near = sidecar(&project, "-wals");
+    let out = c.run(&project, "1", &near);
+    assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+}
+
+#[test]
+fn sidecar_aliases_by_symlinked_project_directory_and_existing_inode_are_refused() {
+    use std::os::unix::fs::symlink;
+    let c = case();
+    let project = c.good_project();
+    let dir = c.dir.path();
+    // A project reached through a symlink: its real sidecar names are still protected.
+    std::fs::create_dir(dir.join("elsewhere")).unwrap();
+    let linked = dir.join("elsewhere/linked.knxdb");
+    symlink(&project, &linked).unwrap();
+    // A directory alias of the project's directory.
+    let dir_alias = dir.join("dir-alias");
+    symlink(dir, &dir_alias).unwrap();
+    for (name, via, output) in [
+        (
+            "real sidecar named through the project symlink",
+            &linked,
+            dir.join("p.knxdb-wal"),
+        ),
+        (
+            "given-name sidecar next to the symlink",
+            &linked,
+            dir.join("elsewhere/linked.knxdb-journal"),
+        ),
+        (
+            "sidecar through a directory alias",
+            &project,
+            dir_alias.join("p.knxdb-shm"),
+        ),
+        (
+            "sidecar through a parent-directory path",
+            &project,
+            dir.join("elsewhere/../p.knxdb-journal"),
+        ),
+    ] {
+        let out = c.run(via, "1", &output);
+        assert_eq!(out.status.code(), Some(2), "{name}: {}", text(&out.stderr));
+        assert!(
+            text(&out.stderr).contains("project sidecar"),
+            "{name}: {}",
+            text(&out.stderr)
+        );
+        assert!(bytes_if_present(&output).is_none(), "{name}: not created");
+    }
+    // Existing sidecar reached under another name: hard link and symlink.
+    let journal = sidecar(&project, "-journal");
+    std::fs::write(&journal, b"hot journal").unwrap();
+    let hard = dir.join("hard-journal.bin");
+    std::fs::hard_link(&journal, &hard).unwrap();
+    let soft = dir.join("soft-journal.bin");
+    symlink(&journal, &soft).unwrap();
+    let project_bytes = std::fs::read(&project).unwrap();
+    for (name, output) in [("hard link", hard), ("symlink", soft)] {
+        let out = c.run(&project, "1", &output);
+        assert_eq!(out.status.code(), Some(2), "{name}: {}", text(&out.stderr));
+        assert!(
+            text(&out.stderr).contains("project sidecar"),
+            "{name}: {}",
+            text(&out.stderr)
+        );
+        assert_eq!(std::fs::read(&journal).unwrap(), b"hot journal", "{name}");
+        assert_eq!(std::fs::read(&project).unwrap(), project_bytes, "{name}");
+    }
+    // Positive control: an unrelated distinct output with the same inputs succeeds.
+    std::fs::remove_file(&journal).unwrap();
+    let out = c.run(&linked, "1", &dir.join("distinct.bin"));
     assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
 }

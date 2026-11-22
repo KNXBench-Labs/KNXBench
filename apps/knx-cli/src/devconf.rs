@@ -1,8 +1,8 @@
 //! `knx devconf`: checks device configuration modules, validates documents and writes exports.
 //!
 //! Module and document commands are files only (ADR-0175). `export-stored` additionally reads one
-//! saved project read-only (no migration in place, no write); nothing here opens a bus connection
-//! or a device.
+//! saved project read-only (no migration in place, main file never written; the store's read-only
+//! opener may maintain SQLite sidecars); nothing here opens a bus connection or a device.
 
 use knx_devconf::{ExportError, Finding, FindingKind, Module, Validation};
 use serde_json::{json, Value};
@@ -303,23 +303,75 @@ fn export_stored(args: &[String]) -> Result<ExitCode, String> {
     )
 }
 
-/// Refuses an output that is, or already links to, one of the inputs (symlink or hard link).
+/// SQLite companion files of a project database; a write to one of them corrupts the project.
+const PROJECT_SIDECAR_SUFFIXES: [&str; 3] = ["-wal", "-shm", "-journal"];
+
+/// Refuses an output that is, or links to, an input or a SQLite sidecar of the project.
+///
+/// Sidecars are protected by name (also when absent, so a successful export cannot create one for
+/// a later open to replay) and by inode (an existing one reached through a link). The names are
+/// built from the project path as given and from its resolved path, the latter being the one
+/// SQLite derives them from. A metadata error other than "not found" refuses.
 fn ensure_output_distinct(output: &Path, inputs: &[(&str, &str)]) -> Result<(), String> {
-    use std::os::unix::fs::MetadataExt;
-    let Ok(target) = std::fs::metadata(output) else {
-        return Ok(());
-    };
-    for (what, path) in inputs {
-        if let Ok(input) = std::fs::metadata(path) {
-            if (input.dev(), input.ino()) == (target.dev(), target.ino()) {
-                return Err(format!(
-                    "--output {} is the same file as the {what} {path}",
-                    output.display()
-                ));
+    let project = inputs
+        .iter()
+        .find_map(|(what, path)| (*what == "project").then_some(*path));
+    let mut protected: Vec<(String, PathBuf)> = inputs
+        .iter()
+        .map(|(what, path)| ((*what).to_owned(), PathBuf::from(path)))
+        .collect();
+    if let Some(project) = project {
+        let resolved = std::fs::canonicalize(project)
+            .map_err(|e| format!("cannot resolve the project {project}: {e}"))?;
+        for base in [PathBuf::from(project), resolved] {
+            for suffix in PROJECT_SIDECAR_SUFFIXES {
+                let mut name = base.clone().into_os_string();
+                name.push(suffix);
+                protected.push((format!("project sidecar {suffix}"), PathBuf::from(name)));
             }
         }
     }
+    let output_key = resolved_name(output)?;
+    let target = existing_identity(output)?;
+    for (what, path) in &protected {
+        let same_name = resolved_name(path).is_ok_and(|key| key == output_key);
+        let same_file = match (&target, existing_identity(path)?) {
+            (Some(target), Some(input)) => *target == input,
+            _ => false,
+        };
+        if same_name || same_file {
+            return Err(format!(
+                "--output {} is the same file as the {what} {}",
+                output.display(),
+                path.display()
+            ));
+        }
+    }
     Ok(())
+}
+
+/// The path with its directory resolved (symlinks, `..`) and the file name kept as given.
+fn resolved_name(path: &Path) -> Result<PathBuf, String> {
+    let name = path
+        .file_name()
+        .ok_or_else(|| format!("{}: not a file path", path.display()))?;
+    let dir = match path.parent() {
+        Some(p) if !p.as_os_str().is_empty() => p,
+        _ => Path::new("."),
+    };
+    std::fs::canonicalize(dir)
+        .map(|dir| dir.join(name))
+        .map_err(|e| format!("cannot resolve the directory of {}: {e}", path.display()))
+}
+
+/// Device and inode of an existing file (links followed); `None` when it does not exist.
+fn existing_identity(path: &Path) -> Result<Option<(u64, u64)>, String> {
+    use std::os::unix::fs::MetadataExt;
+    match std::fs::metadata(path) {
+        Ok(meta) => Ok(Some((meta.dev(), meta.ino()))),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(format!("cannot inspect {}: {e}", path.display())),
+    }
 }
 
 /// Writes through a temporary file in the target directory so a reader never sees half a file.

@@ -46,10 +46,11 @@ Work after this source cutoff belongs to a later release.
 Own-firmware devices get their configuration (for example menus, keys and LED
 policies) from declarative module packages instead of device code in KNXBench
 ([ADR-0175](adr/0175-device-configuration-modules-are-declarative-data.md)).
-WP-42.1 delivers the format, the pure `knx-devconf` engine and `knx devconf`
-CLI. Next: installed modules with id/version/SHA-256 and a per-device document
-in the project (WP-42.2), then the structured editor in the device panel
-(WP-42.3). Downloading a configuration to a device is not planned here.
+WP-42 delivered the format, the pure `knx-devconf` engine, the `knx devconf`
+CLI (including project-read-only `export-stored`), per-device stored documents
+with module id/version/SHA-256 (WP-42.2) and the structured editor in the
+device panel (WP-42.3). Downloading a configuration to a device is not
+provided here (WP-43).
 
 <a id="workspace-density-and-technical-appearance-14-november-2026-wp-41-delivered-on-main"></a>
 

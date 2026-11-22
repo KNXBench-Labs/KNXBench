@@ -93,10 +93,10 @@ trees and binary export layouts ([ADR-0175](adr/0175-device-configuration-module
 [contract](contracts/device-configuration-modules.md)). The new pure crate
 `knx-devconf` loads and type-checks modules, validates documents (structure,
 then every rule, with JSON-pointer locations) and produces exports with length
-and CRC-16/CCITT-FALSE; `knx devconf check|validate|export` exposes it on the
+and CRC-16/CCITT-FALSE; `knx devconf check|validate|export|export-stored` exposes it on the
 CLI with atomic output files. KNXBench contains no device-specific code; tests
-use a fictional demo module with hand-computed export bytes. No project storage,
-server route, web editor, device download or bus access yet at that point;
+use a fictional demo module with hand-computed export bytes. WP-42.1 itself had no project storage,
+server route, web editor, device download or bus access;
 WP-42.2 (storage: schema 22 `device_config_profile`, duplicate/missing-device
 load guards, snapshot identity) and WP-42.3 (server routes with
 preview/apply/cancel and confirmation, web `DeviceConfigPanel` as a seventh

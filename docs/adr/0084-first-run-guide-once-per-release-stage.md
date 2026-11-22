@@ -101,7 +101,8 @@ a different root and never imports it.
 - **A release-version check in `xtask`** (all program versions equal). It
   would contradict ADR-0018, under which programs version independently; the
   stale `knx-server` version that prompted it was a missed bump and was
-  bumped instead.
+  bumped instead. (ADR-0190 later replaced independent versions with one
+  workspace version and added that check.)
 
 ## Consequences
 

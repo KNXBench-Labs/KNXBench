@@ -6,13 +6,14 @@ Read this chapter before you trust KNXBench with a project you care about.
 
 ## The version number
 
-Every part of KNXBench carries its own version
-([ADR-0018](../../adr/0018-program-versions-and-file-headers.md)). Since the
-`v0.1.0-alpha.6` release (9 October 2026), application versions have been aligned.
-Alpha 20 is a pre-release with source cutoff 8 November 2026 and aligns the CLI, desktop,
-web frontend, server and `knx-mcp` at `0.1.0-alpha.20`; library crates keep their
-own numbers. Its [release scope](../../releases/alpha20.md) uses source cutoff
-`dfb3f88b8`. [Installation](04-installation.md) names the Alpha 20 artifacts.
+All parts of KNXBench share one version: the CLI, desktop, web frontend, server,
+`knx-mcp` and every library crate
+([ADR-0190](../../adr/0190-one-workspace-version.md), from the release after
+Alpha 23). Releases up to Alpha 23 aligned only the applications (since
+`v0.1.0-alpha.6`); their library crates kept older numbers. Alpha 20 is a
+pre-release with source cutoff 8 November 2026 at `0.1.0-alpha.20`. Its
+[release scope](../../releases/alpha20.md) uses source cutoff `dfb3f88b8`.
+[Installation](04-installation.md) names the Alpha 20 artifacts.
 
 Alpha 20 imports group addresses from ETS6 CSV exports with an explicit UTF-8 or
 Windows-1252 choice and adds a group-address description. On Linux, one USB/serial

@@ -1,7 +1,7 @@
 # ADR 0018: Programs carry SemVer pre-release versions; files carry a one-sentence header and no version
 
 Date: 2026-09-12
-Status: Accepted
+Status: Accepted; decision 1 (independent versions) superseded by [ADR-0190](0190-one-workspace-version.md)
 Session: 7 (T35, versioning and file headers)
 
 ## Context
@@ -63,6 +63,9 @@ finds that pragma with a regex over the *whole* file content
 header on line 1 with the pragma on line 2 is safe.
 
 ## Decision
+
+> Decision 1 is superseded by [ADR-0190](0190-one-workspace-version.md): every
+> package now inherits one workspace version. Decisions 2 to 5 stay in force.
 
 **1. Every program has its own SemVer 2.0.0 version, starting at
 `0.1.0-alpha.1`.** All 14 Cargo packages and the `knx-web` npm package

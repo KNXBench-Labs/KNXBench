@@ -292,7 +292,7 @@ says nothing about uncommitted edits.
 
 ## Regression evidence
 
-`xtask/tests/gate_scope.rs` exercises selected fixtures, unrelated/deleted
+`xtask/tests/it/gate_scope.rs` exercises selected fixtures, unrelated/deleted
 roots, sub-crate refusal, generated-only scans, argument mistakes and actual
 runtime graph selection. Unit tests exercise missing/empty scans and intentional
 nonempty fixture scopes. Fixture APIs do not authorize empty production scans.

@@ -340,6 +340,10 @@ already found lying in the grass.
 - **A new Rust file's header is one sentence on line 1** (`//! … .`, then
   an empty `//!`). A two-line opening paragraph counts as no header, and the
   ADR-0018 ratchet fails the gate (seen 2026-10-13 with twelve new files).
+- **A new workspace package inherits the version.** Write
+  `version.workspace = true`, never its own `version = "..."`; the release
+  bump edits only the root `Cargo.toml` and the `knx-web` package pair, and
+  `xtask/tests/it/workspace_version.rs` fails on any other number (ADR-0190).
 
 ## Handover and Git
 

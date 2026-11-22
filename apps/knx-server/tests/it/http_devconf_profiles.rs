@@ -370,3 +370,220 @@ async fn remove_action_requires_an_existing_profile_and_applies_as_one_undo_step
     }
     assert_eq!(*state.project.lock().unwrap(), with_profile);
 }
+
+async fn apply_set(app: &axum::Router, device: u32, document: &[u8]) -> Value {
+    let (_, view) = request(
+        app,
+        "GET",
+        "/api/project/device-config-profiles",
+        Value::Null,
+    )
+    .await;
+    let mut action = set_action(device, "{}");
+    action["draft"]["documentB64"] = json!(base64url(document));
+    let (status, plan) = request(
+        app,
+        "POST",
+        "/api/project/device-config-profiles/preview",
+        preview_payload(&view, action),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{plan}");
+    let (status, applied) = request(
+        app,
+        "POST",
+        "/api/project/device-config-profiles/apply",
+        json!({"token":plan["token"],"confirmed":true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{applied}");
+    applied
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    format!("{:x}", Sha256::digest(bytes))
+}
+
+#[tokio::test]
+async fn single_device_read_returns_exact_stored_bytes_bound_to_the_snapshot() {
+    let (_dir, _state, app, device) = fixture().await;
+    let path = format!("/api/project/device-config-profiles/devices/{device}");
+
+    let (status, none) = request(&app, "GET", &path, Value::Null).await;
+    assert_eq!(status, StatusCode::OK, "{none}");
+    assert_eq!(none["profile"], Value::Null);
+    assert_eq!(none["device"], device);
+
+    let (status, body) = request(
+        &app,
+        "GET",
+        "/api/project/device-config-profiles/devices/4242424",
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+    assert_eq!(body["kind"], "devconfDeviceNotFound");
+
+    // Unknown members, odd whitespace and key order survive byte for byte.
+    let original = b"{ \"zeta\" :1,\n \"alpha\": {\"unknown_member\": [true,null]} }";
+    apply_set(&app, device, original).await;
+    let (_, stored) = request(&app, "GET", &path, Value::Null).await;
+    let profile = &stored["profile"];
+    assert_eq!(profile["documentB64"], base64url(original));
+    assert_eq!(profile["documentBytes"], original.len());
+    assert_eq!(profile["documentSha256"], sha256_hex(original));
+    assert_eq!(profile["documentError"], Value::Null);
+    assert_eq!(
+        stored["snapshotRevision"],
+        none["snapshotRevision"].as_u64().unwrap() + 1
+    );
+    assert_eq!(stored["serverIncarnation"], none["serverIncarnation"]);
+
+    // Equal length, different content: only the content identity differs.
+    let mut sibling = original.to_vec();
+    sibling[3] = b'y';
+    apply_set(&app, device, &sibling).await;
+    let (_, after) = request(&app, "GET", &path, Value::Null).await;
+    assert_eq!(after["profile"]["documentBytes"], profile["documentBytes"]);
+    assert_ne!(
+        after["profile"]["documentSha256"],
+        profile["documentSha256"]
+    );
+
+    // Undo moves the revision and the readable content back.
+    let (status, _) = request(&app, "POST", "/api/undo", Value::Null).await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, undone) = request(&app, "GET", &path, Value::Null).await;
+    assert_eq!(undone["profile"]["documentSha256"], sha256_hex(original));
+    assert_ne!(undone["snapshotRevision"], after["snapshotRevision"]);
+
+    // The installation-wide list stays metadata-only.
+    let (_, list) = request(
+        &app,
+        "GET",
+        "/api/project/device-config-profiles",
+        Value::Null,
+    )
+    .await;
+    assert!(list["profiles"][0].get("documentB64").is_none());
+    assert_eq!(list["profiles"][0]["documentSha256"], sha256_hex(original));
+}
+
+#[tokio::test]
+async fn non_strict_documents_are_refused_without_touching_state_or_history() {
+    let (_dir, state, app, device) = fixture().await;
+    apply_set(&app, device, b"{\"nodes\": []}").await;
+    let (_, view) = request(
+        &app,
+        "GET",
+        "/api/project/device-config-profiles",
+        Value::Null,
+    )
+    .await;
+    let project_before = state.project.lock().unwrap().clone();
+    let stack_before = state.command_stack.lock().unwrap().clone();
+    let revision_before = view["snapshotRevision"].clone();
+    let too_deep = format!("{}{}", "[".repeat(300), "]".repeat(300));
+    let oversized = format!("\"{}\"", "a".repeat(1_048_576));
+    let bad: Vec<(&str, Vec<u8>)> = vec![
+        ("malformed", b"not json".to_vec()),
+        ("non-utf8", b"{\"a\":\"\xff\"}".to_vec()),
+        ("duplicate", b"{\"a\":1,\"a\":2}".to_vec()),
+        ("fraction", b"{\"a\":0.5}".to_vec()),
+        ("trailing", b"{} x".to_vec()),
+        ("too deep", too_deep.into_bytes()),
+        ("oversized", oversized.into_bytes()),
+    ];
+    for (name, document) in bad {
+        let mut action = set_action(device, "{}");
+        action["draft"]["documentB64"] = json!(base64url(&document));
+        let (status, body) = request(
+            &app,
+            "POST",
+            "/api/project/device-config-profiles/preview",
+            preview_payload(&view, action),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{name}: {body}");
+        assert!(
+            ["devconfDocumentInvalid", "devconfInvalid"].contains(&body["kind"].as_str().unwrap()),
+            "{name}: {body}"
+        );
+    }
+    // No pending preview exists, so no token can apply anything.
+    let (status, _) = request(
+        &app,
+        "POST",
+        "/api/project/device-config-profiles/apply",
+        json!({"token":"anything","confirmed":true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    assert_eq!(*state.project.lock().unwrap(), project_before);
+    assert_eq!(*state.command_stack.lock().unwrap(), stack_before);
+    let (_, view_after) = request(
+        &app,
+        "GET",
+        "/api/project/device-config-profiles",
+        Value::Null,
+    )
+    .await;
+    assert_eq!(view_after["snapshotRevision"], revision_before);
+}
+
+#[tokio::test]
+async fn historical_non_json_bytes_are_preserved_reported_and_removable() {
+    let (_dir, state, app, device) = fixture().await;
+    let legacy = b"legacy \xff not json".to_vec();
+    {
+        let mut project = state.project.lock().unwrap();
+        project.as_mut().unwrap().devices.set_config_profile(
+            knx_core::devconf::DeviceConfigProfile::new(
+                knx_core::DeviceId(device),
+                "example.demo-panel",
+                "1.0.0",
+                &"a".repeat(64),
+                legacy.clone(),
+            )
+            .unwrap(),
+        );
+    }
+    let (_, stored) = request(
+        &app,
+        "GET",
+        &format!("/api/project/device-config-profiles/devices/{device}"),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(stored["profile"]["documentB64"], base64url(&legacy));
+    assert!(stored["profile"]["documentError"].is_string());
+
+    // Re-saving the identical non-conforming bytes is refused; removal still works.
+    let (_, view) = request(
+        &app,
+        "GET",
+        "/api/project/device-config-profiles",
+        Value::Null,
+    )
+    .await;
+    let mut action = set_action(device, "{}");
+    action["draft"]["documentB64"] = json!(base64url(&legacy));
+    let (status, body) = request(
+        &app,
+        "POST",
+        "/api/project/device-config-profiles/preview",
+        preview_payload(&view, action),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert_eq!(body["kind"], "devconfDocumentInvalid");
+    let (status, _) = request(
+        &app,
+        "POST",
+        "/api/project/device-config-profiles/preview",
+        preview_payload(&view, json!({"kind":"remove","device":device})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+}

@@ -1,13 +1,16 @@
 /** Strict device-config-profile HTTP admission with confirmed mutation payloads. */
 export type DevconfContext = Readonly<{serverIncarnation:string;projectIncarnation:number;snapshotRevision:number}>;
-export type DevconfProfileView = Readonly<{device:number;moduleId:string;moduleVersion:string;moduleSha256:string;documentBytes:number}>;
+export type DevconfProfileView = Readonly<{device:number;moduleId:string;moduleVersion:string;moduleSha256:string;documentBytes:number;documentSha256:string}>;
+/** One device's stored document, exact bytes in base64url, bound to the snapshot it was read from. */
+export type DevconfDocumentView = DevconfProfileView & Readonly<{documentB64:string;documentError:string|null}>;
+export type DevconfDeviceView = DevconfContext & Readonly<{device:number;profile:DevconfDocumentView|null;persistence:DevconfPersistence}>;
 export type DevconfDraft = Readonly<{device:number;moduleId:string;moduleVersion:string;moduleSha256:string;documentB64:string}>;
 export type DevconfAction = Readonly<{kind:"set";draft:DevconfDraft}> | Readonly<{kind:"remove";device:number}>;
 export type DevconfPersistence = "session-only"|"native-working-history";
 export type DevconfView = DevconfContext & Readonly<{profiles:readonly DevconfProfileView[];persistence:DevconfPersistence}>;
 export type DevconfPreview = Readonly<{token:string;action:DevconfAction;previous:DevconfProfileView|null;noOp:boolean;expiresInSeconds:number}>;
 export type DevconfApplied = Readonly<{changed:boolean;nativeGeneration:number|null;snapshotRevision:number;persistence:DevconfPersistence}>;
-export type DevconfClient = Readonly<{read(signal?:AbortSignal):Promise<DevconfView>;preview(context:DevconfContext,action:DevconfAction,signal?:AbortSignal):Promise<DevconfPreview>;apply(token:string,signal?:AbortSignal):Promise<DevconfApplied>;cancel(token:string):Promise<void>}>;
+export type DevconfClient = Readonly<{read(signal?:AbortSignal):Promise<DevconfView>;readDevice(device:number,signal?:AbortSignal):Promise<DevconfDeviceView>;preview(context:DevconfContext,action:DevconfAction,signal?:AbortSignal):Promise<DevconfPreview>;apply(token:string,signal?:AbortSignal):Promise<DevconfApplied>;cancel(token:string):Promise<void>}>;
 export class DevconfContractError extends Error {constructor(){super("Unsupported or malformed device configuration profile response");this.name="DevconfContractError";}}
 const UINT32_MAX = 0xffff_ffff;
 const MAX_PROFILES = 65536;
@@ -35,9 +38,22 @@ function documentB64(value:unknown):value is string{
  const bytes = typeof atob==="function" ? atob(value.replace(/-/g,"+").replace(/_/g,"/")).length : 0;
  return bytes<=MAX_DOCUMENT_BYTES;
 }
+const PROFILE_KEYS=["device","moduleId","moduleVersion","moduleSha256","documentBytes","documentSha256"] as const;
+function profileFields(value:Record<string,unknown>):boolean{
+ return integer(value.device,UINT32_MAX)&&moduleId(value.moduleId)&&moduleVersion(value.moduleVersion)&&sha256(value.moduleSha256)&&integer(value.documentBytes,MAX_DOCUMENT_BYTES)&&sha256(value.documentSha256);
+}
 function profile(value:unknown):value is DevconfProfileView{
- return record(value)&&keys(value,["device","moduleId","moduleVersion","moduleSha256","documentBytes"])
-  &&integer(value.device,UINT32_MAX)&&moduleId(value.moduleId)&&moduleVersion(value.moduleVersion)&&sha256(value.moduleSha256)&&integer(value.documentBytes,MAX_DOCUMENT_BYTES);
+ return record(value)&&keys(value,PROFILE_KEYS)&&profileFields(value);
+}
+function documentView(value:unknown):value is DevconfDocumentView{
+ return record(value)&&keys(value,[...PROFILE_KEYS,"documentB64","documentError"])&&profileFields(value)
+  &&documentB64(value.documentB64)&&documentB64Length(value.documentB64 as string)===value.documentBytes
+  &&(value.documentError===null||(typeof value.documentError==="string"&&value.documentError.length<=400));
+}
+function admitDevice(value:unknown,requested:number):DevconfDeviceView{
+ if(!context(value)||!keys(value,["device","profile","serverIncarnation","projectIncarnation","snapshotRevision","persistence"])||!persistence(value.persistence)||value.device!==requested)throw new DevconfContractError();
+ if(value.profile!==null&&(!documentView(value.profile)||value.profile.device!==requested))throw new DevconfContractError();
+ return value as DevconfDeviceView;
 }
 function draft(value:unknown):value is DevconfDraft{
  return record(value)&&keys(value,["device","moduleId","moduleVersion","moduleSha256","documentB64"])
@@ -69,15 +85,16 @@ function sameAction(a:DevconfAction,b:DevconfAction):boolean{
   case "remove":return b.kind==="remove"&&a.device===b.device;
  }
 }
-function sameProfile(a:DevconfProfileView,b:{device:number;moduleId:string;moduleVersion:string;moduleSha256:string;documentBytes:number}):boolean{return a.device===b.device&&a.moduleId===b.moduleId&&a.moduleVersion===b.moduleVersion&&a.moduleSha256===b.moduleSha256&&a.documentBytes===b.documentBytes;}
+function sameProfile(a:DevconfProfileView,b:Omit<DevconfProfileView,"documentSha256">):boolean{return a.device===b.device&&a.moduleId===b.moduleId&&a.moduleVersion===b.moduleVersion&&a.moduleSha256===b.moduleSha256&&a.documentBytes===b.documentBytes;}
 function admitPreview(value:unknown,requested:DevconfAction):DevconfPreview{
  if(!record(value)||!keys(value,["token","action","previous","noOp","expiresInSeconds"])||!token(value.token)||!action(value.action)||!sameAction(value.action,requested)||typeof value.noOp!=="boolean"||!integer(value.expiresInSeconds,300)||value.expiresInSeconds===0)throw new DevconfContractError();
  if(requested.kind==="set"){
   const d=requested.draft;
   if(value.previous!==null&&!profile(value.previous))throw new DevconfContractError();
   if(value.previous!==null&&value.previous.device!==d.device)throw new DevconfContractError();
-  const expectedNoOp = value.previous!==null&&sameProfile(value.previous,{device:d.device,moduleId:d.moduleId,moduleVersion:d.moduleVersion,moduleSha256:d.moduleSha256,documentBytes:documentB64Length(d.documentB64)});
-  if(value.noOp!==expectedNoOp)throw new DevconfContractError();
+  // Equal length is necessary for a no-op, not sufficient: only the server compares content.
+  const possibleNoOp = value.previous!==null&&sameProfile(value.previous,{device:d.device,moduleId:d.moduleId,moduleVersion:d.moduleVersion,moduleSha256:d.moduleSha256,documentBytes:documentB64Length(d.documentB64)});
+  if(value.noOp&&!possibleNoOp)throw new DevconfContractError();
  }else{
   if(value.previous===null||!profile(value.previous)||value.previous.device!==requested.device||value.noOp)throw new DevconfContractError();
  }
@@ -115,6 +132,10 @@ export function createDevconfClient(transport:typeof fetch=fetch):DevconfClient{
  const request=(path:string,payload?:unknown,signal?:AbortSignal)=>requestJson(transport,path,payload,signal);
  return {
   read:async(signal)=>admitView(await request("/api/project/device-config-profiles",undefined,signal)),
+  readDevice:async(device,signal)=>{
+   if(!integer(device,UINT32_MAX))throw new DevconfContractError();
+   return admitDevice(await request(`/api/project/device-config-profiles/devices/${device}`,undefined,signal),device);
+  },
   preview:async(expected,proposed,signal)=>{
    if(!context(expected)||!action(proposed))throw new DevconfContractError();
    const sent:DevconfAction=JSON.parse(JSON.stringify(proposed)) as DevconfAction;

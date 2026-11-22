@@ -7,7 +7,7 @@ function jsonResponse(value: unknown, ok = true, status = ok ? 200 : 400): Respo
   return new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
 }
 
-const validProfile = { device: 3, moduleId: "smartsensor", moduleVersion: "1.0.0", moduleSha256: "a".repeat(64), documentBytes: 14 };
+const validProfile = { device: 3, moduleId: "smartsensor", moduleVersion: "1.0.0", moduleSha256: "a".repeat(64), documentBytes: 14, documentSha256: "b".repeat(64) };
 const validView = { ...context, profiles: [validProfile], persistence: "native-working-history" };
 
 const setAction: DevconfAction = { kind: "set", draft: { device: 3, moduleId: "smartsensor", moduleVersion: "1.0.0", moduleSha256: "a".repeat(64), documentB64: "eyJub2RlcyI6W119" } };
@@ -44,12 +44,38 @@ describe("devconf client", () => {
     expect(sent.snapshotRevision).toBe(7);
   });
 
-  it("refuses a preview whose noOp disagrees with the previous profile", async () => {
-    const sameDraft: DevconfAction = { kind: "set", draft: { device: 3, moduleId: "smartsensor", moduleVersion: "1.0.0", moduleSha256: "a".repeat(64), documentB64: encodeOf("x".repeat(14)) } };
-    const preview = { token: "tok", action: sameDraft, previous: validProfile, noOp: false, expiresInSeconds: 300 };
-    const transport = vi.fn().mockResolvedValue(jsonResponse(preview));
+  it("accepts an equal-length changed document as a real change but refuses an impossible no-op", async () => {
+    const sameLength: DevconfAction = { kind: "set", draft: { device: 3, moduleId: "smartsensor", moduleVersion: "1.0.0", moduleSha256: "a".repeat(64), documentB64: encodeOf("x".repeat(14)) } };
+    const changed = { token: "tok", action: sameLength, previous: validProfile, noOp: false, expiresInSeconds: 300 };
+    const client = createDevconfClient(vi.fn().mockResolvedValue(jsonResponse(changed)) as unknown as typeof fetch);
+    await expect(client.preview(context, sameLength)).resolves.toEqual(changed);
+    const shorter: DevconfAction = { kind: "set", draft: { device: 3, moduleId: "smartsensor", moduleVersion: "1.0.0", moduleSha256: "a".repeat(64), documentB64: encodeOf("x") } };
+    const impossible = { token: "tok", action: shorter, previous: validProfile, noOp: true, expiresInSeconds: 300 };
+    const bad = createDevconfClient(vi.fn().mockResolvedValue(jsonResponse(impossible)) as unknown as typeof fetch);
+    await expect(bad.preview(context, shorter)).rejects.toBeInstanceOf(DevconfContractError);
+  });
+
+  it("reads one device's stored document and admits it strictly", async () => {
+    const text = '{ "a" :1 }';
+    const { documentBytes: _unused, ...rest } = validProfile;
+    void _unused;
+    const device = { ...context, device: 3, persistence: "native-working-history", profile: { ...rest, documentBytes: text.length, documentB64: encodeOf(text), documentError: null } };
+    const transport = vi.fn().mockResolvedValue(jsonResponse(device));
     const client = createDevconfClient(transport as unknown as typeof fetch);
-    await expect(client.preview(context, sameDraft)).rejects.toBeInstanceOf(DevconfContractError);
+    await expect(client.readDevice(3)).resolves.toEqual(device);
+    expect(transport).toHaveBeenCalledWith("/api/project/device-config-profiles/devices/3", expect.objectContaining({ method: "GET" }));
+    for (const broken of [
+      { ...device, device: 4 },
+      { ...device, profile: { ...device.profile, documentBytes: text.length + 1 } },
+      { ...device, profile: { ...device.profile, documentB64: "***" } },
+      { ...device, profile: { ...device.profile, extra: 1 } },
+      { ...device, profile: { ...device.profile, documentSha256: "B".repeat(64) } },
+    ]) {
+      const bad = createDevconfClient(vi.fn().mockResolvedValue(jsonResponse(broken)) as unknown as typeof fetch);
+      await expect(bad.readDevice(3)).rejects.toBeInstanceOf(DevconfContractError);
+    }
+    const none = createDevconfClient(vi.fn().mockResolvedValue(jsonResponse({ ...device, profile: null })) as unknown as typeof fetch);
+    await expect(none.readDevice(3)).resolves.toMatchObject({ profile: null });
   });
 
   it("applies with a confirmed token and admits the outcome", async () => {

@@ -9,6 +9,8 @@ publish = false
 
 [dependencies]
 knx-core.workspace = true
+# One strict-JSON parser for device configuration documents (WP-48.4), no second engine.
+knx-devconf.workspace = true
 # Shared read-only diagnostic service orchestrates the existing management adapter.
 # No new external packages; UI/CLI do not implement their own protocol path.
 knx-net.workspace = true

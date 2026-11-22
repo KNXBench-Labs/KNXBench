@@ -14,89 +14,239 @@ vi.mock("./i18n", () => ({ useTranslate: () => (key: string, params?: Record<str
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
 afterEach(() => { act(() => root?.unmount()); container?.remove(); root = null; container = null; vi.unstubAllGlobals(); });
-async function renderPanel(props: { deviceId: number; onApplied?: (t: ProjectTree) => void }) {
-  container = document.createElement("div");
-  document.body.appendChild(container);
-  root = createRoot(container);
-  await act(async () => { root!.render(<DeviceConfigPanel deviceId={props.deviceId} tree={tree} onApplied={props.onApplied ?? (() => undefined)} />); });
-  return container;
+
+function treeOf(project: number, revision: number, server = "srv"): ProjectTree {
+  return { server_incarnation: server, project_incarnation: project, snapshot_revision: revision } as unknown as ProjectTree;
 }
-async function flush() { await act(async () => { await new Promise((r) => setTimeout(r, 0)); }); }
-function textOf(el: Element | null): string { return el?.textContent ?? ""; }
+async function show(tree: ProjectTree, deviceId = 3) {
+  if (!container) {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+  }
+  await act(async () => { root!.render(<DeviceConfigPanel deviceId={deviceId} tree={tree} onApplied={() => undefined} />); });
+}
+async function flush() { for (let i = 0; i < 4; i++) await act(async () => { await new Promise((r) => setTimeout(r, 0)); }); }
+const body = () => document.body.textContent ?? "";
 function button(name: string): HTMLButtonElement {
-  const found = [...document.querySelectorAll("button")].find((b) => textOf(b).includes(name));
+  const found = [...document.querySelectorAll("button")].find((b) => (b.textContent ?? "").includes(name));
   if (!found) throw new Error(`button ${name} not found`);
   return found as HTMLButtonElement;
 }
-function textarea(): HTMLTextAreaElement {
-  const found = document.querySelector("textarea");
-  if (!found) throw new Error("textarea not found");
-  return found;
-}
-async function type(value: string) {
-  const field = textarea();
+const textarea = () => document.querySelector("textarea") as HTMLTextAreaElement;
+async function type(value: string, field: HTMLTextAreaElement | HTMLInputElement = textarea()) {
   await act(async () => {
-    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!;
-    setter.call(field, value);
+    const proto = field instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, "value")!.set!.call(field, value);
     field.dispatchEvent(new Event("input", { bubbles: true }));
   });
-  await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
-}
-
-const tree = {
-  server_incarnation: "srv",
-  project_incarnation: 1,
-  snapshot_revision: 7,
-} as unknown as ProjectTree;
-
-function jsonResponse(value: unknown, ok = true, status = ok ? 200 : 400): Response {
-  return new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
 }
 
 const sha = "a".repeat(64);
-const view = {
-  serverIncarnation: "srv", projectIncarnation: 1, snapshotRevision: 7,
-  profiles: [{ device: 3, moduleId: "smartsensor", moduleVersion: "1.0.0", moduleSha256: sha, documentBytes: 14 }],
-  persistence: "native-working-history",
-};
+const b64 = (text: string) => btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+function profileOf(document: string, digest: string, device = 3) {
+  return { device, moduleId: "smartsensor", moduleVersion: "1.0.0", moduleSha256: sha, documentBytes: document.length, documentSha256: digest };
+}
+function deviceView(project: number, revision: number, document: string | null, digest = "d".repeat(64), device = 3) {
+  return {
+    device, serverIncarnation: "srv", projectIncarnation: project, snapshotRevision: revision, persistence: "native-working-history",
+    profile: document === null ? null : { ...profileOf(document, digest, device), documentB64: b64(document), documentError: null as string | null },
+  };
+}
+function json(value: unknown, status = 200): Response {
+  return new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
+}
+function deferred() {
+  let resolve!: (r: Response) => void;
+  const promise = new Promise<Response>((r) => { resolve = r; });
+  return { promise, resolve };
+}
+
+const ORIGINAL = '{ "known" : 1,\n  "unknown_member": [true, null] }';
 
 describe("DeviceConfigPanel", () => {
-  it("loads the stored profile and previews a change", async () => {
-    const transport = vi.fn()
-      .mockResolvedValueOnce(jsonResponse(view))
-      .mockResolvedValueOnce(jsonResponse({ token: "tok", action: { kind: "set", draft: { device: 3, moduleId: "smartsensor", moduleVersion: "1.0.0", moduleSha256: sha, documentB64: "eyJ4IjoxfQ" } }, previous: view.profiles[0], noOp: false, expiresInSeconds: 300 }));
+  it("shows the stored document verbatim and previews it back as the exact stored bytes", async () => {
+    const calls: string[] = [];
+    const transport = vi.fn(async (url: string, init?: { body?: string }) => {
+      calls.push(url);
+      if (url.endsWith("/devices/3")) return json(deviceView(1, 7, ORIGINAL));
+      const sent = JSON.parse(init!.body!);
+      return json({ token: "tok", action: sent.action, previous: profileOf(ORIGINAL, "d".repeat(64)), noOp: true, expiresInSeconds: 300 });
+    });
     vi.stubGlobal("fetch", transport);
-    await renderPanel({ deviceId: 3 });
+    await show(treeOf(1, 7));
     await flush();
-    expect(textOf(document.body)).toContain("deviceConfig.current");
-    await type('{"x":1}');
+    expect(textarea().value).toBe(ORIGINAL);
+    expect(body()).toContain("deviceConfig.current");
+    expect(calls).toEqual(["/api/project/device-config-profiles/devices/3"]); // one device, no list
     await act(async () => { button("deviceConfig.preview").click(); });
     await flush();
-    expect(textOf(document.body)).toContain("deviceConfig.confirmText");
+    const previewCall = transport.mock.calls[1][1] as { body: string };
+    expect(JSON.parse(previewCall.body).action.draft.documentB64).toBe(b64(ORIGINAL));
+    expect(body()).toContain("deviceConfig.noChange");
   });
 
-  it("refuses invalid JSON before any request", async () => {
-    const emptyView = { ...view, profiles: [] };
-    const transport = vi.fn().mockResolvedValue(jsonResponse(emptyView));
-    vi.stubGlobal("fetch", transport);
-    await renderPanel({ deviceId: 3 });
-    for (let i = 0; i < 5; i++) await flush();
-    expect(textOf(document.body)).toContain("deviceConfig.none");
-    await type("not json");
-    const btn = button("deviceConfig.preview");
-    expect((btn as HTMLButtonElement).disabled).toBe(true); // module fields empty
-    // Fill module identity so the button enables, then invalid JSON must refuse.
-    const inputs = [...document.querySelectorAll("input")] as HTMLInputElement[];
-    for (const [i, value] of ["smartsensor", "1.0.0", sha].entries()) {
-      await act(async () => {
-        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
-        setter.call(inputs[i], value);
-        inputs[i].dispatchEvent(new Event("input", { bubbles: true }));
-      });
-    }
+  it("reloads a clean editor on revision change, also for an equal-length different document", async () => {
+    const other = ORIGINAL.replace("known", "knowm");
+    expect(other.length).toBe(ORIGINAL.length);
+    const current = { view: deviceView(1, 7, ORIGINAL, "1".repeat(64)) };
+    vi.stubGlobal("fetch", vi.fn(async () => json(current.view)));
+    await show(treeOf(1, 7));
+    await flush();
+    expect(textarea().value).toBe(ORIGINAL);
+    current.view = deviceView(1, 8, other, "2".repeat(64));
+    await show(treeOf(1, 8));
+    await flush();
+    expect(textarea().value).toBe(other);
+    expect(body()).not.toContain("deviceConfig.staleDraft");
+  });
+
+  it("keeps a dirty draft, flags it stale, blocks preview and lets the user choose", async () => {
+    const current = { view: deviceView(1, 7, ORIGINAL, "1".repeat(64)) };
+    vi.stubGlobal("fetch", vi.fn(async () => json(current.view)));
+    await show(treeOf(1, 7));
+    await flush();
+    await type('{"mine":true}');
+    expect(body()).toContain("deviceConfig.unsaved");
+    current.view = deviceView(1, 8, '{"undone":1}', "2".repeat(64));
+    await show(treeOf(1, 8));
+    await flush();
+    expect(textarea().value).toBe('{"mine":true}');
+    expect(body()).toContain("deviceConfig.staleDraft");
+    expect(button("deviceConfig.preview").disabled).toBe(true);
+    await act(async () => { button("deviceConfig.keepDraft").click(); });
+    expect(textarea().value).toBe('{"mine":true}');
+    expect(body()).not.toContain("deviceConfig.staleDraft");
+    expect(button("deviceConfig.preview").disabled).toBe(false);
+
+    current.view = deviceView(1, 9, '{"third":3}', "3".repeat(64));
+    await show(treeOf(1, 9));
+    await flush();
+    expect(body()).toContain("deviceConfig.staleDraft");
+    await act(async () => { button("deviceConfig.loadStored").click(); });
+    expect(textarea().value).toBe('{"third":3}');
+    expect(body()).not.toContain("deviceConfig.unsaved");
+  });
+
+  it("does not flag a dirty draft when the stored content did not change", async () => {
+    const current = { view: deviceView(1, 7, ORIGINAL, "1".repeat(64)) };
+    vi.stubGlobal("fetch", vi.fn(async () => json(current.view)));
+    await show(treeOf(1, 7));
+    await flush();
+    await type('{"mine":true}');
+    current.view = deviceView(1, 8, ORIGINAL, "1".repeat(64));
+    await show(treeOf(1, 8));
+    await flush();
+    expect(textarea().value).toBe('{"mine":true}');
+    expect(body()).not.toContain("deviceConfig.staleDraft");
+  });
+
+  it("discards a delayed read of an older revision and a read for a different context", async () => {
+    const late = deferred();
+    const fetchMock = vi.fn()
+      .mockImplementationOnce(() => late.promise)
+      .mockImplementationOnce(async () => json(deviceView(1, 8, '{"new":1}', "2".repeat(64))));
+    vi.stubGlobal("fetch", fetchMock);
+    await show(treeOf(1, 7));
+    await show(treeOf(1, 8));
+    await flush();
+    expect(textarea().value).toBe('{"new":1}');
+    await act(async () => { late.resolve(json(deviceView(1, 7, '{"old":1}', "1".repeat(64)))); });
+    await flush();
+    expect(textarea().value).toBe('{"new":1}');
+
+    // A response that names another revision than the tree is not adopted, it is reported.
+    fetchMock.mockImplementationOnce(async () => json(deviceView(1, 99, '{"x":0}')));
+    await show(treeOf(1, 9));
+    await flush();
+    expect(textarea().value).toBe('{"new":1}');
+    expect(body()).toContain("deviceConfig.outdated");
+  });
+
+  it("never shares a draft or a late response between projects with the same device id", async () => {
+    const fetchMock = vi.fn()
+      .mockImplementationOnce(async () => json(deviceView(1, 7, '{"project":"one"}', "1".repeat(64))))
+      .mockImplementationOnce(async () => json(deviceView(2, 7, '{"project":"two"}', "2".repeat(64))));
+    vi.stubGlobal("fetch", fetchMock);
+    await show(treeOf(1, 7));
+    await flush();
+    await type('{"draft":"of project one"}');
+    // Same device id and revision number, other project incarnation, same mounted parent slot.
+    await show(treeOf(2, 7));
+    await flush();
+    expect(textarea().value).toBe('{"project":"two"}');
+    expect(body()).not.toContain("deviceConfig.unsaved");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("drops a delayed read of the previous project after a project switch", async () => {
+    const late = deferred();
+    const fetchMock = vi.fn()
+      .mockImplementationOnce(() => late.promise)
+      .mockImplementationOnce(async () => json(deviceView(2, 7, '{"project":"two"}', "2".repeat(64))));
+    vi.stubGlobal("fetch", fetchMock);
+    await show(treeOf(1, 7));
+    await show(treeOf(2, 7));
+    await flush();
+    await act(async () => { late.resolve(json(deviceView(1, 7, '{"project":"one-late"}'))); });
+    await flush();
+    expect(textarea().value).toBe('{"project":"two"}');
+  });
+
+  it("drops a preview that resolves after the revision moved on and cancels its token", async () => {
+    const slowPreview = deferred();
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      calls.push(url);
+      if (url.endsWith("/devices/3")) return json(deviceView(1, calls.filter((c) => c.endsWith("/devices/3")).length === 1 ? 7 : 8, ORIGINAL));
+      if (url.endsWith("/preview")) return slowPreview.promise;
+      return json({ cancelled: true });
+    }));
+    await show(treeOf(1, 7));
+    await flush();
     await act(async () => { button("deviceConfig.preview").click(); });
-    for (let i = 0; i < 10; i++) await flush();
-    expect(textOf(document.body)).toContain("deviceConfig.invalidJson");
-    expect(transport).toHaveBeenCalledTimes(1); // only the initial read
+    await show(treeOf(1, 8));
+    await flush();
+    const action = { kind: "set", draft: { device: 3, moduleId: "smartsensor", moduleVersion: "1.0.0", moduleSha256: sha, documentB64: b64(ORIGINAL) } };
+    await act(async () => { slowPreview.resolve(json({ token: "late", action, previous: null, noOp: false, expiresInSeconds: 300 })); });
+    await flush();
+    expect(body()).not.toContain("deviceConfig.confirmText");
+    expect(calls).toContain("/api/project/device-config-profiles/cancel");
+  });
+
+  it("explains a non-UTF-8 stored document without discarding or rewriting it", async () => {
+    const view = deviceView(1, 7, "x");
+    view.profile!.documentB64 = "_w"; // single 0xFF byte
+    view.profile!.documentBytes = 1;
+    vi.stubGlobal("fetch", vi.fn(async () => json(view)));
+    await show(treeOf(1, 7));
+    await flush();
+    expect(body()).toContain("deviceConfig.notUtf8");
+    expect(textarea().value).toBe("");
+  });
+
+  it("reports a stored document that is not strict JSON", async () => {
+    const view = deviceView(1, 7, '{"a":1,"a":2}');
+    view.profile!.documentError = "duplicate member";
+    vi.stubGlobal("fetch", vi.fn(async () => json(view)));
+    await show(treeOf(1, 7));
+    await flush();
+    expect(body()).toContain("deviceConfig.storedNotStrict");
+    expect(textarea().value).toBe('{"a":1,"a":2}');
+  });
+
+  it("refuses invalid JSON before any preview request", async () => {
+    const transport = vi.fn(async () => json(deviceView(1, 7, null)));
+    vi.stubGlobal("fetch", transport);
+    await show(treeOf(1, 7));
+    await flush();
+    expect(body()).toContain("deviceConfig.none");
+    const inputs = [...document.querySelectorAll("input")] as HTMLInputElement[];
+    for (const [i, value] of ["smartsensor", "1.0.0", sha].entries()) await type(value, inputs[i]);
+    await type("not json");
+    await act(async () => { button("deviceConfig.preview").click(); });
+    await flush();
+    expect(body()).toContain("deviceConfig.invalidJson");
+    expect(transport).toHaveBeenCalledTimes(1);
   });
 });

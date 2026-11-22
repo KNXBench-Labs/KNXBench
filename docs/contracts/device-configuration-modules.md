@@ -184,6 +184,41 @@ Exit 0 on success; 1 when the document is invalid or an export is refused; 2 for
 unusable input (unreadable file, malformed or unsupported module). `export`
 writes the output atomically and only after successful validation.
 
+## Project-stored documents (WP-42.2/42.3, WP-48.4)
+
+A device's document is stored with the project as opaque bytes next to the module
+identity it was written for. The admission levels are separate:
+
+1. **Identity syntax** (`knx-core`): module id, version, SHA-256 syntax, a
+   non-empty document of at most 1 MiB. Used on every load and undo/redo replay, so
+   previously stored bytes are never discarded, whatever they contain.
+2. **Strict JSON admission** (`knx-app`, `check_document`, on every new or replaced
+   document, before any command is built): UTF-8, one JSON value (no trailing content),
+   no duplicate member names at any depth, integers only (no fraction/exponent/`-0`,
+   signed 64-bit), nesting depth at most 128, at most 1 MiB. Refusal is `422` with kind
+   `devconfDocumentInvalid` and changes neither project, history nor revision. It uses
+   the same strict parser as the engine; it does **not** check the document against any
+   module or rule and does not prove a module package is installed or valid.
+3. **Module validation** (`knx devconf validate`, engine): structure and rules against a
+   module package. Not performed by the project edit routes.
+
+A stored document that fails level 2 (legacy or foreign bytes) is kept byte for byte and
+reported: the single-device read carries `documentError`. It can be removed or replaced,
+not re-saved unchanged.
+
+Reading: `GET /api/project/device-config-profiles/devices/{id}` returns that device's
+profile with `documentB64` (exact stored bytes, base64url), `documentBytes` and
+`documentSha256`, plus the server/project incarnation and snapshot revision it was read
+at (`404 devconfDeviceNotFound` for an unknown device, `profile: null` without a
+profile). The installation-wide list stays metadata only (identity, length, content
+SHA-256), never document bytes.
+
+Editor draft policy: the panel reads the device again on every snapshot revision and only
+adopts a response carrying exactly the context it asked for. A clean editor reloads; a
+dirty draft is never overwritten. If the stored content changed underneath it, the draft
+is kept, previewing is blocked and the user chooses *Keep my draft* or *Load stored
+version*. Unedited text is sent back as the exact stored bytes (no reformatting).
+
 ## What is not claimed
 
 - A valid document is valid **for the module**. Whether a device accepts it is

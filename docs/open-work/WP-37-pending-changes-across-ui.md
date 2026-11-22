@@ -328,7 +328,12 @@ description after the name.
   comparison (`DeviceDetail.last_download`, native schema 21) names the address's
   raw value in a sending-direction difference; a summary line above the views
   reports the count and the links state. Web-only change in `apps/knx-web`;
-  no new baseline, API or schema.
+  no new baseline, API or schema. **Correction (WP-48.5, F07/F08):** as merged the marks
+  were reachable only through a `gaLastDownloadMarks` settings key that no control
+  set, so they stayed off in ordinary use, and the summary could claim that no address
+  differs when only some devices had been compared. WP-48.5 adds the Settings →
+  Group addresses switch (off by default: it reads every device's detail) and a
+  coverage-aware summary; pending review/gate on its branch.
 - ~~Differences on object numbers without a selected project row were counted,
   not listed~~ **shipped 21 November 2026 (S3)**: a second line under the
   communication-object summary lists them from the server's `differing`

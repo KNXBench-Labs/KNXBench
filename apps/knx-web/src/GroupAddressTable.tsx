@@ -21,6 +21,7 @@ import { collectInstallationDevices } from "./treeUtils";
 import { differingAddresses, type AddressLinkChange } from "./groupAddressLastDownload";
 import { rawGroupAddress } from "./rawGroupAddress";
 import { GroupAddressLastDownloadSummary } from "./GroupAddressLastDownload";
+import { linkedDeviceIds, summarizeCoverage } from "./groupAddressLastDownloadCoverage";
 import GroupAddressLinks from "./GroupAddressLinks";
 import NewGroupAddressInRangeDialog from "./NewGroupAddressInRangeDialog";
 import type { GroupRangeNode } from "./bindings/GroupRangeNode";
@@ -76,6 +77,10 @@ export default function GroupAddressTable(props: {
   // union of all usable link comparisons marks the group-address rows.
   const gaDevices = useMemo(() => [...collectInstallationDevices(installation).values()], [installation]);
   const lastDownloads = useDeviceLastDownloads(gaDevices, installation, `${props.projectContextKey ?? ""}:${installation.id}`);
+  const lastDownloadsOn = lastDownloads.enabled;
+  const coverage = useMemo(() => lastDownloadsOn
+    ? summarizeCoverage(gaDevices.map(device => device.id), linkedDeviceIds(index.rows.map(row => row.node)), lastDownloads.entries, lastDownloads.source)
+    : null, [lastDownloadsOn, gaDevices, index, lastDownloads.entries, lastDownloads.source]);
   const differing = useMemo(() => {
     const merged = new Map<number, AddressLinkChange[]>();
     for (const lastDownload of lastDownloads.current.values()) {
@@ -218,7 +223,7 @@ export default function GroupAddressTable(props: {
       <ul>{index.issues.map((issue, i) => <li key={i}>{t(`gaWorkspace.issue.${issue.code}`)} · {issue.key} → #{issue.reference}</li>)}</ul>
     </details>}
     {rangeScope !== null && externalGroups.length !== 1 && <p role="status">{t("gaWorkspace.scopeUnavailable")}</p>}
-    <GroupAddressLastDownloadSummary differingRows={differingRowKeys} rows={rows} lastDownloads={lastDownloads.current} />
+    <GroupAddressLastDownloadSummary differingRows={differingRowKeys} rows={rows} coverage={coverage} />
     {view === "columns" ? <GroupAddressColumns {...shared} /> : view === "atlas" ? <GroupAddressAtlas {...shared} /> : view === "matrix" ? <GroupAddressMatrix {...shared}
       matrix={matrix} inventory={inventory} columnKeys={columnKeys} onColumns={setColumnKeys} columnQuery={columnQuery} onColumnQuery={setColumnQuery} /> : <GroupAddressTreeTable {...shared}
       expanded={expanded} onToggle={toggle} includeEmpty={query.trim() === "" && filter === "all" && validScope === null && externalScope === null}

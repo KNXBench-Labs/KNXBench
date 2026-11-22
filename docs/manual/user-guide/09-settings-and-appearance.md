@@ -9,7 +9,7 @@
 debug device-control switches are not appearance preferences or hardware permission.
 
 KNXBench's settings are grouped into **Appearance**, **Language & data**,
-**Autosave**, **Bus & diagnostics**, and a separate **Debug · device control**
+**Autosave**, **Group addresses**, **Bus & diagnostics**, and a separate **Debug · device control**
 section. Since Alpha.10 there is also **Updates**; Alpha.9 and older builds do not
 have that section.
 Ordinary changes apply without a Save button or restart. The Debug switch is
@@ -309,6 +309,17 @@ For the pack format itself, see [Language packs](../../LANGUAGE_PACKS.md).
 last save; it never opens a file dialog. A notice counts down the last five seconds and
 offers **Cancel**. If an autosave fails, a message says so and the project stays marked
 as unsaved, exactly as after a failed manual save.
+
+## Group addresses
+
+**Mark addresses whose links differ from the last download** is **off by default**. Switched on,
+the group-address views read every device's last-download comparison from the server (one
+request per device, repeated after a project change) and mark addresses whose sending links
+changed; a summary line above the views reports the result. The summary says how many of the
+relevant devices were compared and why the others were not (still loading, could not be read,
+no recorded download, downloaded with another application program, no product data, current
+links cannot be built). It only says that no address differs when every relevant device was
+compared. *(source build after the current release)*
 
 ## Toast notifications
 

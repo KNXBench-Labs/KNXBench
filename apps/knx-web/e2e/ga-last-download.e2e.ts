@@ -22,8 +22,10 @@ test.use({ timezoneId: zone });
 
 const range = (id: number, parent: number | null, name: string): GroupRangeNode =>
   ({ id, parent, name, start: "1/0/0", end: "1/7/255" });
-const ga = (id: number, address: string, name: string, rangeId: number | null): GroupAddressNode =>
-  ({ id, address, name, range: rangeId, dpts: [], links: [] });
+const link = (device_id: number): GroupAddressNode["links"][number] =>
+  ({ device_id, device_name: null, device_address: null, com_object_id: device_id * 10, com_object_number: 10, com_object_name: null, direction: "Send" });
+const ga = (id: number, address: string, name: string, rangeId: number | null, devices: number[] = [1]): GroupAddressNode =>
+  ({ id, address, name, range: rangeId, dpts: [], links: devices.map(link) });
 const device = (id: number): DeviceNode =>
   ({ id, name: `Fictional device ${id}`, address: `1.1.${id}`, description: null, com_object_count: 1 });
 
@@ -42,18 +44,18 @@ const usable: ObjectLastDownload = { links: { state: "usable", at }, flags: { st
   differing: [added, removed, redirected, flagsOnly], instances: { 10: added, 11: removed, 12: redirected, 13: flagsOnly },
   differing_objects: 4, no_selected_row: 0 };
 
-function tree(): ProjectTree {
+function tree(deviceIds: number[] = [1]): ProjectTree {
   return { schema_version: 13, errors: 0, warnings: 0, can_undo: false, can_redo: false, is_modified: false,
     group_address_style: "ThreeLevel", server_incarnation: "ga-dl-browser", project_incarnation: 1, snapshot_revision: 1,
     installations: [{ id: 1, name: "Fictional house", buildings: [], unassigned: [],
       topology: [{ id: 5, name: "Fictional area", address: 1, lines: [{ id: 6, name: "Fictional line", address: 1,
-        devices: [device(1)] }] }],
+        devices: deviceIds.map(device) }] }],
       group_ranges: [range(20, null, "Lighting"), range(21, 20, "Ground floor")],
       group_addresses: [
         ga(30, "1/0/1", "Kitchen ceiling", 21),
         ga(31, "1/0/2", "Kitchen dimming", 21),
         ga(32, "1/0/3", "Hallway", 20),
-        ga(33, "2/0/1", "Unassigned spare", null),
+        ga(33, "2/0/1", "Unassigned spare", null, deviceIds.length > 1 ? [2] : [1]),
       ] }] };
 }
 
@@ -61,15 +63,31 @@ const detail: DeviceDetail = { id: 1, name: "Fictional device 1", description: n
   com_objects: [], product: { product_ref: null, program_ref: null, catalog: null, resolution: "NoReference" },
   last_download: usable };
 
-async function intercept(page: Page, language: "en" | "de", lastDownload?: ObjectLastDownload, marksEnabled = true) {
-  const state = { tree: tree(), unexpected: [] as string[], projectOpen: false,
-    settings: { uiLanguage: language, theme: "porcelain", gaLastDownloadMarks: marksEnabled ? "1" : "0" } as Record<string, unknown> };
-  await page.route("**/api/**", (route) => {
+interface InterceptOptions {
+  /** `injected`: preference present in the stored settings; `fresh`: no key at all (a new profile). */
+  marks?: "on" | "off" | "fresh";
+  deviceIds?: number[];
+  /** Per-device comparison; defaults to `lastDownload` for every device. */
+  perDevice?: Record<number, ObjectLastDownload>;
+  /** Device ids whose detail reply waits for `releaseDevice`. */
+  delayed?: number[];
+}
+
+async function intercept(page: Page, language: "en" | "de", lastDownload?: ObjectLastDownload, marksOrOptions: boolean | InterceptOptions = true) {
+  const options: InterceptOptions = typeof marksOrOptions === "boolean" ? { marks: marksOrOptions ? "on" : "off" } : marksOrOptions;
+  const settings: Record<string, unknown> = { uiLanguage: language, theme: "porcelain", achievementsEnabled: false, releaseChecksEnabled: false };
+  if (options.marks !== "fresh") settings.gaLastDownloadMarks = options.marks === "off" ? "0" : "1";
+  const gates = new Map<number, () => void>();
+  const waits = new Map<number, Promise<void>>((options.delayed ?? []).map(id => [id, new Promise<void>(resolve => gates.set(id, resolve))]));
+  const state = { tree: tree(options.deviceIds), unexpected: [] as string[], projectOpen: false, detailRequests: [] as number[], writes: [] as Record<string, unknown>[],
+    releaseDevice: (id: number) => gates.get(id)?.(), settings };
+  await page.route("**/api/**", async (route) => {
     const url = new URL(route.request().url()); const path = url.pathname; const method = route.request().method();
     let body: unknown; let status = 200;
     if (path === "/api/auth/status" && method === "GET") body = { required: false, authenticated: true };
     else if (path === "/api/settings" && method === "GET") body = { schemaVersion: 1, status: "ok", settings: { ...state.settings } };
     else if (path === "/api/settings" && method === "PUT") {
+      state.writes.push(route.request().postDataJSON().settings);
       state.settings = { ...state.settings, ...route.request().postDataJSON().settings };
       body = { schemaVersion: 1, status: "ok", settings: { ...state.settings } };
     }
@@ -81,8 +99,16 @@ async function intercept(page: Page, language: "en" | "de", lastDownload?: Objec
     else if (path === "/api/product-languages" && method === "GET") body = [];
     else if (/^\/api\/device\/\d+$/.test(path) && method === "GET") {
       const id = Number(path.split("/").pop());
-      body = id === 1 ? { ...detail, last_download: lastDownload } : { ...detail, id, last_download: lastDownload };
+      state.detailRequests.push(id);
+      await waits.get(id);
+      body = { ...detail, id, last_download: options.perDevice?.[id] ?? lastDownload };
     }
+    else if (path === "/api/version" && method === "GET") body = { version: "0.1.0-alpha.18+ga-dl-fixture" };
+    else if (path === "/api/legacy-password" && method === "GET") body = { available: true, remembered: false, problem: null };
+    else if (path === "/api/log" && method === "GET") body = [];
+    else if (["/api/catalog/manufacturers", "/api/catalog/items"].includes(path) && method === "GET") body = [];
+    else if (path === "/api/device-system2/status" && method === "GET") body = null;
+    else if (["/api/device-download/status", "/api/device-download/batch/status", "/api/device-address/status"].includes(path) && method === "GET") { status = 404; body = { error: "none" }; }
     else if (achievementsFixtureAnswer(method, path) !== undefined) body = achievementsFixtureAnswer(method, path);
     else if (busActivityFixtureAnswer(method, path) !== undefined) body = busActivityFixtureAnswer(method, path);
     else { state.unexpected.push(`${method} ${path}`); status = 404; body = { error: "strict ga last-download fixture only" }; }
@@ -202,5 +228,95 @@ test("opt-out preference: no device detail is read and nothing is marked", async
   await expect(page.locator(".ga-workspace .ga-last-download")).toHaveCount(0);
   await expect(page.locator(".ga-download-mark")).toHaveCount(0);
   expect(requests).toEqual([]);
+  expect(state.unexpected).toEqual([]);
+});
+
+async function openSettings(page: Page, language: "en" | "de") {
+  const m = language === "en" ? en : de;
+  await page.locator(".settings-navigation").getByRole("button", { name: m["toolbar.settings"], exact: true }).click();
+  await expect(page.locator(".settings-panel")).toBeVisible();
+  return page.locator(".settings-section-group-addresses");
+}
+
+async function backToAddresses(page: Page, language: "en" | "de") {
+  const m = language === "en" ? en : de;
+  await page.locator(".settings-panel").getByRole("button", { name: m["settings.back"], exact: true }).click();
+  await expect(page.locator(".settings-panel")).toHaveCount(0);
+  await openNavigationSections(page);
+  const nav = page.getByRole("navigation", { name: m["workbench.navigation"], exact: true });
+  if (!(await nav.isVisible())) await page.getByRole("button", { name: m["workbench.navigation"], exact: true }).click();
+  await nav.getByRole("button", { name: m["workbench.addresses"], exact: true }).click();
+  await expect(page.locator(".ga-workspace")).toBeVisible();
+}
+
+for (const language of ["en", "de"] as const) {
+  test(`${language} fresh profile: marks are off, the Settings checkbox turns them on and off`, { tag: "@exclusive" }, async ({ page }) => {
+    const m = language === "en" ? en : de;
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const state = await intercept(page, language, usable, { marks: "fresh" });
+    await openAddresses(page, language);
+    // Fresh profile: no preference stored, no optional detail request, no marks, no summary.
+    expect(state.settings).not.toHaveProperty("gaLastDownloadMarks");
+    await expect(page.locator(".ga-workspace .ga-last-download")).toHaveCount(0);
+    await expect(page.locator(".ga-download-mark")).toHaveCount(0);
+    expect(state.detailRequests).toEqual([]);
+
+    // Turn it on through the real Settings workspace.
+    let section = await openSettings(page, language);
+    await expect(section.getByRole("heading", { name: m["settings.section.groupAddresses"], exact: true })).toBeVisible();
+    const box = section.getByRole("checkbox", { name: m["settings.gaLastDownloadMarks"], exact: true });
+    await expect(box).not.toBeChecked();
+    await expect(section).toContainText(m["settings.gaLastDownloadMarksHint"]);
+    await box.check();
+    await expect.poll(() => state.writes.some(write => write.gaLastDownloadMarks === "true")).toBe(true);
+    await backToAddresses(page, language);
+    await expect(page.locator(".ga-workspace .ga-last-download")).toHaveAttribute("data-differs", "true");
+    await expect(page.locator(".ga-download-mark").first()).toBeVisible();
+    expect(state.detailRequests).toEqual([1]);
+
+    // And off again: the marks go and no further detail request is issued.
+    section = await openSettings(page, language);
+    await expect(box).toBeChecked();
+    await box.uncheck();
+    await expect.poll(() => state.writes.some(write => write.gaLastDownloadMarks === "false")).toBe(true);
+    const before = state.detailRequests.length;
+    await backToAddresses(page, language);
+    await expect(page.locator(".ga-workspace .ga-last-download")).toHaveCount(0);
+    await expect(page.locator(".ga-download-mark")).toHaveCount(0);
+    await page.waitForTimeout(300);
+    expect(state.detailRequests.length).toBe(before);
+    expect(state.unexpected).toEqual([]);
+  });
+}
+
+test("partial coverage: one compared device and one without a recorded download is not an all-clear", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const clean: ObjectLastDownload = { ...usable, differing: [], instances: {}, differing_objects: 0 };
+  const absent: ObjectLastDownload = { ...clean, links: { state: "absent" } };
+  const state = await intercept(page, "en", clean, { marks: "on", deviceIds: [1, 2], perDevice: { 1: clean, 2: absent } });
+  await openAddresses(page, "en");
+  const summary = page.locator(".ga-workspace .ga-last-download");
+  await expect(summary).toHaveAttribute("data-coverage", "partial");
+  await expect(summary).toHaveAttribute("data-compared", "1");
+  await expect(summary).toHaveAttribute("data-total", "2");
+  await expect(summary).toContainText(en["gaWorkspace.lastDownload.coverage.other"].replace("{compared}", "1").replace("{total}", "2"));
+  await expect(summary).toContainText(en["gaWorkspace.lastDownload.reason.absent"].replace("{count}", "1"));
+  await expect(summary).toContainText(en["gaWorkspace.lastDownload.noneDifferCompared"]);
+  await expect(summary).not.toContainText(en["gaWorkspace.lastDownload.noneDiffer"]);
+  expect([...state.detailRequests].sort()).toEqual([1, 2]); // exactly one read per device
+  expect(state.unexpected).toEqual([]);
+});
+
+test("delayed reply: loading is named, then the comparison completes", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const clean: ObjectLastDownload = { ...usable, differing: [], instances: {}, differing_objects: 0 };
+  const state = await intercept(page, "en", clean, { marks: "on", deviceIds: [1, 2], delayed: [2] });
+  await openAddresses(page, "en");
+  const summary = page.locator(".ga-workspace .ga-last-download");
+  await expect(summary).toContainText(en["gaWorkspace.lastDownload.reason.loading"].replace("{count}", "1"));
+  await expect(summary).not.toContainText(en["gaWorkspace.lastDownload.noneDiffer"]);
+  state.releaseDevice(2);
+  await expect(summary).toHaveAttribute("data-coverage", "complete");
+  await expect(summary).toContainText(en["gaWorkspace.lastDownload.noneDiffer"]);
   expect(state.unexpected).toEqual([]);
 });

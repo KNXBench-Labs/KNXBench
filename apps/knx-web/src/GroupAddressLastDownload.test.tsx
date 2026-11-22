@@ -29,11 +29,13 @@ beforeEach(() => { resetSettingsForTests(); settingsStorage.setItem("uiLanguage"
 afterEach(() => { host?.remove(); host = undefined; vi.clearAllMocks(); });
 
 // 1/0/1 = 0x0801, 1/0/2 = 0x0802, 1/0/3 = 0x0803, 2/0/1 = 0x1001.
-const ga = (id: number, address: string, name: string, range: number | null): GroupAddressNode =>
-  ({ id, address, name, range, dpts: [], links: [] });
+const link = (device_id: number): GroupAddressNode["links"][number] =>
+  ({ device_id, device_name: null, device_address: null, com_object_id: device_id * 10, com_object_number: 10, com_object_name: null, direction: "Send" });
+const ga = (id: number, address: string, name: string, range: number | null, devices: number[] = []): GroupAddressNode =>
+  ({ id, address, name, range, dpts: [], links: devices.map(link) });
 const addresses: GroupAddressNode[] = [
-  ga(30, "1/0/1", "Kitchen ceiling", 21),
-  ga(31, "1/0/2", "Kitchen dimming", 21),
+  ga(30, "1/0/1", "Kitchen ceiling", 21, [1]),
+  ga(31, "1/0/2", "Kitchen dimming", 21, [1]),
   ga(32, "1/0/3", "Hallway", 20),
   ga(33, "2/0/1", "Unassigned spare", null),
 ];
@@ -215,20 +217,23 @@ describe("tree view marks", () => {
     await act(async () => root.unmount());
   });
 
-  it("no summary and no marks without last_download (older server); a failed read keeps the previous marks off", async () => {
+  it("an older server without last_download and failed reads give no marks and say nothing was compared", async () => {
     let root = await render(undefined);
-    expect(host!.querySelector(".ga-last-download")).toBeNull();
+    expect(host!.querySelector(".ga-last-download")!.textContent).toBe(
+      `${en["gaWorkspace.lastDownload.coverage.one"].replace("{compared}", "0").replace("{total}", "1")} ${
+        en["gaWorkspace.lastDownload.notCompared"].replace("{list}", en["gaWorkspace.lastDownload.reason.failed"].replace("{count}", "1"))}`);
     expect(host!.querySelectorAll(".ga-download-mark").length).toBe(0);
     await act(async () => root.unmount());
 
-    // A fresh component whose reads fail starts with no marks at all.
     api.deviceDetail.mockRejectedValue(new Error("boom"));
     host = document.createElement("div");
     document.body.appendChild(host);
     const root2 = createRoot(host);
     await act(async () => { root2.render(<Harness />); });
     for (let i = 0; i < 20; i += 1) await act(async () => { await Promise.resolve(); });
-    expect(host!.querySelector(".ga-last-download")).toBeNull();
+    const summary = host!.querySelector(".ga-last-download")!;
+    expect(summary.getAttribute("data-coverage")).toBe("partial");
+    expect(summary.textContent).not.toContain(en["gaWorkspace.lastDownload.noneDiffer"]);
     expect(host!.querySelectorAll(".ga-download-mark").length).toBe(0);
     await act(async () => root2.unmount());
   });
@@ -316,6 +321,107 @@ describe("columns and atlas views", () => {
       .find(b => b.querySelector(".mono")?.textContent?.trim() === "2/0/1")!;
     expect(spare.closest("li")!.dataset.differsFromDownload).toBe("true");
     void clean;
+    await act(async () => root.unmount());
+  });
+});
+
+// Two devices, both linking addresses; replies controlled per device.
+describe("summary coverage", () => {
+  const twoDevices = (): InstallationNode => {
+    const inst = installation();
+    inst.topology[0]!.lines[0]!.devices.push({ id: 2, name: "Fictional switch", address: "1.1.2", description: null, com_object_count: 1 });
+    inst.group_addresses = [
+      ga(30, "1/0/1", "Kitchen ceiling", 21, [1, 2]), ga(31, "1/0/2", "Kitchen dimming", 21, [1]),
+      ga(32, "1/0/3", "Hallway", 20, [2]), ga(33, "2/0/1", "Unassigned spare", null)];
+    return inst;
+  };
+  const noneDiffer: ObjectLastDownload = { ...usable, differing: [], instances: {}, differing_objects: 0 };
+  const settle = async () => { for (let i = 0; i < 20; i += 1) await act(async () => { await Promise.resolve(); }); };
+  const summaryText = () => host!.querySelector(".ga-last-download")?.textContent ?? null;
+  const reason = (key: string, count = 1) => en[`gaWorkspace.lastDownload.reason.${key}` as keyof typeof en].replace("{count}", String(count));
+  const mount = async () => {
+    host = document.createElement("div"); document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => { root.render(<Harness inst={twoDevices()} />); });
+    return root;
+  };
+  const deferred = () => { let resolve!: (d: DeviceDetail) => void; let reject!: (e: unknown) => void;
+    const promise = new Promise<DeviceDetail>((res, rej) => { resolve = res; reject = rej; }); return { promise, resolve, reject }; };
+  const detailOf = (id: number, lastDownload: ObjectLastDownload): DeviceDetail => ({ ...detail(lastDownload), id });
+
+  it("one usable no-difference device beside an absent one is not an all-clear", async () => {
+    api.deviceDetail.mockImplementation(async (id: number) => detailOf(id, id === 1 ? noneDiffer : { ...noneDiffer, links: { state: "absent" } }));
+    const root = await mount(); await settle();
+    const summary = host!.querySelector(".ga-last-download")!;
+    expect(summary.getAttribute("data-coverage")).toBe("partial");
+    expect(summary.getAttribute("data-compared")).toBe("1");
+    expect(summary.getAttribute("data-total")).toBe("2");
+    expect(summary.textContent).toContain(en["gaWorkspace.lastDownload.coverage.other"].replace("{compared}", "1").replace("{total}", "2"));
+    expect(summary.textContent).toContain(reason("absent"));
+    expect(summary.textContent).toContain(en["gaWorkspace.lastDownload.noneDifferCompared"]);
+    expect(summary.textContent).not.toContain(en["gaWorkspace.lastDownload.noneDiffer"]);
+    await act(async () => root.unmount());
+  });
+
+  it("every device usable and clean says so installation-wide", async () => {
+    api.deviceDetail.mockImplementation(async (id: number) => detailOf(id, noneDiffer));
+    const root = await mount(); await settle();
+    const summary = host!.querySelector(".ga-last-download")!;
+    expect(summary.getAttribute("data-coverage")).toBe("complete");
+    expect(summary.textContent).toContain(en["gaWorkspace.lastDownload.noneDiffer"]);
+    expect(summary.textContent).not.toContain(en["gaWorkspace.lastDownload.coverage.other"].replace("{compared}", "2").replace("{total}", "2"));
+    await act(async () => root.unmount());
+  });
+
+  it("a delayed reply keeps the summary partial until it arrives, then completes it", async () => {
+    const slow = deferred();
+    api.deviceDetail.mockImplementation((id: number) => id === 1 ? Promise.resolve(detailOf(1, noneDiffer)) : slow.promise);
+    const root = await mount(); await settle();
+    expect(summaryText()).toContain(reason("loading"));
+    expect(summaryText()).not.toContain(en["gaWorkspace.lastDownload.noneDiffer"]);
+    await act(async () => { slow.resolve(detailOf(2, noneDiffer)); }); await settle();
+    expect(host!.querySelector(".ga-last-download")!.getAttribute("data-coverage")).toBe("complete");
+    expect(summaryText()).toContain(en["gaWorkspace.lastDownload.noneDiffer"]);
+    await act(async () => root.unmount());
+  });
+
+  it("a failed read stays partial and names the failure; other states are told apart", async () => {
+    api.deviceDetail.mockImplementation(async (id: number) => {
+      if (id === 2) throw new Error("boom");
+      return detailOf(1, { ...noneDiffer, links: { state: "otherProgram" } });
+    });
+    let root = await mount(); await settle();
+    expect(summaryText()).toContain(reason("failed"));
+    expect(summaryText()).toContain(reason("otherProgram"));
+    expect(summaryText()).toContain(en["gaWorkspace.lastDownload.coverage.other"].replace("{compared}", "0").replace("{total}", "2"));
+    expect(summaryText()).not.toContain(en["gaWorkspace.lastDownload.noneDiffer"]);
+    await act(async () => root.unmount());
+    host!.remove();
+    api.deviceDetail.mockImplementation(async (id: number) =>
+      detailOf(id, { ...noneDiffer, links: { state: id === 1 ? "productUnavailable" : "currentUnreadable" } }));
+    root = await mount(); await settle();
+    expect(summaryText()).toContain(reason("productUnavailable"));
+    expect(summaryText()).toContain(reason("currentUnreadable"));
+    await act(async () => root.unmount());
+  });
+
+  it("marks from the compared device stay while the other is unknown; a device linked in several rows counts once", async () => {
+    api.deviceDetail.mockImplementation(async (id: number) =>
+      id === 1 ? detailOf(1, usable) : detailOf(2, { ...usable, links: { state: "absent" } }));
+    const root = await mount(); await settle();
+    const summary = host!.querySelector(".ga-last-download")!;
+    expect(summary.getAttribute("data-total")).toBe("2"); // device 1 links two addresses, device 2 two, both counted once
+    expect(summary.textContent).toContain(en["gaWorkspace.lastDownload.differs.other"].replace("{count}", "3"));
+    expect(summary.getAttribute("data-differs")).toBe("true");
+    await act(async () => root.unmount());
+  });
+
+  it("German coverage copy", async () => {
+    settingsStorage.setItem("uiLanguage", "de"); resetUiLanguageForTests();
+    api.deviceDetail.mockImplementation(async (id: number) => detailOf(id, id === 1 ? noneDiffer : { ...noneDiffer, links: { state: "absent" } }));
+    const root = await mount(); await settle();
+    expect(summaryText()).toContain(de["gaWorkspace.lastDownload.coverage.other"].replace("{compared}", "1").replace("{total}", "2"));
+    expect(summaryText()).toContain(de["gaWorkspace.lastDownload.reason.absent"].replace("{count}", "1"));
     await act(async () => root.unmount());
   });
 });

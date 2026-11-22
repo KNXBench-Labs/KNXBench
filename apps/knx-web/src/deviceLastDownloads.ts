@@ -2,7 +2,8 @@
 // Reuses the object-inventory pattern: one snapshot-bound read per device, replies
 // applied only for their own generation, project and snapshot, so a late reply for
 // another project or device never reaches the view. The read is gated on an explicit
-// opt-in preference (absent by default, so existing tests and private mode see no call).
+// Settings preference ("Last-download marks", off by default; see WP-48.5), so a profile
+// that never enabled it issues no per-device call.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import type { DeviceNode } from "./bindings/DeviceNode";
@@ -10,12 +11,25 @@ import type { ObjectLastDownload } from "./bindings/ObjectLastDownload";
 import { useProductLanguage } from "./productLanguage";
 import { settingsStorage, useSettingsRevision } from "./settingsStore";
 
-/** The opt-in key; absent means the group-address last-download marks stay off. */
+/** The preference key; absent means the group-address last-download marks stay off. */
 export const GA_LAST_DOWNLOAD_KEY = "gaLastDownloadMarks";
 
-/** Whether the opt-in preference is on; absent or unparsable means off. */
+/** Whether the preference is on. Off by default: it reads every device's detail. Only `"true"`/`"1"` enable it. */
 export function gaLastDownloadMarksEnabled(storage: Pick<Storage, "getItem"> = settingsStorage): boolean {
-  try { return storage.getItem(GA_LAST_DOWNLOAD_KEY) === "1"; } catch { return false; }
+  try { const value = storage.getItem(GA_LAST_DOWNLOAD_KEY); return value === "true" || value === "1"; } catch { return false; }
+}
+
+/** Writes the preference as the literal `"true"`/`"false"`, like the other boolean preferences. */
+export function saveGaLastDownloadMarks(storage: Pick<Storage, "setItem">, enabled: boolean): void {
+  storage.setItem(GA_LAST_DOWNLOAD_KEY, enabled ? "true" : "false");
+}
+
+/** The preference as React state, re-read whenever the settings record changes. */
+export function useGaLastDownloadMarks(): [boolean, (enabled: boolean) => void] {
+  const revision = useSettingsRevision();
+  const [enabled, setEnabledState] = useState(() => gaLastDownloadMarksEnabled());
+  useEffect(() => { setEnabledState(gaLastDownloadMarksEnabled()); }, [revision]);
+  return [enabled, (value: boolean) => { setEnabledState(value); saveGaLastDownloadMarks(settingsStorage, value); }];
 }
 
 export type LastDownloadEntry =
@@ -28,6 +42,8 @@ export interface DeviceLastDownloads {
   source: object;
   /** The current snapshot's comparison per device; absent entry means not yet read. */
   current: Map<number, ObjectLastDownload | undefined>;
+  /** The preference state this read set was built under. */
+  enabled: boolean;
   load: (deviceId: number) => void;
 }
 
@@ -38,17 +54,18 @@ export interface DeviceLastDownloads {
  */
 export function useDeviceLastDownloads(devices: DeviceNode[], snapshot: object, projectKey: string): DeviceLastDownloads {
   const [language] = useProductLanguage();
-  const revision = useSettingsRevision();
+  useSettingsRevision(); // re-render on a preference change; only the preference itself restarts the reads
   const enabled = gaLastDownloadMarksEnabled();
-  const source = useMemo(() => ({}), [snapshot, language, projectKey, enabled, revision]);
+  const source = useMemo(() => ({}), [snapshot, language, projectKey, enabled]);
   const [entries, setEntries] = useState<ReadonlyMap<number, LastDownloadEntry>>(() => new Map());
   const entriesRef = useRef(entries); entriesRef.current = entries;
-  const live = useRef({ source, language, projectKey, mounted: true, generations: new Map<number, number>() });
+  const live = useRef({ source, language, projectKey, mounted: true, generations: new Map<number, number>(), inflight: new Map<number, object>() });
 
   const load = useCallback((deviceId: number) => {
     const l = live.current;
     const generation = (l.generations.get(deviceId) ?? 0) + 1;
     l.generations.set(deviceId, generation);
+    l.inflight.set(deviceId, l.source);
     const requestSource = l.source;
     setEntries(previous => {
       const old = previous.get(deviceId);
@@ -57,6 +74,7 @@ export function useDeviceLastDownloads(devices: DeviceNode[], snapshot: object, 
     });
     const settle = (entry: LastDownloadEntry) => {
       if (!l.mounted || l.generations.get(deviceId) !== generation || l.source !== requestSource) return;
+      l.inflight.delete(deviceId);
       setEntries(previous => new Map(previous).set(deviceId, entry));
     };
     // The read is optional for the marks: a missing or failed comparison marks nothing.
@@ -78,7 +96,7 @@ export function useDeviceLastDownloads(devices: DeviceNode[], snapshot: object, 
     const l = live.current;
     const switched = l.projectKey !== projectKey;
     l.source = source; l.language = language; l.projectKey = projectKey;
-    const forget = (id: number) => l.generations.set(id, (l.generations.get(id) ?? 0) + 1);
+    const forget = (id: number) => { l.generations.set(id, (l.generations.get(id) ?? 0) + 1); l.inflight.delete(id); };
     if (switched || !enabled) {
       for (const id of l.generations.keys()) forget(id);
       if (entriesRef.current.size > 0) setEntries(new Map());
@@ -96,6 +114,7 @@ export function useDeviceLastDownloads(devices: DeviceNode[], snapshot: object, 
     if (!enabled) return;
     for (const device of devices) {
       const entry = entriesRef.current.get(device.id);
+      if (l.inflight.get(device.id) === source) continue; // StrictMode's second effect run must not double-read
       if (entry === undefined || (entry.status !== "failed" && entry.source !== source)) load(device.id);
     }
   }, [source, language, projectKey, devices, load, enabled]);
@@ -109,5 +128,5 @@ export function useDeviceLastDownloads(devices: DeviceNode[], snapshot: object, 
     return map;
   }, [devices, entries, source]);
 
-  return { entries, source, current, load };
+  return { entries, source, current, enabled, load };
 }

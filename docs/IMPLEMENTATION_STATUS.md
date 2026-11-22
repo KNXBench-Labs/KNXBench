@@ -39,6 +39,18 @@ hardware. Tests: component tests in `ParameterPanel.lastDownload.test.tsx`,
 cases in `parameter-last-download.e2e.ts` (en/de, 1440/400 px, plus the
 Manufacturer fields view). See [WP-37](open-work/WP-37-pending-changes-across-ui.md).
 
+## Group-address last-download marks: Settings switch and honest coverage (22 November 2026; WP-48.5)
+
+The marks added by WP-37 were gated on a `gaLastDownloadMarks` setting that nothing in the
+UI could set. Settings now has a **Group addresses** section with a translated (en/de)
+checkbox, off by default because enabling it reads every device's detail. The group-address
+summary line now compares against every device linked in the address index (each counted
+once) and states which subset was compared and why the rest was not (loading, failed,
+absent, other program, product unavailable, current unreadable); it says "no address's links
+differ" only when every relevant device has a usable comparison. Web-only (`apps/knx-web`);
+implemented on branch `work/wp48-5-ga-last-download-20261122`, pending review/gate.
+Intercepted-browser tests only; no hardware run.
+
 ## Group-address last-download marks delivered (20 November 2026; WP-37, PR !104)
 
 The group-address views (tree, columns, atlas, matrix) now carry the amber

@@ -410,6 +410,14 @@ send.
 Clicking a row in the telegram table prefills the form's destination with that row's
 address and, for a decoded value, its DPT. It does not send anything.
 
+**Since Alpha 23:** the destination field is searchable by address, name and data type, and
+free typing still works for an address outside the project. The group-address workspace
+offers a **send** action that opens this form with the address filled in; choosing an address
+never sends, sending stays the separate explicit **Send** step. The telegram details pane
+stays in view while the table scrolls, table headers are sticky and every column sorts
+(time order is exact; ties keep their arrival order), and while connected the status bar
+counts the received and sent telegrams of the current session.
+
 Since Alpha.10, **DPT**
 is a dropdown, not a free-text field. Choose a name such as **Temperature (9.001)**
 (**Temperatur (9.001)** in German), or choose **Use the group address’s DPT**

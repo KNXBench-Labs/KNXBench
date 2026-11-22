@@ -1,5 +1,7 @@
 # WP-46 — Calmer UI copy: "Default" priority label, explanations behind ?, one-time hints
 
+**Release:** the delivered parts of this package ship in Alpha 23 ([release notes](../releases/alpha23.md)).
+
 Origin: owner UI feedback, 17 November 2026 (WebUI session). Not tied to a
 GitHub issue.
 

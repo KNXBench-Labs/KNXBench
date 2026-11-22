@@ -49,9 +49,10 @@ Devices built from modules (the same module used several times in one applicatio
 used to share one pool of remembered values. Now each module instance keeps its own,
 so “changed since the last download” can be shown for the right instance. The way a
 repeated instance is identified follows the accepted
-[module-instance decision](../adr/0177-accepted-wp07-mapping-is-the-module-instance-authority.md),
-which rests on a counted comparison against exported projects
-([evidence](../research/2026-11-17-wp07-module-mapping-witness.md)).
+[module-instance decision record](../adr/0189-accepted-wp07-mapping-is-the-module-instance-authority.md)
+(the owner accepted the counted comparison against exported projects it rests on,
+[evidence](../research/2026-11-17-wp07-module-mapping-witness.md); the record itself is
+still marked as a proposal).
 
 - Module and ownership lookups are now exact. A module instance is matched by its
   full identity, not by whether one name happens to appear inside another; unclear
@@ -189,31 +190,33 @@ able to fail when the behaviour breaks.
 
 [Audit and per-finding outcome](../open-work/WP-48-recent-change-correctness-audit.md)
 
-PART-B-PENDING
+## Exporting stored device profiles from the command line
 
-## Exporting stored device profiles from the command line (pull request #137)
+A device configuration that you saved in a project can now be turned into its export
+file without opening the app:
 
-> This section describes a change that is **not yet on the main branch** when this
-> draft was written. It is only part of the release if the pull request is merged.
+```bash
+knx devconf export-stored <project.knxdb> --device <id> --module <module.devconf.json> --export <id> --output <file>
+```
 
-`knx devconf export-stored <project.knxdb> --device <id> --module <module.devconf.json> --export <id> --output <file>`
-reads one saved project **read-only** and writes the device’s stored configuration
-export to a file.
+The command reads one saved project **read-only** and writes the device's stored
+configuration export to the file you name.
 
-- The stored profile’s module id, version and checksum must match the module you
-  name; there is no fallback to another version.
+- The stored profile's module id, version and checksum must match the module you
+  name. There is no fallback to another version; a mismatch writes nothing.
 - The project is never migrated or written. An older project is upgraded only in a
-  memory copy.
+  memory copy. SQLite may still maintain its usual companion files next to a project
+  that is being read.
 - An output file that is the project, the module or a database side file of the
   project is refused before anything is read.
 - Exit codes: 0 success; 1 invalid document, module mismatch or refused export;
-  2 unusable input.
+  2 unusable input (for example an unknown device or a device without a stored
+  profile).
 - Offline file work only: no bus, device or download. Behaviour against a project
   being written at the same moment, or a path swapped mid-run, is untested.
 
-[Contract](../contracts/device-configuration-modules.md)
-
-<!-- PART-B-END -->
+[Contract](../contracts/device-configuration-modules.md) ·
+[Command-line chapter](../manual/user-guide/10-command-line.md#device-configuration-modules-and-stored-exports)
 
 ## Upgrade
 
@@ -267,8 +270,8 @@ product database; no downgrade path is provided or tested.
 
 | | Alpha 23 |
 |---|---|
-| Commits since Alpha 22 | **274** (**179** without merges), counted at main before the two pending pull requests |
-| Files changed | **463**, +38,330 / −1,362 lines |
+| Commits since Alpha 22 | **291** (**193** without merges), counted up to the version bump |
+| Files changed | **469**, +39,608 / −1,373 lines |
 | Estimated active development time | RELEASE-GATE-PENDING |
 | Rust tests | RELEASE-GATE-PENDING |
 | Frontend unit tests | RELEASE-GATE-PENDING |

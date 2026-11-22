@@ -88,6 +88,12 @@ System presentation and reports an unavailable selection without overwriting the
 saved identity. This is source-established fallback, not an executed downgrade
 probe. Whole-data downgrade compatibility remains untested.
 [Alpha 22 upgrade notes](releases/alpha22.md#upgrade).
+Alpha 23 moves native/model 21 → 22 (module-scoped last-download values and one stored
+device-configuration document per device; additive) and product33 → product34 (one typed
+inline-section column; products already stored keep their earlier layout data). Alpha 22
+and older refuse both newer versions by their version checks (source-established, not an
+executed downgrade test). Restore closed pre-upgrade copies to return; no downgrade path
+is provided. [Alpha 23 upgrade notes](releases/alpha23.md#upgrade).
 Alpha 15 supports product26, and the preceding master-provenance source
 supports product27; builds with either older maximum refuse product28 by
 their version check. This is source-established refusal, not an executed

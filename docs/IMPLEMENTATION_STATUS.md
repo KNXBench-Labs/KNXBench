@@ -12,6 +12,32 @@ for an older date keep that date and their original ordering in the archive.
 archival checkpoint move complete entries into their dated period, preserve
 fragment aliases and update this index. Do not rewrite previous results.
 
+## Alpha 23 pre-release (source cutoff 22 November 2026)
+
+The [released scope](releases/alpha23.md) contains the delivered work since Alpha 22:
+module-instance parameter values and last-download marks (project schema 22), the
+device Configuration tab and `knx devconf` (including read-only `export-stored`), the
+optional manual Reko catalogue source, the searchable send form with a send action in
+the group-address workspace, bus-monitor workspace changes, more parameter-layout
+fidelity (product database 34), further simulator-only programming safeguards, #50
+report reconciliation, the #52 explicit complete-programming offer, the #51 send
+workflow and the WP-48 correctness fixes. Project schema 21 → 22 and product database
+33 → 34; Alpha 22 and older refuse the upgraded files. Historical source/build
+observations keep their original identities; release inclusion does not rebind native
+or hardware evidence. #50, #51 and #53 are closed; #49 and #52 remain open; #22 remains
+open. Final release verification is recorded in the release notes.
+
+## Stored-profile export from the command line (22 November 2026; WP-42, PR #137)
+
+`knx devconf export-stored <project.knxdb> --device <id> --module <module.devconf.json>
+--export <id> --output <file>` reads one saved project read-only and writes the device's
+stored configuration export. The stored profile's module id, version and SHA-256 must equal
+the named module; the project is never migrated or written (an older project is upgraded in
+a memory copy), and an output that is the project, the module or a project sidecar is
+refused before anything is read. Offline file work only; behaviour against a concurrent
+writer or a path swapped mid-run is untested. Ships in Alpha 23.
+[Contract](contracts/device-configuration-modules.md#cli).
+
 ## WP-48 recent-change correctness audit closed (22 November 2026)
 
 All nine WP-48 slices are on main (PRs #127 and #129–#135; the closeout is documentation
@@ -87,10 +113,10 @@ no hardware run.
 
 ## Alpha 22 pre-release (source cutoff 15 November 2026)
 
-**Delivered, not in Alpha 22:** the owner-authorized Reko online catalogue
-shipped on main 16 November 2026 as `c079ec8d6`, after this cutoff. See
+**Delivered after this cutoff, ships in Alpha 23:** the owner-authorized Reko online
+catalogue shipped on main 16 November 2026 as `c079ec8d6`. See
 [LS-02](open-work/LS-02-online-catalogue.md) for the delivered scope; it is
-not included in the Alpha 22 result below.
+not part of the Alpha 22 result below.
 
 The [released scope](releases/alpha22.md) contains the bounded 14 November
 workspace, navigation, caption, focus and module-owner slices below, more
@@ -103,7 +129,9 @@ confirmed and closed 14 November for changes shipped in Alpha 21; #30 is closed,
 
 <a id="device-configuration-modules-15-november-2026-wp-42-1"></a>
 
-## Device configuration modules: format, engine and CLI (15 November 2026; WP-42.1, after the Alpha 22 cutoff)
+<a id="device-configuration-modules-format-engine-and-cli-15-november-2026-wp-421-after-the-alpha-22-cutoff"></a>
+
+## Device configuration modules: format, engine and CLI (15 November 2026; WP-42.1, ships in Alpha 23)
 
 A device configuration module is a JSON package describing a device's own
 configuration document: typed members and tables, rules as JSON expression

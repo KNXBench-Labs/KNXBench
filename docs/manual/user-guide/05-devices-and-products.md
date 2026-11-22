@@ -568,8 +568,7 @@ apply until their next regular download. Parameters of module instances are not 
 line also says when the application program changed or product data is missing,
 since then nothing can be compared.
 
-**Links and flags that differ from the last download** *(source build after
-Alpha 20, 12 November 2026; issue #40)*: the project also remembers the links
+**Links and flags that differ from the last download** *(since Alpha 21; issue #40)*: the project also remembers the links
 and the object flags a completed KNXBench download wrote. The **Communication
 objects** tab marks each object whose links or flags you have changed since
 with the amber dot and a caption under its name, for example **Links differ
@@ -734,14 +733,12 @@ The native table scrolls locally on narrow screens; there is no column resizing.
 
 ### Reko online catalogue
 
-**Availability:** shipped on main since 16 November 2026 (`c079ec8d6`); not
-included in the Alpha 22 release image. These instructions describe the
-current controls, not a feature promised by the Alpha 22 download.
+**Availability:** included since Alpha 23 (merged on main 16 November 2026), optional
+and manual. It was tested with local fixtures, not the live provider.
 [Delivered work](../../open-work/LS-02-online-catalogue.md).
 
 **Goal:** find a product file in a local copy of the Reko index, acquire and
-verify that exact file, then explicitly import it. You need a build containing
-this delivery; an account on the provider website is needed for an uncached
+verify that exact file, then explicitly import it. You need Alpha 23 or later; an account on the provider website is needed for an uncached
 download. Local-file installation remains available if Reko is unavailable.
 
 1. Open **Product catalog**. At the install control choose **Reko** in
@@ -1189,7 +1186,29 @@ evidence in the source-bound matrix; the broader limitation is not closed.
 Select a device and the center of the workbench shows its panel: the name, the
 individual address and tabs for objects, parameters, product data, diagnostics
 and manufacturer fields. `←` and `→` move between tabs, `Home` and `End`
-jump to the first and last.
+jump to the first and last. Since Alpha 23, a device with an installed module package
+also has a **Configuration** tab (below).
+
+### Device configuration (since Alpha 23)
+
+A **module package** is a declarative data file that describes one device's own
+configuration document, for example a menu tree, key actions and LED policies. KNXBench
+contains no device-specific code; the module says what the document looks like.
+
+- The **Configuration** tab appears for a device that has an installed module package. It
+  loads the document stored in the project, so you edit what you saved earlier instead of
+  retyping it.
+- Each apply is one undoable project step. Undo and redo refresh the tab, and your own apply
+  does not raise a false "changed elsewhere" warning.
+- New documents must be valid JSON; older stored bytes are kept as they are, not silently
+  rewritten. If the module is missing, the stored document stays unchanged and read-only.
+- This is **editing and exporting only. Nothing is sent to a device**; downloading a
+  configuration to hardware is not provided and not qualified.
+- To write a stored document's export file from a script, see
+  [`knx devconf export-stored`](10-command-line.md#device-configuration-modules-and-stored-exports).
+
+Table columns in the Devices and catalogue views are configurable (since Alpha 23).
+[Contract](../../contracts/device-configuration-modules.md).
 
 ### Address and line
 

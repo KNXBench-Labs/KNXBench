@@ -1,5 +1,7 @@
 # WP-07 — Module-instance authority
 
+**Release:** the delivered parts of this package ship in Alpha 23 ([release notes](../releases/alpha23.md)).
+
 **Status:** Unblocked by owner decision 17 November 2026 (evidence block lifted; [OWN-01](OWN-01-owner-decisions.md#decision-recorded--17-november-2026)). Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 **Evidence route:** clean-room observation is admitted by the owner (8 November 2026; [OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)).

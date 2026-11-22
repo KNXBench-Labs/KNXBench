@@ -1,5 +1,7 @@
 # WP-43 — Programming and group-address feedback, issues #49–#52
 
+**Release:** the delivered parts of this package ship in Alpha 23 ([release notes](../releases/alpha23.md)).
+
 Origin: owner-authorized issue batch, 16 November 2026. Implementation and independent
 reviews use Mistral subagents; the parent owns acceptance and publication.
 

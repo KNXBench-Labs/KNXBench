@@ -1,5 +1,7 @@
 # WP-05 — Parameter layout fidelity: remaining features
 
+**Release:** the delivered parts of this package ship in Alpha 23 ([release notes](../releases/alpha23.md)).
+
 **Status:** In progress: conditional block rename is implemented (9 November 2026).
 Literal program-owned axis translations are implemented, package-gate accepted and
 published on main (14 November), with independent source review; broader features stay open.

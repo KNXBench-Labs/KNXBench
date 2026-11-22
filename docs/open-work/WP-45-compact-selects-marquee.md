@@ -1,5 +1,7 @@
 # WP-45 — Compact dropdown fields with hover marquee on overflow
 
+**Release:** the delivered parts of this package ship in Alpha 23 ([release notes](../releases/alpha23.md)).
+
 Origin: owner UI feedback, 17 November 2026 (WebUI session). Not tied to a
 GitHub issue.
 

@@ -18,17 +18,17 @@ Docker Desktop networking is not a verified substitute for Linux host networking
 ## a) Linux AppImage
 
 The commands below use the
-[`v0.1.0-alpha.22`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.22)
+[`v0.1.0-alpha.23`](https://github.com/KNXBench-Labs/KNXBench/releases/tag/v0.1.0-alpha.23)
 pre-release.
-Download **both** `KNXBench_0.1.0-alpha.22_amd64.AppImage` and `SHA256SUMS` from
+Download **both** `KNXBench_0.1.0-alpha.23_amd64.AppImage` and `SHA256SUMS` from
 that release page into the same directory.
 
 From that directory:
 
 ```bash
 sha256sum -c --ignore-missing SHA256SUMS
-chmod +x KNXBench_0.1.0-alpha.22_amd64.AppImage
-./KNXBench_0.1.0-alpha.22_amd64.AppImage
+chmod +x KNXBench_0.1.0-alpha.23_amd64.AppImage
+./KNXBench_0.1.0-alpha.23_amd64.AppImage
 ```
 
 `SHA256SUMS` also lists the `knx-mcp` binary; `--ignore-missing` checks only the
@@ -38,7 +38,7 @@ files you downloaded and still fails on any mismatch.
 welcome screen. Stop if the checksum differs; do not solve an integrity warning
 by becoming less interested in it.
 
-The Alpha 22 AppImage is built on Ubuntu 24.04 and needs **glibc 2.39 or newer**
+The Alpha 23 AppImage is built on Ubuntu 24.04 and needs **glibc 2.39 or newer**
 (the Alpha 19 AppImage needed 2.43 and could only be started by its file owner; both
 are fixed). The glibc floor is checked for every packaged library; it is not a
 promise for every distribution or graphics driver.
@@ -58,7 +58,14 @@ The [launcher contract](../../APPIMAGE_LAUNCHER.md) records the tested boundary.
 older data directory. Keep the old files and open/copy them deliberately; see
 [known limitation §161](../../KNOWN_LIMITATIONS.md#161-alpha5-does-not-pick-up-the-alpha4-data-folder).
 
-**Alpha 22:** project schema **21** and product database **33** are unchanged
+**Alpha 23:** project files move **21 → 22** (per-module parameter values and stored device
+configuration) and the product database **33 → 34**. Opening a project or the database
+upgrades it, and **Alpha 22 and older refuse the upgraded files**. Close KNXBench and back up
+the complete data directory or volume, projects, device backups and original inputs before
+updating; reinstalling an older program does not undo the upgrade, so restore the backups to go
+back. [Alpha 23 upgrade notes](../../releases/alpha23.md#upgrade).
+
+**Earlier Alpha 22:** project schema **21** and product database **33** are unchanged
 from Alpha 21; no migration is added. Still close KNXBench and back up the
 complete data directory or volume, projects, device backups and original inputs
 before updating. Returning to Alpha 21 with a technical theme selected uses its
@@ -154,8 +161,7 @@ check; Alpha.9 and older do not announce updates. [Detailed scope and privacy](.
 
 ## b) Docker / web
 
-**Reko source candidate:** Alpha 22 does not include it. If you build the Reko
-branch, persist `/config` with an explicit named volume/bind as well as `/data`,
+**Reko online catalogue (Alpha 23):** optional. If you use it, persist `/config` with an explicit named volume/bind as well as `/data`,
 reattach the same config storage on container replacement and back it up
 separately. [Key storage and recovery](../user-guide/11-web-and-docker.md#reko-configuration-and-key-persistence).
 
@@ -182,7 +188,7 @@ compare the browser's certificate fingerprint with the one in
 
 **Choose your update policy:** `latest` follows published releases, including
 alpha pre-releases; it does not track `main`. Use
-`knxbench/knxbench-server:0.1.0-alpha.22` in both commands to pin that release.
+`knxbench/knxbench-server:0.1.0-alpha.23` in both commands to pin that release.
 The source server and source-built images now default to 8484. Keeping
 `-e KNX_PORT=8484` also makes the commands work with Alpha.9 and older images.
 Images start at `0.1.0-alpha.6` (9 October 2026); see

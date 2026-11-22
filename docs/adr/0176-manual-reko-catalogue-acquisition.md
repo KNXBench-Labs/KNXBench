@@ -1,7 +1,7 @@
 # ADR 0176: Reko supplies files; the existing catalogue importer still decides
 
 Date: 2026-11-16
-Status: Accepted implementation direction (owner); delivered on main 16 November 2026 as `c079ec8d6`; not in Alpha 22, release/deployment remain separate
+Status: Accepted implementation direction (owner); delivered on main 16 November 2026 as `c079ec8d6`; ships in Alpha 23, deployment remains separate
 Session: Reko catalogue
 Scope: LS-02 / FUTURE-05, Reko acquisition for the shared web/native backend
 

@@ -1,5 +1,7 @@
 # WP-42 — Device configuration modules
 
+**Release:** the delivered parts of this package ship in Alpha 23 ([release notes](../releases/alpha23.md)).
+
 Owner request: 14–15 November 2026 (configurable menus, keys and LEDs for a
 device with own firmware; KNXBench configures the structure). Owner decisions
 15 November 2026: KNXBench stays modular and simple to extend; module data is

@@ -2,6 +2,22 @@
 
 # Implementation status
 
+## Alpha 23 baseline
+
+[Alpha 23](../releases/alpha23.md) ships, at the bounded scope its notes list: parameter
+values and last-download marks kept per module instance; a **Configuration** tab for
+devices with an installed module package (editing and exporting only, nothing is sent to a
+device) and the `knx devconf` command including read-only `export-stored`; an optional,
+manual Reko catalogue source beside local files; a searchable send destination and a send
+action from the group-address workspace; bus-monitor sticky details, sortable columns and
+session counters; more parameter-layout fidelity; compact dropdowns and configurable
+table columns; and further programming safeguards that were tested against simulators
+only. Project schema moves **21 → 22** and the product database **33 → 34**; **Alpha 22
+and older refuse the upgraded files.** The Reko catalogue was tested with local fixtures,
+not the live provider. #50, #51 and #53 are closed; #49 and #52 remain open; #22 remains
+open. Native evidence below retains its measured builds, not blanket acceptance of the
+Alpha 23 desktop.
+
 ## Alpha 22 baseline
 
 [Alpha 22](../releases/alpha22.md) ships the bounded workspace, parameter,
@@ -870,10 +886,10 @@ change before anything is installed, backs up the product catalogue before
 installing, and lists backups you can restore after confirming
 ([how to use it](user-guide/05-devices-and-products.md#updating-with-a-preview-since-alpha-10),
 [limits](../KNOWN_LIMITATIONS.md#catalogue-updates-come-only-from-files-you-supply-2026-10-12)).
-That supplied-file workflow is included in Alpha.10. The released workflow
-described here does not fetch an online catalogue. A separate owner-authorized
-[Reko branch workflow](user-guide/05-devices-and-products.md#reko-online-catalogue)
-is WIP as of 16 November 2026, not accepted, published or included in Alpha 22.
+That supplied-file workflow is included in Alpha.10 and stays the default. Since Alpha 23, an
+optional, manual [Reko catalogue workflow](user-guide/05-devices-and-products.md#reko-online-catalogue)
+can fetch size- and hash-verified product files into the same importer; nothing contacts the
+service until you ask, and it was tested with local fixtures, not the live provider.
 
 ## Checked parameter editors (12 October 2026 source)
 

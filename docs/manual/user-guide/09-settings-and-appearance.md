@@ -319,7 +319,7 @@ changed; a summary line above the views reports the result. The summary says how
 relevant devices were compared and why the others were not (still loading, could not be read,
 no recorded download, downloaded with another application program, no product data, current
 links cannot be built). It only says that no address differs when every relevant device was
-compared. *(source build after the current release)*
+compared. *(since Alpha 23)*
 
 ## Toast notifications
 

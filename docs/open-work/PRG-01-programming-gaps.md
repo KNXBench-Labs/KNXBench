@@ -1,5 +1,7 @@
 # PRG-01 — Close non-Secure programming gaps
 
+**Release:** the delivered parts of this package ship in Alpha 23 ([release notes](../releases/alpha23.md)).
+
 **Status:** In progress, paused at evidence wall (21 November 2026, N15). Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 **Owner:** programming-correctness track; see the restart snapshot

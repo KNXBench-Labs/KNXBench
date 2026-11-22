@@ -246,6 +246,37 @@ when the projects differ (ambiguity included) and `2` when an argument, input, i
 store fails, so a script can tell the two apart. The result format is described in
 [Documentation export and project comparison](08-reports-and-diff.md).
 
+<a id="device-configuration-modules-and-stored-exports"></a>
+
+### `knx devconf` — device configuration modules and stored exports (since Alpha 23)
+
+```bash
+knx devconf check <module.devconf.json> [--json]
+knx devconf validate <module.devconf.json> <document.json> [--json]
+knx devconf export <module.devconf.json> <document.json> --export <id> --output <file>
+knx devconf export-stored <project.knxdb> --device <id> --module <module.devconf.json> --export <id> --output <file>
+```
+
+A module package is a data file that describes a device's own configuration document.
+`check`, `validate` and `export` work on files only. `export-stored` reads one saved
+project **read-only** and writes the configuration document stored for the device, as the
+module's export, to `--output`:
+
+- The stored profile's module id, version and checksum must match the module you name; there
+  is no fallback to another version, and a mismatch writes nothing.
+- The project is never migrated or written. An older project is upgraded only in a memory
+  copy; SQLite may still maintain its usual companion files while the project is read.
+- An output that is the project, the module or a database side file of the project is refused
+  before anything is read.
+- Exit codes: `0` success; `1` invalid document, module mismatch or refused export; `2`
+  unusable input (for example an unknown device, a device without a stored profile, an
+  unknown export or an unsafe output path).
+- No bus, device or download is involved. Behaviour against a project being written at the
+  same moment, or a path swapped mid-run, is untested.
+
+[Contract](../../contracts/device-configuration-modules.md#cli) ·
+[Configuration tab](05-devices-and-products.md#device-configuration-since-alpha-23).
+
 ## Working with product databases
 
 These subcommands manage the shared product database — manufacturer data, products

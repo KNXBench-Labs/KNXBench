@@ -1,5 +1,7 @@
 # WP-44 — Bus monitor details sticky, status-bar session counters and connected animation
 
+**Release:** the delivered parts of this package ship in Alpha 23 ([release notes](../releases/alpha23.md)).
+
 Origin: owner UI feedback, 17 November 2026 (WebUI session). Not tied to a GitHub
 issue; intake through the owner.
 

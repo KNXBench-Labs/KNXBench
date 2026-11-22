@@ -108,8 +108,8 @@ warning. The quick-start plaintext password is visible in the container environm
 and may enter shell history; use [Setting a password](#setting-a-password) for a
 hashed credential in a lasting setup.
 
-- **Tags:** the release version without its `v` (`0.1.0-alpha.22` for the tag
-  `v0.1.0-alpha.22`) and `latest`. While KNXBench is in alpha, `latest` moves
+- **Tags:** the release version without its `v` (`0.1.0-alpha.23` for the tag
+  `v0.1.0-alpha.23`) and `latest`. While KNXBench is in alpha, `latest` moves
   with every pre-release; pin a version tag if an update should be your own
   decision.
 - **Availability:** from `v0.1.0-alpha.6` (9 October 2026) on; `v0.1.0-alpha.5`
@@ -176,8 +176,7 @@ them from then on.
 
 ### Reko configuration and key persistence
 
-**Availability:** shipped on main since 16 November 2026 (`c079ec8d6`), not
-included in the Alpha 22 release. Its [workflow](05-devices-and-products.md#reko-online-catalogue)
+**Availability:** included since Alpha 23 (merged on main 16 November 2026). Its [workflow](05-devices-and-products.md#reko-online-catalogue)
 uses one account for everyone on this KNXBench installation. Account secrets
 are encrypted separately from ordinary settings. Keep both storage locations,
 but back them up independently:
@@ -253,6 +252,15 @@ This documentation/source review is not a Docker replacement/recovery test.
 Final controlled persistence evidence and package acceptance remain pending.
 [ADR-0176](../../adr/0176-manual-reko-catalogue-acquisition.md) ·
 [Technical API contract](../../contracts/reko-online-catalogue.md).
+
+### Alpha 23 upgrade boundary
+
+Alpha 23 moves project schema **21 → 22** and the product database **33 → 34**: opening a
+project or the database with the new image upgrades it, and **Alpha 22 and older refuse the
+upgraded files**. Close the server and keep an independent copy of the whole data volume (and,
+if you use the Reko catalogue, the `/config` volume) before replacing the image. Returning means
+restoring those copies; reinstalling an older image does not undo the upgrade.
+[Alpha 23 scope](../../releases/alpha23.md#upgrade).
 
 ### Alpha 22 upgrade boundary
 
@@ -543,7 +551,7 @@ stopping fails, the service remains stopped until you correct it; this is not an
 automatic rollback.
 
 To choose a fixed release, replace `latest` in **both** image references with a
-published version such as `0.1.0-alpha.22`. The Linux default keeps
+published version such as `0.1.0-alpha.23`. The Linux default keeps
 `--network host` and `-e KNX_PORT=8484` (or your chosen port), as explained in
 [Networking](#networking). If migrating an older bridge deployment to host mode,
 review the firewall first: the authenticated listener becomes reachable on all

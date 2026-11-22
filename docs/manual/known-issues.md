@@ -2,6 +2,29 @@
 
 # Known issues
 
+## Alpha 23 boundaries
+
+[Alpha 23](../releases/alpha23.md) moves the project file from schema 21 to 22 and the
+product database from 33 to 34. Opening a project or the database upgrades it, **Alpha 22
+and older refuse the upgraded files**, and downgrade is not tested: close KNXBench and keep
+complete backups first.
+
+- **Programming** additions are simulator and loopback evidence only. **#52** (preparing
+  complete programming without a pending change) and **#49** stay open until the reporters
+  confirm; restart after a download is still not confirmed in the reports.
+- A device whose module instances have stored, module-qualified parameter values is
+  **refused at download**; showing and editing those values works.
+- The **Configuration** tab edits and exports a stored document only; nothing is sent to a
+  device, and a missing module keeps the stored document unchanged and read-only.
+- **Group-address last-download marks** are a Settings switch, off by default; when on, the
+  app reads every device's comparison. Marks describe what KNXBench last wrote, not a live
+  read.
+- The **Reko** catalogue was tested with local fixtures, not the live provider.
+- `knx devconf export-stored` is offline; behaviour against a project being written at the
+  same moment or a path swapped mid-run is untested.
+- Products already in your database keep their earlier stored layout; inline sections
+  appear for products imported after the update.
+
 ## Alpha 22 boundaries
 
 [Alpha 22](../releases/alpha22.md) keeps project schema 21 and product database

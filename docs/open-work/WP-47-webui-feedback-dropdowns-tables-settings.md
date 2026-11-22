@@ -1,5 +1,7 @@
 # WP-47 — WebUI feedback 19 Nov 2026: dropdowns, table headers, settings layout
 
+**Release:** the delivered parts of this package ship in Alpha 23 ([release notes](../releases/alpha23.md)).
+
 Origin: owner UI feedback, 19 November 2026 (WebUI session, four
 screenshots). Intake PR !79 (`64c752286`) was documentation-only; all three
 bounded packages were implemented and merged afterwards (see Delivery below).

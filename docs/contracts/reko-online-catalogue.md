@@ -1,7 +1,7 @@
 # Reko online catalogue: provider and KNXBench API contract
 
-Status: delivered on main 16 November 2026 as `c079ec8d6` (not in Alpha 22,
-release/deployment separate). [ADR-0176](../adr/0176-manual-reko-catalogue-acquisition.md) owns the
+Status: delivered on main 16 November 2026 as `c079ec8d6` (ships in Alpha 23;
+deployment separate). [ADR-0176](../adr/0176-manual-reko-catalogue-acquisition.md) owns the
 decision; [LS-02](../open-work/LS-02-online-catalogue.md) owns the work record.
 
 ## Evidence and trust boundary

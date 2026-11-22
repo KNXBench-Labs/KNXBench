@@ -1,5 +1,17 @@
 # Roadmap
 
+## Alpha 23 pre-release (source cutoff 22 November 2026)
+
+The [Alpha 23 scope](releases/alpha23.md) ships the delivered work since Alpha 22:
+per-module-instance parameter values and last-download marks, the device Configuration
+tab with `knx devconf` (including read-only `export-stored`), the optional manual Reko
+catalogue source, send-from-the-group-address-workspace, bus-monitor workspace changes,
+further parameter-layout fidelity, simulator-only programming safeguards and the WP-48
+correctness fixes. Project schema 21 → 22 and product database 33 → 34; Alpha 22 and
+older refuse the upgraded files. Simulator/loopback evidence is not real-gateway
+interoperability; no hardware claim. #49 and #52 remain open awaiting reporter input.
+Work after this source cutoff belongs to a later release.
+
 ## Recent-change correctness follow-up (delivered 22 November 2026; WP-48)
 
 The [WP-48 audit](open-work/WP-48-recent-change-correctness-audit.md) of the changes
@@ -11,7 +23,7 @@ module image values, `CollapseIfEmpty` value domain, four owner questions) sit i
 WP-07, WP-05, WP-42 and OWN-01. No new compatibility claim; existing evidence and
 hardware/write-consent boundaries remain unchanged.
 
-## Reko online catalogue (delivered 16 November 2026, `c079ec8d6`)
+## Reko online catalogue (delivered 16 November 2026, `c079ec8d6`; ships in Alpha 23)
 
 The owner-authorized Reko source shipped on main 16 November 2026 as
 `c079ec8d6`. The bounded scope is manual HTTPS index sync, local paginated
@@ -19,8 +31,8 @@ search, one encrypted account per installation and size/hash-verified
 acquisition into the existing modern/legacy import paths. No automatic sync,
 product/project upgrade, VD1/VD2 importer or user management. The
 rights/provenance audit is owner-excluded for this package, not deemed
-satisfied and not a package blocker. Not part of Alpha 22; release/deployment
-remain separate authorizations.
+satisfied and not a package blocker. Ships in Alpha 23, tested with local fixtures,
+not the live provider; deployment remains a separate authorization.
 [Delivered work](open-work/LS-02-online-catalogue.md) ·
 [ADR-0176](adr/0176-manual-reko-catalogue-acquisition.md) ·
 [Provider/API contract](contracts/reko-online-catalogue.md).
@@ -42,7 +54,9 @@ Work after this source cutoff belongs to a later release.
 
 <a id="device-configuration-modules-15-november-2026-wp-42-1"></a>
 
-## Device configuration modules (15 November 2026; WP-42, after the Alpha 22 cutoff)
+<a id="device-configuration-modules-15-november-2026-wp-42-after-the-alpha-22-cutoff"></a>
+
+## Device configuration modules (15 November 2026; WP-42, ships in Alpha 23)
 
 Own-firmware devices get their configuration (for example menus, keys and LED
 policies) from declarative module packages instead of device code in KNXBench

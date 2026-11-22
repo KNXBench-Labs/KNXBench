@@ -101,15 +101,17 @@ Retained bytes are not a promise of complete ETS semantics.
   command line for the scriptable bits.
 
 > [!NOTE]
-> **Alpha 22 is a pre-release (source cutoff 15 November 2026):** consistent
-> workspace spacing, optional Technical Light/Dark themes, a direct Settings entry,
-> clearer parameter navigation and translated product captions. More server waits
-> run off the asynchronous runtime, and more device operations offer explicit TCP.
-> TCP and USB/serial remain **experimental**; UDP is supported and stays the default.
-> [Release scope](docs/releases/alpha22.md) lists the boundaries and upgrade notes.
-> Project schema **21** and product database **33** are unchanged from Alpha 21.
-> Close KNXBench and back up the complete data directory first. No new hardware
-> interoperability is claimed; #30 is closed, #22 remains open.
+> **Alpha 23 is a pre-release (source cutoff 22 November 2026):** parameter values
+> remembered per module instance, a Configuration tab for devices with a module
+> package, group addresses you can send from the workspace, a calmer bus monitor,
+> an optional manual Reko catalogue source and more parameter-layout fidelity.
+> Programming safeguards were tested against simulators only. TCP and USB/serial
+> remain **experimental**; UDP is supported and stays the default.
+> [Release scope](docs/releases/alpha23.md) lists the boundaries and upgrade notes.
+> Project schema **21 → 22** and product database **33 → 34**: **Alpha 22 and older
+> refuse the upgraded files.** Close KNXBench and back up the complete data
+> directory first. No new hardware interoperability is claimed; #22, #49 and #52
+> remain open.
 
 ## See it in action
 

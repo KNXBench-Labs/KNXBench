@@ -1,5 +1,7 @@
 # WP-37 — Show pending, not-yet-downloaded changes across the UI (#40)
 
+**Release:** the delivered parts of this package ship in Alpha 23 ([release notes](../releases/alpha23.md)).
+
 External report by the issue reporter, 10 November 2026; triaged 11 November 2026.
 **Status update — 14 November 2026:** step 4's reporter-acceptance task is
 **done**. The reporter confirmed the area/section/ancestor marks on

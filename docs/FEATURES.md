@@ -1,11 +1,11 @@
-Last updated: 2026-11-15 (Alpha 22 released baseline)
+Last updated: 2026-11-22 (Alpha 23 released baseline)
 
 # KNXBench Features
 
 | Reference | Value |
 | --- | --- |
-| Source snapshot | `v0.1.0-alpha.22` (source cutoff 15 November 2026) |
-| Released baseline | `v0.1.0-alpha.22` |
+| Source snapshot | `v0.1.0-alpha.23` (source cutoff 22 November 2026) |
+| Released baseline | `v0.1.0-alpha.23` |
 | Main-only | Newer than released baseline |
 | Local-only | Unpublished; not accepted on main |
 | Scope | Listed boundaries; not universal compatibility |
@@ -20,6 +20,29 @@ Last updated: 2026-11-15 (Alpha 22 released baseline)
 <a id="source-candidate-after-alpha-21"></a>
 
 <a id="main-updates-after-alpha-21"></a>
+
+<a id="main-updates-after-alpha-22"></a>
+
+## New in Alpha 23
+
+[Release scope and upgrade](releases/alpha23.md): project schema 21 → 22 and product
+database 33 → 34. Alpha 22 and older refuse the upgraded files; keep complete backups.
+Programming additions are simulator/loopback evidence only; no real-hardware claim.
+
+| Feature | Scope | Availability |
+| --- | --- | --- |
+| [Module-instance parameter values](open-work/WP-37-pending-changes-across-ui.md) | Last-download baseline values are kept per module instance (schema 22); module ownership is resolved exactly and unclear owners are refused; a device with stored module-qualified values is refused at download | alpha.23 |
+| [Group-address last-download marks](open-work/WP-37-pending-changes-across-ui.md) | Optional marks in the group-address views for addresses whose links differ from the last download; a Settings switch, off by default, with a coverage-aware summary | alpha.23 |
+| [Send from the group-address workspace](open-work/WP-43-programming-and-group-address-feedback.md) | A send action opens the bus monitor's send form with the address filled in; the destination is searchable by address, name and data type; selecting never sends (#51) | alpha.23 |
+| [Complete programming without a pending change](status/2026-11-16-issue52-complete-preparation.md) | The dialog says nothing is pending and offers an explicit complete plan; preparing starts no device operation; #52 stays open awaiting reporter confirmation | alpha.23 |
+| [CLI download report reconciliation](adr/0179-external-cli-download-reconciliation.md) | The server clears pending marks only for a report that matches device, application data, planned content and project exactly (#50); no web button yet | alpha.23 |
+| [Device configuration modules](contracts/device-configuration-modules.md) | Declarative module packages, a project-stored configuration document per device, a Configuration tab (undoable apply) and `knx devconf` including read-only `export-stored`; no device download | alpha.23 |
+| [Reko online catalogue](contracts/reko-online-catalogue.md) | Optional manual source beside local files: manual index sync, local search, size- and hash-verified downloads, one encrypted account per installation; local fixtures only, not the live provider | alpha.23 |
+| [Bus monitor workspace](open-work/WP-44-bus-monitor-and-status-bar.md) | Sticky details and headers, free column sorting with exact time order, session counters in the status bar | alpha.23 |
+| [Programming safeguards](open-work/PRG-01-programming-gaps.md) | Exact run-state observation for one more mask, module-local options, exhaustive refusal reason codes pinned between server and web, stricter backup reading; simulator only | alpha.23 |
+| [Parameter layout](contracts/alpha16-parameter-layout.md) | Captions from text parameters, module-aware renames and Buttons, nested and inline sections, rows that collapse when empty; bounded steps, products already stored keep their earlier layout | alpha.23 |
+| [Compact dropdowns and configurable columns](open-work/WP-47-webui-feedback-dropdowns-tables-settings.md) | Bounded dropdown width with hover reveal, calmer wording, no redundant toolbar gear, configurable Devices/catalogue table columns | alpha.23 |
+| [Recent-change correctness review](open-work/WP-48-recent-change-correctness-audit.md) | Findings in the new Alpha 23 work fixed before release; none affected Alpha 22 | alpha.23 |
 
 ## New in Alpha 22
 

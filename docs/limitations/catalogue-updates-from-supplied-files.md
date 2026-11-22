@@ -10,7 +10,7 @@ updates supersede them; they are not new work assignments.
 
 The accepted/released workflow uses supplied files, not the KNX Online Catalog.
 The owner-authorized Reko source shipped on main 16 November 2026 as
-`c079ec8d6` (not in Alpha 22): explicit manual index sync, local search and
+`c079ec8d6` (ships in Alpha 23): explicit manual index sync, local search and
 verified acquisition into the existing import paths. The
 [work record](../open-work/LS-02-online-catalogue.md) and
 [ADR-0176](../adr/0176-manual-reko-catalogue-acquisition.md) preserve the delivery

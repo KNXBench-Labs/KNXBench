@@ -1,5 +1,7 @@
 # WP-48 — Recent-change correctness and regression-test audit
 
+**Release:** the delivered parts of this package ship in Alpha 23 ([release notes](../releases/alpha23.md)).
+
 Owner request: 21 November 2026. Search changes since approximately 14 November,
 including unlabelled contributions, and record actionable defects in one work package.
 

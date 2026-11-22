@@ -4,8 +4,9 @@
 implementation shipped on main 16 November 2026 as `c079ec8d6` (merged from
 `work/reko-catalogue-20261115`, base `f6ef90fb4`): backend online-catalogue
 module with index sync, verified downloads, encrypted account store, routes and
-tests. Alpha 22 and the accepted file-based workflow are not retroactively
-changed; release/deployment remain separate authorizations.
+tests. It ships in Alpha 23 as an optional, manual source beside the accepted
+file-based workflow (tested with local fixtures, not the live provider); deployment remains a
+separate authorization.
 
 **Ledger:** `FUTURE-05`; per-ID status of record is the
 [ledger](../status/LEDGER.md). Not listed in [OPEN_WORK](../OPEN_WORK.md): the row left
@@ -40,7 +41,7 @@ identity and hashes. Release and deployment remain separate authorizations.
 | Shared encrypted account | Delivered in `c079ec8d6`: password/token, AES-256-GCM, separate key, source binding, explicit forget | — |
 | Verified acquisition and import handoff | Delivered in `c079ec8d6`: selected SHA, bounded download cache, modern owned-job feed, separate legacy import | — |
 | Web/native and operator documentation | Delivered in `c079ec8d6` with the server routes; Docker `/config` retention documented | — |
-| Delivery | **Delivered on main 16 November 2026 as `c079ec8d6`** | Release/deployment remain separate authorizations; not in Alpha 22 |
+| Delivery | **Delivered on main 16 November 2026 as `c079ec8d6`** | Ships in Alpha 23; deployment remains a separate authorization |
 
 Controlled local HTTPS responses remain test fixtures, not successful calls to
 the real provider. No authenticated Reko login/product download, hardware/bus

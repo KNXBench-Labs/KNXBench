@@ -60,7 +60,10 @@ for (const language of ["en", "de"] as const) {
     const hoverBox = (await select.boundingBox())!;
     await expect.poll(async () => (await geometry(wrapper)).textAnimation, { timeout: 5000 }).toBe("knx-select-marquee");
 
-    // While the text travels, the control and its neighbours never move.
+    // While the text travels, the control and its neighbours never move; poll until the
+    // animation has settled at its end pause (the tail reached the overlay's right edge).
+    const distance = parseFloat(await wrapper.evaluate((node) => (node as HTMLElement).style.getPropertyValue("--select-marquee-distance")));
+    expect(distance).toBeGreaterThan(0);
     let travelled = 0;
     await expect.poll(async () => {
       const g = await geometry(wrapper);
@@ -73,13 +76,10 @@ for (const language of ["en", "de"] as const) {
       expect(g.overlay!.x + g.overlay!.width).toBeLessThanOrEqual(g.select!.x + g.select!.width - 20);
       expect(g.selectColor, "native text hidden while the overlay shows it").toBe("rgba(0, 0, 0, 0)");
       travelled = g.overlay!.x - g.text!.x;
-      return Math.round(g.text!.x + g.text!.width - (g.overlay!.x + g.overlay!.width));
-    }, { timeout: 20_000, intervals: [100] }).toBeLessThanOrEqual(1);
-    // The whole label has been shown: the text's tail reached the overlay's right edge.
-    const distance = parseFloat(await wrapper.evaluate((node) => (node as HTMLElement).style.getPropertyValue("--select-marquee-distance")));
-    expect(distance).toBeGreaterThan(0);
-    expect(travelled).toBeGreaterThan(distance - 2);
-    expect(travelled).toBeLessThanOrEqual(distance + 1);
+      return travelled >= distance - 0.5;
+    }, { timeout: 20_000, intervals: [100] }).toBe(true);
+    // The whole label has been shown: the text's tail sits at the overlay's right edge.
+    expect(Math.abs(travelled - distance)).toBeLessThanOrEqual(0.5);
     expect(fullText.length).toBeGreaterThan(20);
     expect(await select.boundingBox()).toEqual(hoverBox);
 

@@ -26,6 +26,12 @@ describe("sortMonitorRows", () => {
     expect(seqs(sortMonitorRows(rows, true, time))).toEqual([4, 5, 1, 2, 6, 3]);
   });
 
+  it("treats an unparsable time as the greatest value: last ascending, first descending", () => {
+    const mixed = [row(1, "garbage"), row(2, "2026-11-22T10:00:00Z"), row(3, "2026-11-22T09:00:00Z"), row(4, "nonsense")];
+    expect(seqs(sortMonitorRows(mixed, false, time))).toEqual([3, 2, 1, 4]);
+    expect(seqs(sortMonitorRows(mixed, true, time))).toEqual([1, 4, 2, 3]);
+  });
+
   it("breaks ties by sequence even when the input arrives shuffled", () => {
     const shuffled = [row(9, "2026-11-22T10:00:00Z"), row(2, "2026-11-22T10:00:00.0Z"), row(5, "2026-11-22T10:00:00.000Z")];
     expect(seqs(sortMonitorRows(shuffled, false, time))).toEqual([2, 5, 9]);

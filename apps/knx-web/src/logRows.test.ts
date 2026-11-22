@@ -18,9 +18,9 @@ describe("session log rows", () => {
 
   it("orders entries of the same millisecond by their sub-millisecond digits (F09 class)", () => {
     const rows = newestFirst(serverRows([
+      entry("2026-10-13T10:00:00.100000001+00:00", "latest"),
       entry("2026-10-13T10:00:00.100+00:00", "late"),
       entry("2026-10-13T10:00:00.099999+00:00", "early"),
-      entry("2026-10-13T10:00:00.100000001+00:00", "latest"),
     ]));
     expect(rows.map(r => r.entry.message)).toEqual(["latest", "late", "early"]);
   });

@@ -50,9 +50,10 @@ export function compareInstants(a: Instant, b: Instant): number {
 }
 
 /**
- * Chronological comparison of two timestamp strings. Unparsable text sorts
- * after every valid instant (and compares equal to other unparsable text) so
- * a damaged value never lands in the middle of a time-ordered list.
+ * Chronological comparison of two timestamp strings. Unparsable text is the
+ * greatest value (and equals other unparsable text): it sorts after every
+ * valid instant ascending and, because descending negates, before them
+ * descending. A damaged value never lands in the middle of the list.
  */
 export function compareTimestamps(a: string, b: string): number {
   const left = parseInstant(a);

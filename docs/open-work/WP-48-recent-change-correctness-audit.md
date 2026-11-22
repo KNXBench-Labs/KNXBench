@@ -211,12 +211,15 @@ higher precision accidentally when replacing the comparator.
 
 Implementation note (WP-48.6): `timestampOrder.ts` compares RFC 3339 instants as whole
 UTC seconds plus exact fraction digits (no precision ceiling; width and trailing zeros
-insignificant; unparsable text sorts last); `monitorRowOrder.ts` types the monitor cells
+insignificant; unparsable text is greatest); `monitorRowOrder.ts` types the monitor cells
 and breaks every tie by ascending `seq` in both directions. The same comparator now
 orders session-log rows (`logRows.ts`, which parsed only to milliseconds; an unparsable
 time stays above dated entries as before). Project versions (`projectHistory.ts`) keep
-`Date.parse` plus id: the server stores second-precision RFC 3339 and the file stays
-out of the companion import graph.
+`Date.parse` plus id: the server stores project-history timestamps at millisecond
+precision (`SecondsFormat::Millis` in `crates/knx-store/src/project_history.rs`), which
+`Date.parse` represents exactly, and the file stays out of the companion import graph.
+Unparsable timestamps are the greatest value: last ascending, first descending (pinned
+in `monitorRowOrder.test.ts`).
 
 ### F10 — Native select marquee moves the control rather than revealing its text (P2)
 

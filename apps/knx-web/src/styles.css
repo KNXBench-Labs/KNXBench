@@ -5672,6 +5672,11 @@ html[data-motion-flow="off"] .flow-camera,
     animation: knx-select-marquee calc(var(--knx-transition-duration) * 30) ease-in-out infinite;
   }
 }
+/* Forced colours replace the select's transparent ink: keep only the native text. */
+@media (forced-colors: active) {
+  .select-compact-reveal { display: none !important; }
+  .select-compact.is-marquee > select { color: FieldText !important; }
+}
 @keyframes knx-select-marquee {
   0%, 6% { transform: translateX(0); }
   60%, 100% { transform: translateX(calc(var(--select-marquee-distance, 0px) * -1)); }

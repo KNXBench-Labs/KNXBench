@@ -108,7 +108,7 @@ catalogue size or quota. Source constants are authoritative.
 | Raw index entries | 500,000; larger snapshots refused, not truncated |
 | Search | 200 query characters, default page 25, clamp 1–100, offset at most 10,000,000 |
 | File bytes | `MAX_FILE_BYTES = knx_core::limits::MAX_RETAINED_BYTES`, currently 1,000,000,000 bytes |
-| Verified acquisition cache | At most 16 files and `2 * MAX_FILE_BYTES`; oldest eligible files evicted after acquisition, current file retained |
+| Verified acquisition cache | At most 16 files and `2 * MAX_FILE_BYTES`; oldest eligible files evicted (with their digest records) after acquisition, current file retained |
 | Download duration | One hour total; 60-second idle body deadline |
 | Index body duration | 15 minutes total; 60-second idle body deadline |
 | Connect / response headers | 15 seconds per TCP/TLS connect stage / 60 seconds for response headers |
@@ -188,9 +188,18 @@ status for acquisition progress; polling is not a provider retry loop.
 
 Search entries contain the consumed display/application metadata and SHA-256,
 plus `importable` and `downloaded`. The latter describes an acquisition-cache
-candidate verified when written, not an import receipt or a permanent guarantee
-that local bytes remain intact. Reuse/import revalidates bytes. VD1/VD2 stay
-visible with `importable:false`.
+candidate of the *selected revision*: a private regular file of the indexed size
+plus a retained digest record (`downloads/<id>.sha256`, written atomically after the
+download verified) equal to the entry's current SHA-256. Search checks metadata and that
+record only and never hashes cached files. A manual index update that keeps id and size
+but changes the digest therefore reports `downloaded:false` until the new revision is
+acquired. Cache files without a digest record (legacy caches) also report
+`downloaded:false`; the existing download/verify action rehashes such a file once,
+adopts it by writing the record, or removes it (and its record) when the bytes differ,
+without a provider request when the bytes match. Opening a source also removes digest records whose cache file is gone (never following links). A replaced revision's old record is removed before the new file is stored; that is defence in depth, since an old record can never equal the new digest. `downloaded` is not an import receipt or
+a permanent guarantee that local bytes remain intact (same-size in-place tampering is only
+caught by the revalidation). Reuse/import revalidates bytes. VD1/VD2 stay visible with
+`importable:false`.
 
 Errors use the existing API error envelope with stable `kind`; rate/daily-limit
 errors include `retryAfterSecs`/`resetAt` details. Important local codes: 409

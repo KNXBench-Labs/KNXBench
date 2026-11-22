@@ -7,6 +7,7 @@ import { useUiLanguage } from "./uiLanguage";
 import Overlay from "./Overlay";
 import ProjectHistoryTimeline from "./ProjectHistoryTimeline";
 import "./projectHistory.css";
+import { projectSavingMessage } from "./projectSaving";
 import { filterProjectVersions, validVersionLabel, type ProjectHistory, type ProjectVersion } from "./projectHistory";
 
 type Confirmation = { kind: "restore" | "delete" | "clear"; view: ProjectHistory; version?: ProjectVersion };
@@ -54,7 +55,7 @@ export default function ProjectHistoryDialog(props: {
       accept(next);
       if (next.snapshotRevision > (treeRef.current.snapshot_revision ?? 0)) props.onTreeUpdate(next.project, false);
     } catch (failure) {
-      if (alive.current && request === sequence.current) setError(String(failure instanceof Error ? failure.message : failure));
+      if (alive.current && request === sequence.current) setError(projectSavingMessage(failure) ?? String(failure instanceof Error ? failure.message : failure));
     } finally {
       if (alive.current && request === sequence.current) setLoading(false);
     }
@@ -95,7 +96,7 @@ export default function ProjectHistoryDialog(props: {
     } catch (failure) {
       if (alive.current && request === sequence.current) {
         setConfirmation(null);
-        setError(String(failure instanceof Error ? failure.message : failure));
+        setError(projectSavingMessage(failure) ?? String(failure instanceof Error ? failure.message : failure));
       }
     } finally {
       mutationPending.current = false;

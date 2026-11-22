@@ -59,6 +59,7 @@ async fn reconcile(
             .map(Json)
             .map_err(|error| match error {
                 BoundCommandError::NoProject => ApiError::bad_request("No project open"),
+                BoundCommandError::Saving => ApiError::project_saving(),
                 BoundCommandError::Stale => ApiError::conflict(
                     "programmingStale",
                     "The project changed since this device was shown; refresh and reconcile again. Nothing was changed.",

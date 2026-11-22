@@ -63,6 +63,7 @@ async fn mark(
             .map(Json)
             .map_err(|error| match error {
                 BoundCommandError::NoProject => ApiError::bad_request("No project open"),
+                BoundCommandError::Saving => ApiError::project_saving(),
                 BoundCommandError::Stale => ApiError::conflict(
                     "programmingStale",
                     "The project changed since this device was shown; refresh and mark again. Nothing was changed.",

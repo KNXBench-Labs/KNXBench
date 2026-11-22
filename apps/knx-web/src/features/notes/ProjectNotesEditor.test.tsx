@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ProjectNotesEditor } from "./ProjectNotesEditor";
+import { translateFor } from "../../i18n";
 import type { NotesClient, NotesContext, NotesView } from "./client";
 const context:NotesContext={serverIncarnation:"synthetic-server",projectIncarnation:1,snapshotRevision:2};
 const source:NotesView={...context,persistence:"session-only",notes:[{id:1,position:0,target:{kind:"project"},title:" Existing ",body:'<img src="https://untrusted.invalid/never">\r\n**literal**',includeInDocumentation:false}]};
@@ -153,6 +154,16 @@ describe("notes editing gestures",()=>{
   const client=fixture({apply:vi.fn().mockRejectedValue(Object.assign(new Error("Native persistence refused"),{kind:"notePersistenceFailed"}))});
   const {host}=await mount(client);await edit(host,"Title","unsaved");await click(host,"Preview change");await click(host,"Confirm change");
   expect(host.textContent).toContain("Native persistence refused");expect(Array.from(host.querySelectorAll("textarea")).some(field=>field.value==="unsaved")).toBe(true);
+ });
+ it("words a Save in progress as a retry, keeps the draft and lets the same preview be confirmed again",async()=>{
+  const apply=vi.fn().mockRejectedValueOnce(Object.assign(new Error("The project is being saved; try again in a moment"),{status:409,kind:"projectSaving"})).mockResolvedValue({changed:true,nativeGeneration:null,snapshotRevision:3,persistence:"session-only"});
+  const client=fixture({apply});
+  const {host}=await mount(client);await edit(host,"Title","unsaved");await click(host,"Preview change");await click(host,"Confirm change");
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe(translateFor("en","projectSaving.retry"));
+  expect(Array.from(host.querySelectorAll("textarea")).some(field=>field.value==="unsaved")).toBe(true);
+  expect(client.cancel).not.toHaveBeenCalled();
+  await click(host,"Confirm change");
+  expect(apply).toHaveBeenCalledTimes(2);expect(apply.mock.calls[1][0]).toBe(apply.mock.calls[0][0]);
  });
  it("renders German local copy without changing global catalogues or authored text",async()=>{
   const client=fixture();const {host}=await mount(client,{language:"de"});expect(host.textContent).toContain("Projektnotizen");

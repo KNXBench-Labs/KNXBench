@@ -2,6 +2,7 @@
 
 mod bin_version;
 mod catalog_allocation;
+mod catalog_create_saving;
 mod catalog_request_replay;
 mod com_object_activation_corpus;
 mod command_dispatch;
@@ -120,6 +121,7 @@ mod open_reference_project;
 mod private_saved_activation;
 mod project_download_request;
 mod save_load_roundtrip;
+mod saving_hold;
 mod signal_stop;
 mod signal_stop_journal;
 mod topology_repair_routes;

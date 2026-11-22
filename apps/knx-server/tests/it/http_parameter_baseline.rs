@@ -426,3 +426,44 @@ async fn a_manual_mark_in_either_direction_forgets_the_baseline_durably_and_undo
 }
 
 mod links_and_flags;
+
+#[tokio::test]
+async fn a_mark_that_forgets_a_baseline_is_refused_during_a_save() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("saving.knxdb");
+    let state = state(None, &[]);
+    let (status, saved) = call(
+        &state,
+        "POST",
+        "/api/project/save-as",
+        Some(json!({ "path": path })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    seed(&state, "A-1", &[("P-1_R-1", "5")]);
+    let shown = tree(&state).await;
+    let before = state.project.lock().unwrap().clone();
+    let bytes = std::fs::read(&path).unwrap();
+    let app = knx_server::app(state.clone(), None);
+    crate::saving_hold::refused_while_saving(
+        &state,
+        &app,
+        "POST",
+        "/api/device/1/programming",
+        mark(&shown, true),
+    )
+    .await;
+    assert!(has_baseline(&state), "a refused mark keeps the baseline");
+    assert_eq!(*state.project.lock().unwrap(), before);
+    assert_eq!(std::fs::read(&path).unwrap(), bytes);
+    // Without a save the same binding marks and forgets the baseline.
+    let (status, marked) = call(
+        &state,
+        "POST",
+        "/api/device/1/programming",
+        Some(mark(&shown, true)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{marked}");
+    assert!(!has_baseline(&state));
+}

@@ -240,7 +240,7 @@ async fn apply(
         }
         let mut candidate = snapshot(state, project);
         let mut stack = state.command_stack.lock().expect("state mutex poisoned");
-        let path = state.store_path.lock().expect("state mutex poisoned");
+        let path = state.store_path.lock_unless_saving()?;
         let mut generation = state
             .history_generation
             .lock()

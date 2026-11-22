@@ -43,6 +43,26 @@ impl StorePath {
         }
     }
 
+    /// The path lock for a writer that holds the project lock and must not wait for
+    /// a running Save (WP-31, ADR-0166).
+    ///
+    /// Call it only while holding `state.project`: a Save takes the store path
+    /// while it holds the project and keeps it after releasing the project, so
+    /// with the project held a busy path means a Save is writing, and a free
+    /// one means none can start before the project is released. Refusing then
+    /// (`projectSaving`, retryable, nothing changed) keeps the project lock
+    /// from queueing every reader behind that writer for the rest of the Save.
+    ///
+    /// The `history_generation` lock taken after it may stay blocking: a Save
+    /// holds the generation only while it holds the store path (taken first,
+    /// released last, `domain::save_editor_state`), so with the path held no
+    /// Save holds it. Its other holder is the background journal writer, which
+    /// takes the generation without the store path or project lock and for one
+    /// bounded write, the same wait every ordinary edit already has.
+    pub(crate) fn lock_unless_saving(&self) -> Result<StorePathGuard<'_>, ProjectSaving> {
+        self.lock_if_free().ok_or(ProjectSaving)
+    }
+
     /// The path as last set, without waiting for a holder of the lock.
     pub fn known(&self) -> Option<PathBuf> {
         read(&self.known)
@@ -53,6 +73,10 @@ impl StorePath {
         Arc::clone(&self.known)
     }
 }
+
+/// A Save holds the store path: the caller must not wait for it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ProjectSaving;
 
 /// Reads a copy made by [`StorePath::known_cell`].
 pub(crate) fn read(known: &Mutex<Option<PathBuf>>) -> Option<PathBuf> {

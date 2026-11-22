@@ -137,11 +137,7 @@ fn has_project(state: &AppState) -> bool {
 }
 
 fn is_native(state: &AppState) -> bool {
-    state
-        .store_path
-        .lock()
-        .expect("state mutex poisoned")
-        .is_some()
+    state.store_path.known().is_some()
 }
 
 async fn blocking<T: Send + 'static>(
@@ -235,6 +231,9 @@ pub(crate) async fn apply(
 
 fn apply_locked(state: &AppState, token: &str) -> Result<Value, ApiError> {
     let mut project = state.project.lock().expect("state mutex poisoned");
+    // Before the plan is taken out of its slot, so a refusal leaves it usable. With the
+    // project held, a free path means no Save can start; the later reads cannot wait.
+    drop(state.store_path.lock_unless_saving()?);
     // Taken only when the token matches: a wrong token leaves another
     // client's shown plan alone; a matching one is used at most once.
     let shown = {

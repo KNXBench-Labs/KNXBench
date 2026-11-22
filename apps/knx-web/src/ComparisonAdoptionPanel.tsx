@@ -5,6 +5,7 @@ import type { BoundDeviceComparison } from "./deviceComparisons";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { applyComparisonAdoption, previewComparisonAdoption, type ComparisonAdoptionPreview } from "./comparisonAdoptionApi";
 import { errorMessage } from "./api";
+import { isProjectSaving, projectSavingMessage } from "./projectSaving";
 import { useTranslate } from "./i18n";
 
 export default function ComparisonAdoptionPanel({ result, disabled, onBusy, onApplied }: {
@@ -45,7 +46,9 @@ export default function ComparisonAdoptionPanel({ result, disabled, onBusy, onAp
       try { await onApplied?.(outcome.tree); }
       catch { if (live.current) setError(t("compare.adoption.refreshFailed")); }
     } catch (reason) {
-      if (live.current) { setError(`${t("compare.adoption.applyFailed")} ${errorMessage(reason)}`); setPreview(null); setConfirmed(false); }
+      // A save refusal changed nothing and the server keeps the preview token: keep the review for a retry.
+      if (live.current && isProjectSaving(reason)) setError(projectSavingMessage(reason));
+      else if (live.current) { setError(`${t("compare.adoption.applyFailed")} ${errorMessage(reason)}`); setPreview(null); setConfirmed(false); }
     } finally { onBusy(false); if (live.current) setBusy(false); }
   }
   return <section className="comparison-adoption" aria-label={t("compare.adoption.title")}>

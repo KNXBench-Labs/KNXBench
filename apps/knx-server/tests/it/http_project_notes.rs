@@ -1056,3 +1056,36 @@ async fn target_catalogue_without_a_project_is_refused() {
     let (status, _) = request(&app, "GET", "/api/project/notes/targets", Value::Null).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
 }
+
+#[tokio::test]
+async fn a_note_apply_during_a_save_is_refused_at_once_and_the_token_survives() {
+    let (_dir, state, app, _) = fixture("retained original").await;
+    let before = state.project.lock().unwrap().clone();
+    let (_, view) = request(&app, "GET", "/api/project/notes", Value::Null).await;
+    let (status, plan) = request(
+        &app,
+        "POST",
+        "/api/project/notes/preview",
+        preview_payload(&view, note_action("saving", 0)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{plan}");
+    let apply = json!({"token":plan["token"],"confirmed":true});
+    crate::saving_hold::refused_while_saving(
+        &state,
+        &app,
+        "POST",
+        "/api/project/notes/apply",
+        apply.clone(),
+    )
+    .await;
+    assert_eq!(*state.project.lock().unwrap(), before);
+    assert_eq!(
+        state.command_stack.lock().unwrap().history_lengths(),
+        (0, 0)
+    );
+    // Without a save the same token still applies: the refusal consumed nothing.
+    let (status, outcome) = request(&app, "POST", "/api/project/notes/apply", apply).await;
+    assert_eq!(status, StatusCode::OK, "{outcome}");
+    assert_eq!(outcome["changed"], true);
+}

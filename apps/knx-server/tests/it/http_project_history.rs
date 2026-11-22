@@ -650,3 +650,51 @@ async fn a_restore_leaves_the_held_baselines_equal_to_what_the_file_kept() {
         assert_eq!(held.is_empty(), reimported, "{label}");
     }
 }
+
+#[tokio::test]
+async fn the_history_panel_and_every_version_action_are_refused_during_a_save() {
+    let (_dir, path, state, app) = fixture().await;
+    let (_, view) = request(&app, "GET", "/api/project/history", Value::Null).await;
+    let mut payload = binding(&view, true);
+    payload["label"] = json!("Kept");
+    let (status, view) = request(&app, "POST", "/api/project/history/versions", payload).await;
+    assert_eq!(status, StatusCode::OK);
+    let id = view["versions"][0]["id"].as_i64().unwrap();
+    let before = state.project.lock().unwrap().clone();
+    let bytes = std::fs::read(&path).unwrap();
+    let mut create = binding(&view, true);
+    create["label"] = json!("Refused");
+    let calls = [
+        ("GET", "/api/project/history".to_string(), Value::Null),
+        (
+            "POST",
+            "/api/project/history/versions".to_string(),
+            create.clone(),
+        ),
+        (
+            "POST",
+            format!("/api/project/history/versions/{id}/restore"),
+            binding(&view, true),
+        ),
+        (
+            "POST",
+            format!("/api/project/history/versions/{id}/delete"),
+            binding(&view, true),
+        ),
+        (
+            "POST",
+            "/api/project/history/clear-undo".to_string(),
+            binding(&view, true),
+        ),
+    ];
+    for (method, uri, body) in calls {
+        crate::saving_hold::refused_while_saving(&state, &app, method, &uri, body).await;
+        assert_eq!(*state.project.lock().unwrap(), before, "{uri}");
+        assert_eq!(std::fs::read(&path).unwrap(), bytes, "{uri}");
+    }
+    // Positive control: without a save the same bindings still work.
+    let (status, _) = request(&app, "GET", "/api/project/history", Value::Null).await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, after) = request(&app, "POST", "/api/project/history/versions", create).await;
+    assert_eq!(status, StatusCode::OK, "{after}");
+}

@@ -3831,6 +3831,9 @@ pub(crate) struct SnapshotBinding {
 #[derive(Debug)]
 pub(crate) enum BoundCommandError {
     NoProject,
+    /// A Save holds the project file and this write is a file transaction;
+    /// nothing ran. Retryable.
+    Saving,
     /// The binding no longer names the live project; nothing ran.
     Stale,
     /// The command refused; nothing changed.
@@ -3944,6 +3947,14 @@ fn apply_bound_with(
         binding.snapshot_revision,
     ) {
         return Err(BoundCommandError::Stale);
+    }
+    // A write that changes a baseline is a file transaction (ADR-0173 §7): refused
+    // while a Save writes instead of holding the project for the rest of it (WP-31).
+    // Held project: a free path means no Save can start before we are done.
+    if !effective_baseline_edits(state, baselines).is_empty()
+        && state.store_path.lock_unless_saving().is_err()
+    {
+        return Err(BoundCommandError::Saving);
     }
     let mut refused = false;
     let message = message.as_deref().unwrap_or(label);
@@ -5291,6 +5302,14 @@ pub enum CatalogCreateError {
     /// The project changed since the preview: the request would now create
     /// other names or addresses than the ones the user confirmed.
     PreviewStale(String),
+    /// A Save is writing the project file (WP-31): try again in a moment.
+    Saving,
+}
+
+impl From<crate::store_path::ProjectSaving> for CatalogCreateError {
+    fn from(_: crate::store_path::ProjectSaving) -> Self {
+        CatalogCreateError::Saving
+    }
 }
 
 impl From<String> for CatalogCreateError {
@@ -5311,6 +5330,7 @@ impl std::fmt::Display for CatalogCreateError {
             CatalogCreateError::Refused(reason) | CatalogCreateError::PreviewStale(reason) => {
                 f.write_str(reason)
             }
+            CatalogCreateError::Saving => f.write_str("the project is being saved; try again"),
         }
     }
 }
@@ -5907,6 +5927,9 @@ fn create_devices_recorded(
             return Ok(replay);
         }
     }
+    // WP-31: refuse while a Save writes, before any ID is reserved or the project mutated;
+    // the persist below would otherwise block on the store path with the project held.
+    drop(state.store_path.lock_unless_saving()?);
     let installation = match resolve_catalog_installation(project, request.line_id, request.options)
     {
         Ok(installation) => installation,

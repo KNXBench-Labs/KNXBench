@@ -13,7 +13,7 @@ import { statusMetricsFixtureBody } from "./status-metrics-fixture";
 type Language = "en" | "de";
 type Catalogue = { readonly [K in keyof typeof en]: string };
 const CAPTURE = process.env.KNX_NOTES_CAPTURE_DIR;
-type ApplyMode = "ok" | "stale" | "persistence";
+type ApplyMode = "ok" | "stale" | "persistence" | "saving";
 
 interface Fixture {
   unexpected: string[];
@@ -125,6 +125,7 @@ async function fixture(page: Page, language: Language, theme: string, width: num
       const action = plans.get(body.token);
       if (!action || body.confirmed !== true) return refuse(409, "noteStale", "unknown plan");
       if (f.applyMode === "stale") return refuse(409, "noteStale", "The project changed since this preview.");
+      if (f.applyMode === "saving") return refuse(409, "projectSaving", "The project is being saved; try again in a moment");
       if (f.applyMode === "persistence") return refuse(422, "notePersistenceFailed", "The note could not be persisted.");
       plans.delete(body.token);
       applyAction(f, action);
@@ -412,3 +413,28 @@ test("en 1440: a reload over a note draft asks first; staying keeps it, leaving 
   expect(f.applied).toBe(0);
   expect(f.unexpected).toEqual([]);
 });
+
+for (const [language, width] of [["en", 1440], ["de", 400]] as const) {
+  test(`${language} ${width}: a Save in progress refuses Apply, keeps the draft and the retry works`, async ({ page }) => {
+    const m: Catalogue = language === "de" ? de : en;
+    const f = await fixture(page, language, "graphite", width);
+    const editor = (await openNotes(page, m, width)).locator("section").first();
+    f.applyMode = "saving";
+    const before = structuredClone(f.notes);
+    const title = editor.getByLabel(language === "de" ? "Titel" : "Title", { exact: true });
+    await title.fill("A rewrite that waits for the save");
+    await editor.getByRole("button", { name: language === "de" ? "Änderung prüfen" : "Preview change", exact: true }).click();
+    const confirm = editor.getByRole("button", { name: language === "de" ? "Änderung bestätigen" : "Confirm change", exact: true });
+    await confirm.click();
+    await expect(editor.getByRole("alert")).toHaveText(m["projectSaving.retry"]);
+    await expect(editor.getByRole("alert")).toBeInViewport();
+    expect(f.notes).toEqual(before);
+    await expect(title).toHaveValue("A rewrite that waits for the save");
+    // The preview survives: the same Confirm works once the save has finished.
+    f.applyMode = "ok";
+    await confirm.click();
+    await expect.poll(() => f.applied).toBe(1);
+    expect(f.applyRequests).toBe(2);
+    expect(f.unexpected).toEqual([]);
+  });
+}

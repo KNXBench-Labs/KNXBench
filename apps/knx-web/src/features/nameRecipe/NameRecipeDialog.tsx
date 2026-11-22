@@ -17,6 +17,7 @@ import {
   applyNameRecipe, cancelNameRecipe, isStaleRecipe, MAX_RECIPE_AFFIX_BYTES, MAX_RECIPE_SELECTION,
   previewNameRecipe, utf8Bytes, type RecipeBinding, type RecipePreview, type RecipeRefusal,
 } from "./client";
+import { isProjectSaving, projectSavingMessage } from "../../projectSaving";
 import "./nameRecipe.css";
 
 const NAME_RECIPE_COLUMNS = [
@@ -121,6 +122,11 @@ export default function NameRecipeDialog(props: {
       props.onApplied();
       props.onClose();
     } catch (error) {
+      if (isProjectSaving(error)) {
+        // A Save is writing: nothing was renamed and the preview stays valid for a retry.
+        setProblem({ lead: projectSavingMessage(error) ?? "", detail: null });
+        return;
+      }
       // Stale or refused: nothing was renamed. The old preview is spent.
       tokenRef.current = null;
       setPreview(null);

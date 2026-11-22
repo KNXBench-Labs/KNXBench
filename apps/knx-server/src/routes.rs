@@ -3998,6 +3998,7 @@ fn catalog_error(error: domain::CatalogCreateError) -> ApiError {
         domain::CatalogCreateError::PreviewStale(reason) => {
             ApiError::conflict("catalogPreviewStale", reason)
         }
+        domain::CatalogCreateError::Saving => ApiError::project_saving(),
     }
 }
 

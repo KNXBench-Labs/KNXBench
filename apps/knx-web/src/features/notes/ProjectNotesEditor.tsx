@@ -6,6 +6,7 @@ import { noteCopy } from "./copy";
 import HelpTip from "../../HelpTip";
 import { requestHelpTopic } from "../../help";
 import { usePreviewFocus } from "../usePreviewFocus";
+import { isProjectSaving, projectSavingMessage } from "../../projectSaving";
 import styles from "./editor.module.css";
 export type NoteTargetChoice=Readonly<{target:NoteTarget;label:string}>;
 export type ProjectNotesEditorProps=Readonly<{context:NotesContext;language?:"en"|"de";targetChoices?:readonly NoteTargetChoice[];client?:NotesClient;onApplied?:(outcome:NotesApplied)=>void|Promise<void>;onDirtyChange?:(dirty:boolean)=>void}>;
@@ -127,6 +128,7 @@ export function ProjectNotesEditor({context,client=defaultClient,language="en",t
   }catch(reason){
    if(controller.signal.aborted||generation!==sequence.current)return;
    if(committed){setError(copy.refreshFailed);setStale(true);}
+   else if(isProjectSaving(reason)){setError(projectSavingMessage(reason));}
    else if(typeof reason==="object"&&reason!==null&&"kind" in reason&&typeof reason.kind==="string"){revoke();setError(reason instanceof Error?reason.message:copy.changed);}
    else {revoke();setStale(true);setError(copy.unknown);}
   }finally{applying.current=false;if(generation===sequence.current)setBusy(false);}

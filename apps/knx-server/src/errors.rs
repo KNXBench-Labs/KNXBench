@@ -114,6 +114,15 @@ impl ApiError {
         }
     }
 
+    /// A `409` `projectSaving`: a Save holds the project file, nothing was
+    /// changed, and the same request works once the Save has finished.
+    pub fn project_saving() -> Self {
+        Self::conflict(
+            "projectSaving",
+            "The project is being saved; try again in a moment",
+        )
+    }
+
     /// Stable refusal token only; callers never retain the message or request details.
     pub(crate) fn kind(&self) -> Option<&'static str> {
         self.kind
@@ -228,5 +237,11 @@ impl IntoResponse for ApiError {
                 None => (self.status, Json(json!({ "error": self.message }))).into_response(),
             },
         }
+    }
+}
+
+impl From<crate::store_path::ProjectSaving> for ApiError {
+    fn from(_: crate::store_path::ProjectSaving) -> Self {
+        Self::project_saving()
     }
 }

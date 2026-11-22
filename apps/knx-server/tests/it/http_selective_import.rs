@@ -237,10 +237,10 @@ async fn missing_confirmation_changed_selection_and_changed_target_refuse_withou
 
 // The apply runs in spawn_blocking; this task never waits on the path lock it holds.
 #[tokio::test]
-async fn a_save_finishing_while_the_apply_waits_makes_it_stale() {
-    // #36: Save writes with store path held but without the project lock, and
-    // publishes its catalogue references afterwards. An apply that snapshots
-    // meanwhile must refuse instead of restoring the pre-save references.
+async fn an_apply_during_a_save_is_refused_at_once_and_the_token_survives() {
+    // #36 / WP-31: Save writes with the store path held but without the project lock and
+    // publishes its catalogue references afterwards. An apply meanwhile answers
+    // `projectSaving` before it snapshots, so it can never restore pre-save references.
     let (_dir, _store, state, app, mut payload) = merge_fixture().await;
     let (_, preview) = post(
         &app,
@@ -250,33 +250,19 @@ async fn a_save_finishing_while_the_apply_waits_makes_it_stale() {
     .await;
     payload["confirmationToken"] = preview["confirmationToken"].clone();
     let before = state.project.lock().unwrap().clone().unwrap();
-    let saving = state.store_path.lock().unwrap();
-    let apply_app = app.clone();
-    let apply = tokio::spawn(async move {
-        post(&apply_app, "/api/project/import-selection/apply", payload).await
-    });
-    // Let the apply snapshot under the project lock and block on the store path.
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-    while state.project.try_lock().is_ok() && std::time::Instant::now() < deadline {
-        tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-    }
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    let saved_refs = vec![knx_store::ManufacturerRef {
-        source_path: "M-0001.knxprod".into(),
-        sha256: "0".repeat(64),
-        len: 1,
-        kind: "product".into(),
-    }];
-    *state.manufacturer_refs.lock().unwrap() = saved_refs.clone();
-    state
-        .project_revision
-        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-    drop(saving);
-    let (status, body) = apply.await.unwrap();
-    assert_eq!(status, StatusCode::CONFLICT, "{body}");
-    assert_eq!(body["kind"], "selectiveImportStale");
-    assert_eq!(*state.manufacturer_refs.lock().unwrap(), saved_refs);
+    let refs = state.manufacturer_refs.lock().unwrap().clone();
+    crate::saving_hold::refused_while_saving(
+        &state,
+        &app,
+        "POST",
+        "/api/project/import-selection/apply",
+        payload.clone(),
+    )
+    .await;
     assert_eq!(state.project.lock().unwrap().as_ref(), Some(&before));
+    assert_eq!(*state.manufacturer_refs.lock().unwrap(), refs);
+    let (status, body) = post(&app, "/api/project/import-selection/apply", payload).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
 }
 
 #[tokio::test]

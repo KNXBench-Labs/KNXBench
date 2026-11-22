@@ -75,6 +75,11 @@ function draftOf(base: Baseline): Draft {
   return { raw: base.text, moduleId: base.moduleId, moduleVersion: base.moduleVersion, moduleSha256: base.moduleSha256 };
 }
 
+/** The draft already holds exactly what `base` stores (e.g. right after the user's own apply). */
+function draftEquals(base: Baseline, draft: Draft): boolean {
+  return !isDirty(base, draft);
+}
+
 function isDirty(base: Baseline, draft: Draft): boolean {
   return draft.raw !== base.text || draft.moduleId !== base.moduleId || draft.moduleVersion !== base.moduleVersion || draft.moduleSha256 !== base.moduleSha256;
 }
@@ -87,7 +92,11 @@ const sameContext = (a: SnapshotContext, b: SnapshotContext) =>
  * a dirty draft is never overwritten. If the stored content changed underneath it, the
  * draft is kept, previews are blocked and the user chooses to keep the draft or load
  * the stored version. State is keyed by server, project incarnation and device, so
- * equal numeric device ids in another project never share a draft.
+ * equal numeric device ids in another project never share a draft. A new revision whose
+ * stored content equals the draft (the user's own apply) is adopted silently. A preview
+ * confirmation always belongs to the draft it was requested for: an edit made while the
+ * preview request is in flight bumps `draftVersion`, and the late answer is dropped and
+ * its token cancelled, so Apply can never write text the user no longer sees.
  */
 export default function DeviceConfigPanel({ deviceId, tree, onApplied }: DeviceConfigPanelProps) {
   const t = useTranslate();
@@ -112,6 +121,7 @@ function DeviceConfigEditor({ deviceId, context, onApplied }: { deviceId: number
   const { serverIncarnation, projectIncarnation, snapshotRevision } = context;
   const latest = useRef({ baseline, draft, context, pending });
   latest.current = { baseline, draft, context, pending };
+  const draftVersion = useRef(0);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
@@ -137,7 +147,7 @@ function DeviceConfigEditor({ deviceId, context, onApplied }: { deviceId: number
       const { baseline: base, draft: current } = latest.current;
       if (!base || !isDirty(base, current)) {
         setBaseline(next); setDraft(draftOf(next)); setIncoming(null); setDraftError(null);
-      } else if (base.identity === next.identity) {
+      } else if (base.identity === next.identity || draftEquals(next, current)) {
         setBaseline(next); setIncoming(null);
       } else {
         setIncoming(next);
@@ -150,7 +160,7 @@ function DeviceConfigEditor({ deviceId, context, onApplied }: { deviceId: number
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client, deviceId, serverIncarnation, projectIncarnation, snapshotRevision]);
 
-  const edit = (change: Partial<Draft>) => { if (pending) clearPending(); setDraft((d) => ({ ...d, ...change })); };
+  const edit = (change: Partial<Draft>) => { draftVersion.current += 1; if (pending) clearPending(); setDraft((d) => ({ ...d, ...change })); };
 
   const refreshProject = async () => {
     try { await onApplied(await api.currentProject()); } catch (e) { if (mounted.current) setError(e instanceof Error ? e.message : String(e)); }
@@ -164,12 +174,13 @@ function DeviceConfigEditor({ deviceId, context, onApplied }: { deviceId: number
     try { JSON.parse(text); } catch { setDraftError(t("deviceConfig.invalidJson")); return; }
     setDraftError(null);
     setBusy(true);
+    const requestedVersion = draftVersion.current;
     try {
       // Unedited text goes back as the exact stored bytes (textarea newline normalisation must not alter them).
       const documentB64 = baseline.exists && !baseline.undecodable && text === baseline.text ? baseline.b64 : encodeB64(new TextEncoder().encode(text));
       const action: DevconfAction = { kind: "set", draft: { device: deviceId, moduleId: draft.moduleId, moduleVersion: draft.moduleVersion, moduleSha256: draft.moduleSha256, documentB64 } };
       const result = await client.preview(context, action);
-      if (!mounted.current || !sameContext(latest.current.context, context)) { void client.cancel(result.token).catch(() => undefined); return; }
+      if (!mounted.current || !sameContext(latest.current.context, context) || draftVersion.current !== requestedVersion) { void client.cancel(result.token).catch(() => undefined); return; }
       setPending(result);
     } catch (e) {
       if (mounted.current) setError(e instanceof Error ? e.message : String(e));

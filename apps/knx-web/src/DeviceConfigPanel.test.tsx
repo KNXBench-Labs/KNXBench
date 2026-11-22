@@ -18,13 +18,13 @@ afterEach(() => { act(() => root?.unmount()); container?.remove(); root = null; 
 function treeOf(project: number, revision: number, server = "srv"): ProjectTree {
   return { server_incarnation: server, project_incarnation: project, snapshot_revision: revision } as unknown as ProjectTree;
 }
-async function show(tree: ProjectTree, deviceId = 3) {
+async function show(tree: ProjectTree, deviceId = 3, onApplied: (tree: ProjectTree) => void | Promise<void> = () => undefined) {
   if (!container) {
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
   }
-  await act(async () => { root!.render(<DeviceConfigPanel deviceId={deviceId} tree={tree} onApplied={() => undefined} />); });
+  await act(async () => { root!.render(<DeviceConfigPanel deviceId={deviceId} tree={tree} onApplied={onApplied} />); });
 }
 async function flush() { for (let i = 0; i < 4; i++) await act(async () => { await new Promise((r) => setTimeout(r, 0)); }); }
 const body = () => document.body.textContent ?? "";
@@ -248,5 +248,103 @@ describe("DeviceConfigPanel", () => {
     await flush();
     expect(body()).toContain("deviceConfig.invalidJson");
     expect(transport).toHaveBeenCalledTimes(1);
+  });
+
+  it("flags a dirty draft when the stored document changed to an equal-length different one", async () => {
+    const other = ORIGINAL.replace("known", "knowm");
+    expect(other.length).toBe(ORIGINAL.length);
+    const current = { view: deviceView(1, 7, ORIGINAL, "1".repeat(64)) };
+    vi.stubGlobal("fetch", vi.fn(async () => json(current.view)));
+    await show(treeOf(1, 7));
+    await flush();
+    await type('{"mine":true}');
+    current.view = deviceView(1, 8, other, "2".repeat(64));
+    await show(treeOf(1, 8));
+    await flush();
+    expect(textarea().value).toBe('{"mine":true}');
+    expect(body()).toContain("deviceConfig.staleDraft");
+  });
+
+  /** A small in-memory server: one device, a stored document, a revision that moves on apply. */
+  function fakeServer(initial: string | null) {
+    const state = { revision: 7, document: initial, digest: 1, applied: 0, cancelled: [] as string[], previews: [] as unknown[] };
+    const view = () => deviceView(1, state.revision, state.document, String(state.digest).repeat(64));
+    const handler = async (url: string, init?: { body?: string }) => {
+      if (url.endsWith("/devices/3")) return json(view());
+      if (url === "/api/project") return json(treeOf(1, state.revision));
+      const sent = init?.body ? JSON.parse(init.body) : null;
+      if (url.endsWith("/preview")) {
+        state.previews.push(sent.action);
+        const previous = state.document === null ? null : profileOf(state.document, "1".repeat(64));
+        return json({ token: `tok${state.previews.length}`, action: sent.action, previous, noOp: false, expiresInSeconds: 300 });
+      }
+      if (url.endsWith("/apply")) {
+        const action = state.previews[Number(sent.token.slice(3)) - 1] as { kind: string; draft?: { documentB64: string } };
+        state.document = action.kind === "remove" ? null : new TextDecoder().decode(Uint8Array.from(atob(action.draft!.documentB64.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0)));
+        state.revision += 1; state.digest += 1; state.applied += 1;
+        return json({ changed: true, nativeGeneration: state.applied, snapshotRevision: state.revision, persistence: "native-working-history" });
+      }
+      if (url.endsWith("/cancel")) { state.cancelled.push(sent.token); return json({ cancelled: true }); }
+      throw new Error(`unexpected ${url}`);
+    };
+    return { state, handler };
+  }
+
+  it("after the user's own apply the new revision is adopted without a stale-draft alert", async () => {
+    const server = fakeServer(ORIGINAL);
+    vi.stubGlobal("fetch", vi.fn(server.handler));
+    const onApplied = async (tree: ProjectTree) => { await show(tree, 3, onApplied); };
+    await show(treeOf(1, 7), 3, onApplied);
+    await flush();
+    await type('{"edited":1}');
+    await act(async () => { button("deviceConfig.preview").click(); });
+    await flush();
+    await act(async () => { button("deviceConfig.apply").click(); });
+    await flush();
+    expect(server.state.document).toBe('{"edited":1}');
+    expect(server.state.revision).toBe(8);
+    expect(body()).not.toContain("deviceConfig.staleDraft");
+    expect(body()).not.toContain("deviceConfig.unsaved");
+    expect(textarea().value).toBe('{"edited":1}');
+    expect(button("deviceConfig.preview").disabled).toBe(false);
+    expect(button("deviceConfig.remove").disabled).toBe(false);
+  });
+
+  it("after the user's own remove the editor shows no profile and no stale-draft alert", async () => {
+    const server = fakeServer(ORIGINAL);
+    vi.stubGlobal("fetch", vi.fn(server.handler));
+    const onApplied = async (tree: ProjectTree) => { await show(tree, 3, onApplied); };
+    await show(treeOf(1, 7), 3, onApplied);
+    await flush();
+    await act(async () => { button("deviceConfig.remove").click(); });
+    await flush();
+    expect(server.state.document).toBeNull();
+    expect(body()).toContain("deviceConfig.none");
+    expect(body()).not.toContain("deviceConfig.staleDraft");
+    expect(textarea().value).toBe("");
+  });
+
+  it("never confirms a preview of text the user has since edited", async () => {
+    const server = fakeServer(ORIGINAL);
+    const slow = deferred();
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: { body?: string }) => {
+      if (url.endsWith("/preview")) {
+        const sent = JSON.parse(init!.body!);
+        await slow.promise;
+        return json({ token: "late", action: sent.action, previous: profileOf(ORIGINAL, "1".repeat(64)), noOp: false, expiresInSeconds: 300 });
+      }
+      return server.handler(url, init);
+    }));
+    await show(treeOf(1, 7));
+    await flush();
+    await type('{"a":1}');
+    await act(async () => { button("deviceConfig.preview").click(); });
+    await type('{"b":2}');
+    await act(async () => { slow.resolve(json({})); });
+    await flush();
+    expect(textarea().value).toBe('{"b":2}');
+    expect(body()).not.toContain("deviceConfig.confirmText");
+    expect(server.state.cancelled).toEqual(["late"]);
+    expect(button("deviceConfig.preview").disabled).toBe(false);
   });
 });

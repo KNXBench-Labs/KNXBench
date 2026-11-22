@@ -430,6 +430,18 @@ mod tests {
     }
 
     #[test]
+    fn negative_zero_is_refused_as_a_non_integer_number() {
+        // Pins current engine behaviour: the strict parser reads the JSON integer `-0` as a
+        // float and refuses it (open owner/contract decision, WP-48 F06); `-7` is accepted.
+        let (snapshot, _stack) = snapshot_with_profile(7);
+        assert!(matches!(
+            preview_devconf_edit(&snapshot, &revision(), &draft_with(b"{\"n\":-0}")),
+            Err(DevconfEditError::Document(_))
+        ));
+        preview_devconf_edit(&snapshot, &revision(), &draft_with(b"{\"n\":-7}")).unwrap();
+    }
+
+    #[test]
     fn historical_non_json_bytes_survive_the_core_constructor_and_removal_stays_possible() {
         // Load and undo replay go through the lenient core constructor (opaque bytes kept);
         // only new documents are gated, so a legacy profile can still be removed.

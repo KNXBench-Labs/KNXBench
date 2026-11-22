@@ -587,3 +587,121 @@ async fn historical_non_json_bytes_are_preserved_reported_and_removable() {
     .await;
     assert_eq!(status, StatusCode::OK);
 }
+
+/// Saves the open project natively and reopens it, as a user does when switching away and back.
+async fn save_and_reopen(app: &axum::Router, dir: &std::path::Path, name: &str) {
+    let native = dir.join(name);
+    for route in ["/api/project/save-as", "/api/project/open"] {
+        let (status, body) = request(app, "POST", route, json!({ "path": native })).await;
+        assert_eq!(status, StatusCode::OK, "{route}: {body}");
+    }
+}
+
+#[tokio::test]
+async fn stored_document_survives_native_save_and_reopen_byte_for_byte_and_stays_editable() {
+    let (dir, _state, app, device) = fixture().await;
+    let path = format!("/api/project/device-config-profiles/devices/{device}");
+    let original = b"{ \"zeta\" :1,\n \"alpha\": {\"unknown_member\": [true,null]} ,\t\"n\":-7 }\n";
+    apply_set(&app, device, original).await;
+    let (_, before) = request(&app, "GET", &path, Value::Null).await;
+    let (_, list_before) = request(
+        &app,
+        "GET",
+        "/api/project/device-config-profiles",
+        Value::Null,
+    )
+    .await;
+    assert_eq!(
+        before["projectIncarnation"], list_before["projectIncarnation"],
+        "the single-device read carries the list's project incarnation"
+    );
+
+    save_and_reopen(&app, dir.path(), "devconf-roundtrip.knxdb").await;
+
+    let (status, after) = request(&app, "GET", &path, Value::Null).await;
+    assert_eq!(status, StatusCode::OK, "{after}");
+    let (_, list_after) = request(
+        &app,
+        "GET",
+        "/api/project/device-config-profiles",
+        Value::Null,
+    )
+    .await;
+    assert_eq!(
+        after["projectIncarnation"],
+        list_after["projectIncarnation"]
+    );
+    assert_ne!(
+        after["projectIncarnation"], before["projectIncarnation"],
+        "reopening is a new project incarnation"
+    );
+    assert_eq!(after["snapshotRevision"], list_after["snapshotRevision"]);
+    let profile = &after["profile"];
+    assert_eq!(profile["documentB64"], base64url(original));
+    assert_eq!(profile["documentSha256"], sha256_hex(original));
+    assert_eq!(profile["documentBytes"], original.len());
+    assert_eq!(profile["documentError"], Value::Null);
+
+    // The reopened document is editable: preview and apply an edit of the original content.
+    let edited = b"{ \"zeta\" :2,\n \"alpha\": {\"unknown_member\": [true,null]} ,\t\"n\":-7 }\n";
+    apply_set(&app, device, edited).await;
+    let (_, changed) = request(&app, "GET", &path, Value::Null).await;
+    assert_eq!(changed["profile"]["documentB64"], base64url(edited));
+}
+
+#[tokio::test]
+async fn historical_non_utf8_profile_survives_native_save_and_reopen_and_is_removable() {
+    let (dir, state, app, device) = fixture().await;
+    let path = format!("/api/project/device-config-profiles/devices/{device}");
+    let legacy = b"legacy \xff not json".to_vec();
+    {
+        let mut project = state.project.lock().unwrap();
+        project.as_mut().unwrap().devices.set_config_profile(
+            knx_core::devconf::DeviceConfigProfile::new(
+                knx_core::DeviceId(device),
+                "example.demo-panel",
+                "1.0.0",
+                &"a".repeat(64),
+                legacy.clone(),
+            )
+            .unwrap(),
+        );
+    }
+    let (_, before) = request(&app, "GET", &path, Value::Null).await;
+
+    save_and_reopen(&app, dir.path(), "devconf-legacy.knxdb").await;
+
+    let (status, after) = request(&app, "GET", &path, Value::Null).await;
+    assert_eq!(status, StatusCode::OK, "{after}");
+    assert_ne!(after["projectIncarnation"], before["projectIncarnation"]);
+    assert_eq!(after["profile"]["documentB64"], base64url(&legacy));
+    assert_eq!(after["profile"]["documentSha256"], sha256_hex(&legacy));
+    assert!(after["profile"]["documentError"].is_string());
+
+    let (_, list) = request(
+        &app,
+        "GET",
+        "/api/project/device-config-profiles",
+        Value::Null,
+    )
+    .await;
+    assert_eq!(after["projectIncarnation"], list["projectIncarnation"]);
+    let (status, plan) = request(
+        &app,
+        "POST",
+        "/api/project/device-config-profiles/preview",
+        preview_payload(&list, json!({"kind":"remove","device":device})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{plan}");
+    let (status, applied) = request(
+        &app,
+        "POST",
+        "/api/project/device-config-profiles/apply",
+        json!({"token":plan["token"],"confirmed":true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{applied}");
+    let (_, removed) = request(&app, "GET", &path, Value::Null).await;
+    assert_eq!(removed["profile"], Value::Null);
+}

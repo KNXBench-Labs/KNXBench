@@ -218,6 +218,11 @@ adopts a response carrying exactly the context it asked for. A clean editor relo
 dirty draft is never overwritten. If the stored content changed underneath it, the draft
 is kept, previewing is blocked and the user chooses *Keep my draft* or *Load stored
 version*. Unedited text is sent back as the exact stored bytes (no reformatting).
+A new revision whose stored content equals the draft (typically the user's own apply) is
+adopted silently, without the stale alert. A preview confirmation always belongs to the
+text it was requested for: an edit made while the preview request is in flight discards
+the late answer and cancels its token (draft-version check, inputs stay editable), so
+*Apply* can never write text the user no longer sees.
 
 ## What is not claimed
 

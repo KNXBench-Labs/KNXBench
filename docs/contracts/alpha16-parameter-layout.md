@@ -236,8 +236,8 @@ Button behaviour, handler support or Table/Grid visual equivalence.
   and the matrix cell shows it in its tooltip like any other caption. A plain
   literal and a plain (placeholder-free) translation send no fill: a translation
   is not a stored parameter value (WP-48.3). The Button's translation and fill
-  are looked up by its exact module scope chain and node, never the program tree's. The label
-  itself stays a plain `span`: no role, tab stop or handler.
+  are looked up by its exact module scope chain and node, never the program
+  tree's. The label itself stays a plain `span`: no role, tab stop or handler.
 - **Absent Cell (WP05-B clarification, 14 November 2026).** A reached,
   program-owned `Button` without `Cell` inside a valid Table/Grid block has no
   defined table position: it receives neither a passive label nor an additional

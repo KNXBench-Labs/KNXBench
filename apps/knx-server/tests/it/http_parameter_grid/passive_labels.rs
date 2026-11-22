@@ -329,6 +329,47 @@ async fn a_translated_button_label_claims_no_parameter_fill() {
 }
 
 #[tokio::test]
+async fn a_translated_placeholder_button_shows_the_filled_text_and_keeps_its_fill() {
+    // WP-48.3 side fix: the source `Text` has no placeholder, the German translation has one.
+    // The label must show the filled translation, not its `{{0}}` template, with the fill.
+    let program = ONLY
+        .replace(
+            r#"<ParameterType Id="PT-NUMBER">"#,
+            r#"<ParameterType Id="PT-T"><TypeText SizeInBit="240"/></ParameterType><ParameterType Id="PT-NUMBER">"#,
+        )
+        .replace(
+            r#"<Parameter Id="P-OTHER" Text="Fictional second value" ParameterType="PT-NUMBER" Value="23" Access="ReadWrite"/>"#,
+            r#"<Parameter Id="P-OTHER" Text="Fictional second value" ParameterType="PT-NUMBER" Value="23" Access="ReadWrite"/><Parameter Id="P-TITLE" Text="Fictional title" ParameterType="PT-T" Value="Attic"/>"#,
+        )
+        .replace(
+            r#"<ParameterRef Id="PR-OTHER" RefId="P-OTHER"/>"#,
+            r#"<ParameterRef Id="PR-OTHER" RefId="P-OTHER"/><ParameterRef Id="PR-TITLE" RefId="P-TITLE"/>"#,
+        )
+        .replace(
+            r#"<Button Id="B-ONLY" Text="Fictional source label" EventHandlerOnline="ConnectionOriented" EventHandler="fictionalCallback" EventHandlerParameters="{ &quot;fixture&quot;: 7 }" Cell="1,2"/>"#,
+            r#"<Button Id="B-ONLY" Text="Open" Cell="1,2" TextParameterRefId="PR-TITLE"/>"#,
+        );
+    let (_dir, state) = state_with(
+        &program,
+        Some(
+            "INSERT INTO translation (scope,scope_id,language,ref_id,attribute_name,text) VALUES\n         ('Program','A-FIX','de-DE','B-ONLY','Text','Öffne {{0}}')",
+        ),
+    );
+    let dto = panel_at(&state, &format!("{PARAMETERS}?language=de-DE")).await;
+    let button = device_section(&dto)["passiveLabels"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|l| l["elementId"] == "B-ONLY")
+        .expect("button label present");
+    assert_eq!(button["text"], json!("Öffne Attic"), "{dto}");
+    assert_eq!(
+        button["textFill"],
+        json!({ "template": "Öffne {{0}}", "source": "ProductDefault" })
+    );
+}
+
+#[tokio::test]
 async fn an_untranslated_button_label_keeps_no_fill() {
     // No requested language: the literal source text stays and carries no
     // provenance overlay, so no fill is sent.

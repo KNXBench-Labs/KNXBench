@@ -363,6 +363,10 @@ Implemented on `work/wp48-3-scoped-captions-20261122`; pending review/gate.
   instantiated twice, each with its own translation; each keeps its own text, and an
   untranslated module Button no longer borrows the program Button's translation (both tests
   fail on the previous code).
+  This is the scope-collision case (two module instances of one definition, distinct scope
+  chains), not a `Repeat` expansion: `Repeat` is a dynamic container whose content is not
+  expanded into scopes, so the spec's "Repeat expansion" acceptance item stays **remaining**
+  (no Repeat-scoped Button coverage here).
 - **F03 fixed.** Resolved translations are kept in a separate map from the positional fills
   (`CaptionFills::translations`). A plain translation sends no `textFill`; real
   stored/default/empty/unresolved substitutions keep their origin, a translated placeholder
@@ -379,6 +383,12 @@ Implemented on `work/wp48-3-scoped-captions-20261122`; pending review/gate.
 - **Lead 3, rename fill metadata: confirmed, fixed.** A rename filled from its
   `@TextParameterRefId` dropped its fill; it now carries the real origin
   (`StoredValue`/`EmptyValue`/...), asserted in `a_rename_leaf_fills_its_placeholder_from_its_own_text_parameter`.
+- **Lead 3, Button translation vs. text parameter: pre-existing, not changed.** A Button
+  with `@TextParameterRefId` and a placeholder in its source `Text` takes the fill branch
+  (`domain.rs`) and ignores a requested-language translation of that Button. Unchanged in
+  this slice; whether translated templates should apply there is an open decision. (Covered
+  instead: a translated placeholder Button without that branch shows the filled text, test
+  `a_translated_placeholder_button_shows_the_filled_text_and_keeps_its_fill`.)
 - **Lead 3, axis fallback: not changed.** `copy_axis_text` keeps the literal axis text and still
   reports the unresolved/empty fill so the reason for not using the parameter-driven caption is
   visible; ADR-0177's pinned tests require exactly this for unresolved references. Still open

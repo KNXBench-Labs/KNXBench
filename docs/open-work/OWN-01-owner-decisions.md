@@ -2,6 +2,18 @@
 
 **Status:** Decisions recorded; remaining evidence and owner review pending. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
+## Decision recorded — 22 November 2026 (device-configuration `-0`)
+
+- **Device-configuration documents keep refusing the JSON number `-0`.** The strict
+  parser accepts integers only (no fraction, exponent or `-0`); no behaviour change.
+  Raised in [WP-48](WP-48-recent-change-correctness-audit.md), carried in
+  [WP-42](WP-42-device-configuration-modules.md#open-decisions); the refusal is stated in
+  the [contract](../contracts/device-configuration-modules.md). Pinned by
+  `negative_zero_is_refused_as_a_non_integer_number`
+  (`crates/knx-app/src/devconf_edit.rs`) and the `-0` case of
+  `fractions_exponents_and_huge_integers_are_refused` (`crates/knx-devconf/src/json.rs`).
+  Reopen only on a new owner decision.
+
 ## Decision recorded — 20 November 2026 (third round)
 
 - **The owner grants no further consents.** WP-12 (field evidence under
@@ -229,8 +241,6 @@ delivered work, and none is decided here.
 - ADR-0189 (the WP-07 module-instance authority, formerly a second ADR 0177) is
   **Proposed**: the 17 November decision accepted the counted witness, not the ADR
   text. Accept it, amend it, or leave it Proposed?
-- May a device-configuration document contain the JSON number `-0`? Today it is refused
-  ([WP-42](WP-42-device-configuration-modules.md)).
 - Tooltip wording for a grid-axis caption that falls back to its literal text when the
   fill origin is an empty value or the template default
   ([WP-05](WP-05-parameter-layout-fidelity.md)).

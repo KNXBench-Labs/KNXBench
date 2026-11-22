@@ -25,7 +25,7 @@ program.
 
 Both JSON inputs are strict: UTF-8, a single JSON value, no duplicate object
 member names (refused, not last-wins), numbers must be integers without fraction
-or exponent and fit in a signed 64-bit integer (`-0` is refused as well). A module package is at most
+or exponent and fit in a signed 64-bit integer (`-0` is refused as well, by owner decision of 22 November 2026, [OWN-01](../open-work/OWN-01-owner-decisions.md)). A module package is at most
 **262144 bytes**; a document is at most the module's `max_document_bytes`
 (1..1048576).
 

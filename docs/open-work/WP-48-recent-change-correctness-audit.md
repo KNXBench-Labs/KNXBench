@@ -209,6 +209,18 @@ policy and stable sequence tie-break. Cover variable fractional widths, no fract
 equivalent timezone offsets, ascending/descending and stable equality. Do not truncate
 higher precision accidentally when replacing the comparator.
 
+Implementation note (WP-48.6): `timestampOrder.ts` compares RFC 3339 instants as whole
+UTC seconds plus exact fraction digits (no precision ceiling; width and trailing zeros
+insignificant; unparsable text is greatest); `monitorRowOrder.ts` types the monitor cells
+and breaks every tie by ascending `seq` in both directions. The same comparator now
+orders session-log rows (`logRows.ts`, which parsed only to milliseconds; an unparsable
+time stays above dated entries as before). Project versions (`projectHistory.ts`) keep
+`Date.parse` plus id: the server stores project-history timestamps at millisecond
+precision (`SecondsFormat::Millis` in `crates/knx-store/src/project_history.rs`), which
+`Date.parse` represents exactly, and the file stays out of the companion import graph.
+Unparsable timestamps are the greatest value: last ascending, first descending (pinned
+in `monitorRowOrder.test.ts`).
+
 ### F10 — Native select marquee moves the control rather than revealing its text (P2)
 
 Commit `ebe7b35ee`; static component/CSS trace, no browser rendering claim.
@@ -430,7 +442,7 @@ session coordinates, reviews source/PR plus gate receipts, then integrates each 
 | WP-48.3 | Correct scoped captions and provenance; F02–F03; verify rename/axis/historical-row and nested-reporting leads — implemented on branch `work/wp48-3-scoped-captions-20261122`, pending review/gate | None; coordinate shared ownership code with 48.2 |
 | WP-48.4 | Existing configuration can actually be edited, editor tracks revisions, server enforces document contract; F04–F06 — implemented on branch `work/wp48-4-devconf-editor-20261122`, pending review/gate | None; reuse WP-42 storage/preview/history |
 | WP-48.5 | Usable, honest last-download address marks; F07–F08 — implemented on branch `work/wp48-5-ga-last-download-20261122`, pending review/gate | None |
-| WP-48.6 | Correct monitor ordering and stationary readable select controls; F09–F10 | None |
+| WP-48.6 | Correct monitor ordering and stationary readable select controls; F09–F10 — implemented on branch `work/wp48-6-monitor-select-20261122`, pending review/gate | None |
 | WP-48.7 | Effective UDP/settings regressions and per-instance image proof; F11–F12, F14 | None; producer changes may coordinate with 48.2 |
 | WP-48.8 | Catalogue cache availability follows the selected digest; F17 | None |
 | WP-48.9 | Resolve evidence/compatibility leads and reconcile remaining decision/status references; remaining F15 | Existing source evidence for semantic/write claims; status closeout follows the relevant earlier slices |

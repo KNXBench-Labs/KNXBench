@@ -16,6 +16,21 @@ describe("session log rows", () => {
     expect(rows.map(r => r.entry.message)).toEqual(["c", "b", "ui", "a"]);
   });
 
+  it("orders entries of the same millisecond by their sub-millisecond digits (F09 class)", () => {
+    const rows = newestFirst(serverRows([
+      entry("2026-10-13T10:00:00.100000001+00:00", "latest"),
+      entry("2026-10-13T10:00:00.100+00:00", "late"),
+      entry("2026-10-13T10:00:00.099999+00:00", "early"),
+    ]));
+    expect(rows.map(r => r.entry.message)).toEqual(["latest", "late", "early"]);
+  });
+
+  it("keeps an unparsable timestamp above dated entries, independent of input order", () => {
+    for (const input of [[entry("garbage", "bad"), entry("2026-10-13T10:00:00Z", "ok")], [entry("2026-10-13T10:00:00Z", "ok"), entry("garbage", "bad")]]) {
+      expect(newestFirst(serverRows(input)).map(r => r.entry.message)).toEqual(["bad", "ok"]);
+    }
+  });
+
   it("keeps an unparsable timestamp orderable by key instead of throwing", () => {
     const rows = newestFirst(serverRows([entry("garbage", "x"), entry("garbage", "y")]));
     expect(rows.map(r => r.entry.message)).toEqual(["y", "x"]);

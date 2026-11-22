@@ -6,6 +6,7 @@ import ExperimentalTransportBadge from "./ExperimentalTransportBadge";
 import { serialLabel, validSerialTarget, type BusEndpoint, type IpTunnelTransport, type SerialTarget } from "./serialTransport";
 // apps/knx-web/src/BusMonitorPanel.tsx
 import ResizableTable from "./ResizableTable";
+import { sortMonitorRows, type MonitorCell } from "./monitorRowOrder";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import DeviceLink from "./DeviceLink";
@@ -54,16 +55,17 @@ const BUS_MONITOR_COLUMNS = [
 type MonitorColumnId = (typeof BUS_MONITOR_COLUMNS)[number]["id"];
 
 /** WP-47.2: sortable cell value per column; numeric where the data is numeric. */
-function monitorCellValue(column: MonitorColumnId, row: BusTelegramRow, language: string): string | number {
+function monitorCellValue(column: MonitorColumnId, row: BusTelegramRow, language: string): MonitorCell {
+  const text = (value: string): MonitorCell => ({ kind: "text", value });
   switch (column) {
-    case "sequence": return row.seq;
-    case "time": return row.timestamp;
-    case "source": return row.source;
-    case "destination": return row.destinationName ?? row.destination;
-    case "service": return row.service;
-    case "control": return row.control ? `${row.control.priority}/${row.control.hopCount}` : "";
-    case "payload": return row.rawPayload ?? "";
-    case "decoded": return decodedSummary(row, language);
+    case "sequence": return { kind: "number", value: row.seq };
+    case "time": return { kind: "time", value: row.timestamp };
+    case "source": return text(row.source);
+    case "destination": return text(row.destinationName ?? row.destination);
+    case "service": return text(row.service);
+    case "control": return text(row.control ? `${row.control.priority}/${row.control.hopCount}` : "");
+    case "payload": return text(row.rawPayload ?? "");
+    case "decoded": return text(decodedSummary(row, language));
   }
 }
 
@@ -846,15 +848,8 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
       return groupAddressMatches(row.destination, query) || name.includes(query);
     });
     if (!columnSort) return filtered;
-    // WP-47.2: stable sort keeps arrival order inside equal cells.
-    return [...filtered].sort((a, b) => {
-      const av = monitorCellValue(columnSort.column, a, language);
-      const bv = monitorCellValue(columnSort.column, b, language);
-      const cmp = typeof av === "number" && typeof bv === "number"
-        ? av - bv
-        : String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" });
-      return columnSort.descending ? -cmp : cmp;
-    });
+    // WP-47.2/WP-48.6: typed cells; ties keep arrival (sequence) order.
+    return sortMonitorRows(filtered, columnSort.descending, (row) => monitorCellValue(columnSort.column, row, language));
   }, [rows, textFilter, serviceFilters, columnSort, language]);
 
   // T25. One sentence for whichever state the search is in, for both the

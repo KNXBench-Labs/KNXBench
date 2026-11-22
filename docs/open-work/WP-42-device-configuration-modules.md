@@ -9,7 +9,7 @@ only as explicitly entered object numbers; structured preview first.
 Decision: [ADR-0175](../adr/0175-device-configuration-modules-are-declarative-data.md).
 Contract: [device configuration modules](../contracts/device-configuration-modules.md).
 
-**Priority:** WP-42.1, WP-42.2 and WP-42.3 delivered 17 Nov 2026 (branch work/wp42-storage-20261117, schema 22); WP-42.4 download/bus integration continues as WP-43.
+**Priority:** WP-42.1, WP-42.2 and WP-42.3 delivered 17 Nov 2026 (branch work/wp42-storage-20261117, schema 22); the offline stored-document export is delivered, physical download/bus integration is not started.
 
 ## Requested outcome
 
@@ -28,12 +28,15 @@ part of this work package.
 2. **WP-42.2 — storage.** Module packages installed with id, version and
    SHA-256 in the product-data layer; per-device configuration document in the
    project (native schema 22) with one undoable command per apply; a missing
-   module keeps the stored document unchanged and read-only. *Not started.*
+   module keeps the stored document unchanged and read-only. *Storage delivered*
+   (schema 22 `device_config_profile`, undoable commands; PR 57). `knx devconf export-stored` exports a
+   stored document through a project-read-only CLI path.
 3. **WP-42.3 — editor.** Device panel section: attach a module explicitly,
    structured editor (tree tables as trees, other tables as lists, typed field
    editors, reference pickers), live validation with field focus, export
    download. Object numbers are typed by the user; nothing is suggested from
-   project data. *Not started.*
+   project data. *Editor delivered* (editor fixes PR 131); a physical device
+   download is not delivered and remains unqualified.
 
 Outside this repository: the first device module and its differential tests
 against the firmware's own validator are maintained with that firmware.

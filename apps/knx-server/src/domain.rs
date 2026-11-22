@@ -5302,6 +5302,14 @@ pub enum CatalogCreateError {
     /// The project changed since the preview: the request would now create
     /// other names or addresses than the ones the user confirmed.
     PreviewStale(String),
+    /// A Save is writing the project file (WP-31): try again in a moment.
+    Saving,
+}
+
+impl From<crate::store_path::ProjectSaving> for CatalogCreateError {
+    fn from(_: crate::store_path::ProjectSaving) -> Self {
+        CatalogCreateError::Saving
+    }
 }
 
 impl From<String> for CatalogCreateError {
@@ -5322,6 +5330,7 @@ impl std::fmt::Display for CatalogCreateError {
             CatalogCreateError::Refused(reason) | CatalogCreateError::PreviewStale(reason) => {
                 f.write_str(reason)
             }
+            CatalogCreateError::Saving => f.write_str("the project is being saved; try again"),
         }
     }
 }
@@ -5918,6 +5927,9 @@ fn create_devices_recorded(
             return Ok(replay);
         }
     }
+    // WP-31: refuse while a Save writes, before any ID is reserved or the project mutated;
+    // the persist below would otherwise block on the store path with the project held.
+    drop(state.store_path.lock_unless_saving()?);
     let installation = match resolve_catalog_installation(project, request.line_id, request.options)
     {
         Ok(installation) => installation,

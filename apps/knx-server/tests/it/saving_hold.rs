@@ -54,6 +54,44 @@ pub async fn refused_while_saving(
     refused_while_saving_with(state, app, method, path, &[], payload).await
 }
 
+/// Sends the request while a Save holds the store path and returns its status and body: for a
+/// read that must keep answering during the Save. Asserts it comes promptly and the project
+/// lock stays free.
+pub async fn answered_while_saving(
+    state: &Arc<knx_server::AppState>,
+    app: &axum::Router,
+    method: &str,
+    path: &str,
+    payload: Value,
+) -> (StatusCode, Value) {
+    let save = SaveInProgress::start(state);
+    let call = app.clone().oneshot(
+        Request::builder()
+            .method(method)
+            .uri(path)
+            .header("content-type", "application/json")
+            .body(Body::from(payload.to_string()))
+            .unwrap(),
+    );
+    let response = tokio::time::timeout(Duration::from_secs(5), call)
+        .await
+        .unwrap_or_else(|_| panic!("{method} {path} waited for the running save"))
+        .unwrap();
+    let status = response.status();
+    let bytes = axum::body::to_bytes(response.into_body(), 4 * 1024 * 1024)
+        .await
+        .unwrap();
+    assert!(
+        state.project.try_lock().is_ok(),
+        "{path} kept the project lock during the save"
+    );
+    drop(save);
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+    )
+}
+
 /// [`refused_while_saving`] for a route that needs extra request headers (a cookie).
 pub async fn refused_while_saving_with(
     state: &Arc<knx_server::AppState>,

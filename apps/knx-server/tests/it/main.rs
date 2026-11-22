@@ -2,6 +2,7 @@
 
 mod bin_version;
 mod catalog_allocation;
+mod catalog_create_saving;
 mod catalog_request_replay;
 mod com_object_activation_corpus;
 mod command_dispatch;

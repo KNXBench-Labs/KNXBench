@@ -6,6 +6,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import ComparisonAdoptionPanel from "./ComparisonAdoptionPanel";
 import { offersAdoption, parseAdoptionPreview, type ComparisonAdoptionPreview } from "./comparisonAdoptionApi";
 import type { BoundDeviceComparison, DecodedComparisonRow } from "./deviceComparisons";
+import { currentProject } from "./api";
+import type { ProjectTree } from "./bindings/ProjectTree";
 import { setSetting, resetSettingsForTests } from "./settingsStore";
 import { resetUiLanguageForTests } from "./uiLanguage";
 import { messages as en } from "./messages/en";
@@ -96,4 +98,52 @@ it.each(["en", "de"] as const)("%s previews association rows with their link cha
   expect(links[0].textContent).toContain(m["compare.adoption.linkSending"]);
   const apply = [...host.querySelectorAll("button")].find((b) => b.textContent === m["compare.adoption.apply"])!;
   expect(apply.disabled).toBe(true); // a separate confirmation is still required
+});
+
+it.each(["en", "de"] as const)("%s keeps the preview and the confirmation when a save refuses the apply, and a retry applies it", async (language) => {
+  await act(async () => setSetting("uiLanguage", language));
+  const m = language === "de" ? de : en;
+  const tree = { installations: [] } as unknown as ProjectTree;
+  const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+  const applyBodies: unknown[] = [];
+  let applies = 0;
+  const fetchMock = vi.fn(async (path: string, init?: RequestInit) => {
+    if (path === "/api/device-compare/preview") return json(200, preview);
+    if (path === "/api/device-compare/apply") {
+      applyBodies.push(JSON.parse(String(init?.body)));
+      applies += 1;
+      return applies === 1 ? json(409, { error: "The project is being saved; try again in a moment", kind: "projectSaving" }) : json(200, { changed: true, tree });
+    }
+    if (path === "/api/project") return json(200, tree);
+    throw new Error(`unexpected request: ${path}`);
+  });
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.stubGlobal("fetch", fetchMock);
+  const published: unknown[] = [];
+  const onApplied = vi.fn(async (_applied: ProjectTree) => { published.push(await currentProject()); });
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  dispose = () => { root.unmount(); host.remove(); };
+  await act(async () => root.render(<ComparisonAdoptionPanel result={result} disabled={false} onBusy={() => {}} onApplied={onApplied} />));
+  await act(async () => host.querySelector<HTMLInputElement>("tbody input[type=checkbox]")!.click());
+  const button = (label: string) => [...host.querySelectorAll("button")].find((b) => b.textContent === label)!;
+  await act(async () => button(m["compare.adoption.preview"]).click());
+  await act(async () => host.querySelector<HTMLInputElement>(".comparison-adoption-review input[type=checkbox]")!.click());
+  await act(async () => button(m["compare.adoption.apply"]).click());
+
+  expect(host.querySelector("[role=alert]")?.textContent).toBe(m["projectSaving.retry"]);
+  expect(host.textContent).not.toContain(m["compare.adoption.applyFailed"]);
+  expect(host.querySelector(".comparison-adoption-review")).not.toBeNull();
+  expect(host.querySelector<HTMLInputElement>(".comparison-adoption-review input[type=checkbox]")!.checked).toBe(true);
+  expect(published).toEqual([]);
+  expect(onApplied).not.toHaveBeenCalled();
+
+  await act(async () => button(m["compare.adoption.apply"]).click());
+  expect(applyBodies).toEqual([{ previewToken: preview.previewToken, confirmation: "AdoptDeviceComparison" }, { previewToken: preview.previewToken, confirmation: "AdoptDeviceComparison" }]); // the same token, no new preview
+  expect(published).toEqual([tree]);
+  expect(onApplied).toHaveBeenCalledExactlyOnceWith(tree);
+  expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+    "/api/device-compare/preview", "/api/device-compare/apply", "/api/device-compare/apply", "/api/project",
+  ]);
+  expect(host.querySelector(".comparison-adoption-review")).toBeNull();
+  expect(host.querySelector("[role=alert]")).toBeNull();
 });

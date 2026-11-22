@@ -615,8 +615,10 @@ async fn a_session_only_project_can_list_but_not_adopt() {
         StatusCode::OK
     );
     let opaque = state.opaque.lock().unwrap().clone();
-    let (status, listing) = post(
+    let (status, listing) = crate::saving_hold::answered_while_saving(
+        &state,
         &app,
+        "POST",
         "/api/project/plugin-data/candidates",
         json!({"path": source}),
     )
@@ -631,7 +633,14 @@ async fn a_session_only_project_can_list_but_not_adopt() {
         "sourceDevice": first["sourceDevice"]["id"],
         "targetDevice": first["targetDevice"]["id"],
     });
-    let (status, refused) = post(&app, "/api/project/plugin-data/preview", body).await;
+    let (status, refused) = crate::saving_hold::answered_while_saving(
+        &state,
+        &app,
+        "POST",
+        "/api/project/plugin-data/preview",
+        body,
+    )
+    .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(refused["kind"], "pluginDataNativeRequired");
     assert_eq!(*state.opaque.lock().unwrap(), opaque);
@@ -702,4 +711,32 @@ async fn an_apply_during_a_save_is_refused_at_once_and_keeps_its_plan() {
     let (status, applied) = post(&f.app, "/api/project/plugin-data/apply", apply).await;
     assert_eq!(status, StatusCode::OK, "{applied}");
     assert_eq!(applied["rollbackVersion"]["label"], ROLLBACK_LABEL);
+}
+
+/// `is_native` reads the path as last set, so listing and preview answer during a Save and still
+/// tell a native project from a session-only one.
+#[tokio::test]
+async fn listing_and_preview_answer_during_a_save_and_still_see_the_project_as_native() {
+    let f = fixture().await;
+    let before = untouched(&f).await;
+    let (status, listing) = crate::saving_hold::answered_while_saving(
+        &f.state,
+        &f.app,
+        "POST",
+        "/api/project/plugin-data/candidates",
+        json!({"path": f.source}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{listing}");
+    assert_eq!(listing["persistence"], "native");
+    let (status, shown) = crate::saving_hold::answered_while_saving(
+        &f.state,
+        &f.app,
+        "POST",
+        "/api/project/plugin-data/preview",
+        preview_body(&f).await,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{shown}");
+    assert_untouched(&f, &before).await;
 }

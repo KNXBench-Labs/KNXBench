@@ -1,4 +1,9 @@
-# Restart snapshot — WP-37 docs closeout (Slice S1) by subagent (2026-11-20, branch work/wp37-docs-closeout-20261120)
+# Restart snapshot — next-task queue (WebUI coordinator; observed 2026-11-22)
+## WP-31 save-time refusal (RUNNING; owner WebUI next-task queue; observed 2026-11-22)
+- Owner chose immediate retryable `projectSaving`, no auto-retry, shared server helper and translated UI. Candidate `30d022415` on `work/wp31-project-saving-20261122`; independent review approved with fixes (catalogue creation and comparison preview retention). Fixes partially implemented; provider-limit interruption, Codex continuation owns remaining verification and package gate. No acceptance or publication yet.
+- WP-06/WP-42 docs closeout published as PR #138, main `965188a5d`; retrospective source review and owner decision to keep rejecting JSON `-0`. Next after WP-31 delivery: bounded docs hash audit. Root checkout stays untouched.
+- REL-01/beta remains PAUSED until explicit owner release. WP-49, stored-profile consumer and PRG-01 stay parked; no bus, hardware, VM, release or deployment authority.
+
 Release freeze: released by claude-release-alpha23 (`v0.1.0-alpha.23` at `81c6bcc62`, observed 2026-11-22); `main` is open for code again. Work merged from now on ships with the next alpha.
 ## Alpha 23 publication verification (RUNNING; owner claude-release-alpha23; observed 2026-11-22)
 - Tag and GitHub pre-release published; `main` fast-forwarded to the tag. Full release gate 24/24, project and product-catalogue upgrade probes, 28-file cross-section and both packaging dry runs green before the tag. Remaining: artifact upload readback, SHA256SUMS, Docker digests, isolated smoke; evidence `<profile-scratch>/release-alpha23/`.

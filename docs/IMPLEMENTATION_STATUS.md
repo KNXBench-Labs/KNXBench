@@ -763,9 +763,9 @@ unchanged. [WP-31](open-work/WP-31-device-editor-unavailable-after-save.md) and
 
 Since 22 November 2026 the routes that write the file in their own transaction
 (note, instruction, profile and recipe apply, adoption, selective import, plugin
-data, baseline marks, history panel and actions) answer `409 projectSaving`
+data, baseline marks, catalogue device creation, history panel and actions) answer `409 projectSaving`
 during a save instead of waiting with the project locked; the web shows a
-translated retry message. Details and the two routes that still wait:
+translated retry message. Details and the route that still waits (settlement):
 [WP-31](open-work/WP-31-device-editor-unavailable-after-save.md).
 
 ## Parameter selection lists offer only declared values (11 November 2026; issue #45, WP-30)

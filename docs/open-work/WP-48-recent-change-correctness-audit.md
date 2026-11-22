@@ -336,7 +336,8 @@ never read). Mutants: removing the unscoped fallback (both `ValueMap::get` and t
 Static documentation/source inventory.
 Anchors: `docs/adr/0177-accepted-wp07-mapping-is-the-module-instance-authority.md:4,40–45`,
 `docs/adr/0177-grid-axis-text-parameter-captions.md:1`,
-`docs/OPEN_WORK.md:10,19,30` at the audit target.
+`docs/OPEN_WORK.md:10,19,30` at the audit target. (The authority ADR is now
+`docs/adr/0189-accepted-wp07-mapping-is-the-module-instance-authority.md`, WP-48.9.)
 
 Two different ADRs use 0177; the authority ADR is still Proposed and specifies an
 `ends_with` rule/shared resolver while the implementation uses duplicated `contains`
@@ -524,7 +525,7 @@ the implementation notes above and in the PR. Merge commits are the first-parent
 | WP-48.6 | Chronological monitor ordering and stationary readable select controls; F09–F10 | #133 | `0e3e428dc` |
 | WP-48.7 | Effective UDP-trap and settings regressions, per-instance image proof; F11–F12, F14 (producer gap recorded, KL-068 / ADR-0189 amendment / WP-07) | #134 | `e3ef3bff9` |
 | WP-48.8 | Catalogue cache availability follows the selected digest; F17 | #135 | `9cd7c0d98` |
-| WP-48.9 | Status closeout: ADR identity, WP-42/LS-02 status, lead and decision dispositions; rest of F15 | this change | recorded in the merge |
+| WP-48.9 | Status closeout: ADR identity, WP-42/LS-02 status, lead and decision dispositions; rest of F15 | PR #136 | recorded in the merge |
 
 ## Closeout summary (22 November 2026)
 

@@ -9,7 +9,7 @@ use knx_net::{cemi::decode_l_data, ApplicationService, Destination, LDataMessage
 use serde_json::Value;
 use std::{
     io::{Read, Write},
-    net::{Ipv4Addr, Shutdown, SocketAddr, TcpListener, TcpStream, UdpSocket},
+    net::{Shutdown, SocketAddr, TcpStream, UdpSocket},
     path::Path,
     process::{Command, Output, Stdio},
     sync::Arc,
@@ -117,17 +117,8 @@ impl Peer {
 fn gateway(
     script: impl FnOnce(&mut Peer) + Send + 'static,
 ) -> (SocketAddr, JoinHandle<Wire>, UdpSocket) {
-    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+    let (listener, trap) = knx_testsupport::tcp_listener_with_udp_trap();
     let address = listener.local_addr().unwrap();
-    let trap = (0..64)
-        .find_map(|_| UdpSocket::bind(address).ok())
-        .or_else(|| {
-            // Fall back to an ephemeral UDP port when the TCP port is still in
-            // TIME_WAIT from a parallel test binary: the trap only needs to keep
-            // the CLI from falling back to UDP, any free port works.
-            UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).ok()
-        })
-        .expect("a UDP trap socket");
     trap.set_nonblocking(true).unwrap();
     let worker = thread::spawn(move || {
         listener.set_nonblocking(true).unwrap();
@@ -359,7 +350,7 @@ fn ordinary_output_reports_skips_before_success_and_peer_eof_in_both_queries() {
 #[test]
 fn refused_tcp_and_rejected_handshake_never_fall_back_or_create_an_answer() {
     for by_address in [false, true] {
-        let (port, trap) = refused_tcp_with_udp_trap();
+        let (port, trap, _held) = refused_tcp_with_udp_trap();
         let output = run_tcp(&format!("127.0.0.1:{port}"), by_address, &[]);
         assert_eq!(output.status.code(), Some(1));
         assert!(stderr(&output).contains("could not connect"));
@@ -367,17 +358,8 @@ fn refused_tcp_and_rejected_handshake_never_fall_back_or_create_an_answer() {
         assert!(stdout(&output).is_empty());
         no_udp(&trap);
 
-        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let (listener, trap) = knx_testsupport::tcp_listener_with_udp_trap();
         let address = listener.local_addr().unwrap();
-        let trap = (0..64)
-            .find_map(|_| UdpSocket::bind(address).ok())
-            .or_else(|| {
-                // Fall back to an ephemeral UDP port when the TCP port is still in
-                // TIME_WAIT from a parallel test binary: the trap only needs to keep
-                // the CLI from falling back to UDP, any free port works.
-                UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).ok()
-            })
-            .expect("a UDP trap socket");
         let worker = thread::spawn(move || {
             listener.set_nonblocking(true).unwrap();
             let deadline = Instant::now() + WAIT;

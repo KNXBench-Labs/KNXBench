@@ -6,7 +6,8 @@
 
 use std::collections::BTreeMap;
 
-use knx_core::IndividualAddress;
+use knx_core::{DeviceId, IndividualAddress, ModuleInstance, ModuleInstanceId, SourceRef};
+use knx_productdb::device_evaluation::{evaluate_device, DeviceEvaluation};
 use knx_productdb::image::{build_download_image, ImageError, ImageRequest};
 
 const ID: &str = "M-0002_A-0002-01-0000";
@@ -172,4 +173,181 @@ fn module_scoped_com_object_ref_still_refuses_by_name() {
         matches!(&result, Err(ImageError::Unsupported { what }) if what == "MO_R: a module instance"),
         "{result:?}"
     );
+}
+
+// ---------------------------------------------------------------------------
+// WP-48 F14: per-instance value ownership versus the image seam's unscoped policy.
+//
+// Verified policy (ADR-0177, `image.rs` value lookup): `build_download_image` consumes
+// `ImageRequest.values` as an unscoped map keyed by declared `ParameterRef` id. Each
+// instantiation resolves its own `BaseOffset`, but a value is looked up scoped first and
+// then falls back to the unscoped (program-level) value; no caller populates the scoped
+// half of the `ValueMap` on the image path, so the fallback is the only value source today.
+// A module-qualified key (`<prefix>_M-<m>_MI-<k>_<suffix>`) is NOT decomposed here and is
+// refused by name. Per-instance value isolation therefore exists only in
+// `device_evaluation::evaluate_device`; it is not wired into image building (finding F14a).
+// ---------------------------------------------------------------------------
+
+/// Real-shaped ids: `ModuleDef` `X_MD-1`, local reference `X_MD-1_R-1`, instances
+/// `X_MD-1_M-1` (base 4) and `X_MD-1_M-2` (base 10), both using the same local reference.
+fn two_instance_program() -> String {
+    PROGRAM
+        .replace("Id=\"MD\"", "Id=\"X_MD-1\"")
+        .replace("RefId=\"MD\"", "RefId=\"X_MD-1\"")
+        .replace("Id=\"MP_R\" RefId=\"MP\"", "Id=\"X_MD-1_R-1\" RefId=\"MP\"")
+        .replace("RefId=\"MP_R\"", "RefId=\"X_MD-1_R-1\"")
+        .replace("Id=\"MI_M-1\"", "Id=\"X_MD-1_M-1\"")
+        .replace(
+            "</ChannelIndependentBlock></Dynamic>\n</ApplicationProgram>",
+            "<Module Id=\"X_MD-1_M-2\" RefId=\"X_MD-1\"><NumericArg RefId=\"MD_A-1\" Value=\"10\" /></Module></ChannelIndependentBlock></Dynamic>\n</ApplicationProgram>",
+        )
+}
+
+const LOCAL_REF: &str = "X_MD-1_R-1";
+
+fn expected_segment(writes: &[(usize, u8)]) -> Vec<u8> {
+    let mut octets = vec![0u8; 32];
+    for (index, value) in writes {
+        octets[*index] = *value;
+    }
+    octets
+}
+
+/// The fallback policy, pinned: one unscoped value reaches every instantiation at its own
+/// base; the product default does the same; every other octet stays as the template.
+#[test]
+fn unscoped_value_is_the_only_value_source_and_reaches_every_instance() {
+    let program = two_instance_program();
+    assert!(program.contains("X_MD-1_M-2") && program.contains("X_MD-1_M-1"));
+
+    let (_dir, conn, request) = fixture(&program);
+    let image = build(&conn, &request).unwrap();
+    assert_eq!(
+        image.segment("S").unwrap().octets,
+        expected_segment(&[(6, 1), (12, 1)]),
+        "product default at base 4+2 and base 10+2, nothing else"
+    );
+
+    let (_dir, conn, mut request) = fixture(&program);
+    request.values.insert(LOCAL_REF.into(), "3".into());
+    let image = build(&conn, &request).unwrap();
+    assert_eq!(
+        image.segment("S").unwrap().octets,
+        expected_segment(&[(6, 3), (12, 3)]),
+        "one unscoped value is shared by both instances"
+    );
+}
+
+/// Two real module-qualified keys with different values are refused by name and write
+/// nothing: the image seam must not silently fall back to the default or drop either value.
+#[test]
+fn module_qualified_keys_with_different_values_are_refused_not_silently_dropped() {
+    let program = two_instance_program();
+    let first = format!("X_MD-1_M-1_MI-1_{}", "R-1");
+    let second = format!("X_MD-1_M-2_MI-1_{}", "R-1");
+    for values in [
+        vec![(first.as_str(), "3"), (second.as_str(), "2")],
+        vec![(first.as_str(), "3")],
+        // An unscoped value beside a scoped one must not mask the refusal.
+        vec![(LOCAL_REF, "1"), (second.as_str(), "2")],
+    ] {
+        let (_dir, conn, mut request) = fixture(&program);
+        for (key, value) in &values {
+            request.values.insert((*key).into(), (*value).into());
+        }
+        let result = build(&conn, &request);
+        assert!(
+            matches!(&result, Err(ImageError::Value { cause, .. }) if cause.contains("no such ParameterRef")),
+            "{values:?}: {result:?}"
+        );
+    }
+}
+
+fn module_instance(k: u32, source: &str) -> ModuleInstance {
+    ModuleInstance {
+        id: ModuleInstanceId(k),
+        device: DeviceId(1),
+        source: SourceRef {
+            path: "synthetic".into(),
+            ets_id: source.into(),
+        },
+        instance_ets_id: format!("{source}_MI-1"),
+        repeat_index: String::new(),
+        arguments: vec![],
+    }
+}
+
+fn evaluate(stored: &[(&str, &str)], instances: &[ModuleInstance]) -> DeviceEvaluation {
+    let (_dir, conn, _request) = fixture(&two_instance_program());
+    let stored = stored
+        .iter()
+        .map(|(key, value)| ((*key).to_string(), (*value).to_string()))
+        .collect();
+    evaluate_device(&conn, ID, stored, instances).unwrap()
+}
+
+fn scoped_value<'a>(evaluation: &'a DeviceEvaluation, module_id: &str) -> Option<&'a str> {
+    let scope = evaluation
+        .activation
+        .parameter_refs
+        .iter()
+        .find_map(|active| {
+            active
+                .scope
+                .as_ref()
+                .filter(|scope| scope.module_id.as_deref() == Some(module_id))
+        })
+        .unwrap_or_else(|| panic!("{module_id} is not activated"));
+    evaluation.values.get(Some(scope), LOCAL_REF)
+}
+
+/// Where per-instance values do exist (the evaluator): two real scoped keys with different
+/// values, one shared local reference; a third reader never sees another instance's value.
+#[test]
+fn evaluator_keeps_two_scoped_values_apart_for_one_shared_local_reference() {
+    let instances = [
+        module_instance(1, "MD-1_M-1"),
+        module_instance(2, "MD-1_M-2"),
+    ];
+    let evaluation = evaluate(
+        &[("X_MD-1_M-1_MI-1_R-1", "3"), ("X_MD-1_M-2_MI-1_R-1", "2")],
+        &instances,
+    );
+    assert!(evaluation.stale.is_empty(), "{:?}", evaluation.stale);
+    assert_eq!(evaluation.validated_scoped.len(), 2);
+    assert_eq!(scoped_value(&evaluation, "X_MD-1_M-1"), Some("3"));
+    assert_eq!(scoped_value(&evaluation, "X_MD-1_M-2"), Some("2"));
+
+    // Only the first instance stores a value: the second keeps the program default, never
+    // the sibling's 3.
+    let evaluation = evaluate(&[("X_MD-1_M-1_MI-1_R-1", "3")], &instances);
+    assert_eq!(scoped_value(&evaluation, "X_MD-1_M-1"), Some("3"));
+    assert_eq!(scoped_value(&evaluation, "X_MD-1_M-2"), Some("1"));
+}
+
+/// An `MI-` counter that disagrees with the owning instance, and a `RefId` collision that
+/// makes the owner ambiguous, are stale: no scoped value is validated for either.
+#[test]
+fn evaluator_refuses_mi_counter_mismatch_and_refid_collision() {
+    let instances = [module_instance(1, "MD-1_M-1")];
+    let evaluation = evaluate(&[("X_MD-1_M-1_MI-2_R-1", "3")], &instances);
+    assert!(evaluation.validated_scoped.is_empty());
+    assert_eq!(evaluation.stale.len(), 1);
+    assert_eq!(scoped_value(&evaluation, "X_MD-1_M-1"), Some("1"));
+
+    // Two instances claiming the same `RefId` and counter make the owner ambiguous
+    // (ADR-0177 amended 2026-11-21 via `knx_core::resolve_module_owner`); an instance of
+    // another module (`M-2`) is no owner of an `M-1` key either.
+    let collision = [
+        module_instance(1, "MD-1_M-1"),
+        module_instance(2, "MD-1_M-1"),
+        module_instance(3, "MD-1_M-2"),
+    ];
+    let evaluation = evaluate(&[("X_MD-1_M-1_MI-1_R-1", "3")], &collision);
+    assert!(
+        evaluation.validated_scoped.is_empty(),
+        "an ambiguous owner is never first-matched"
+    );
+    assert_eq!(evaluation.stale.len(), 1);
+    assert_eq!(scoped_value(&evaluation, "X_MD-1_M-1"), Some("1"));
 }

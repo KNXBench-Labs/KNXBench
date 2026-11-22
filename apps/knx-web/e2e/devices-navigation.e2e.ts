@@ -974,18 +974,23 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await expect(comparison.getByRole("button", { name: m["deviceChecks.cancel"], exact: true })).toBeFocused();
     // WP-47.3: the header gear button is gone; a paused comparison blocks the
     // nav entry's pointer action the same way it blocked the toolbar button.
-    // At 400px the nav pane can be collapsed, in which case the entry is hidden
-    // rather than blocked — open the pane first so the block is exercised.
     const toolbarSettings = page.locator(".settings-navigation").getByRole("button", { name: m["toolbar.settings"], exact: true, includeHidden: true });
-    // WP-47.3: at 400px the nav pane can be collapsed while the paused comparison
-    // modal owns the page, in which case the entry is hidden rather than blocked
-    // — only assert visibility/block when the pane is open.
+    // openSettings() collapsed the pane at 400px (App.tsx), so the modal is owned by the
+    // restored comparison with the pane closed there and open at 1440px: one expected
+    // result per viewport, and the control the assertion needs must be present first.
     const paneToggle = page.locator('.workbench-panel-controls button[aria-expanded]').first();
-    if (await paneToggle.isVisible().catch(() => false)) {
-      if (await paneToggle.getAttribute("aria-expanded") === "false") await paneToggle.click({ timeout: 2000 }).catch(() => {});
-    }
-    if (await toolbarSettings.isVisible()) {
-      await expect(toolbarSettings.click({ trial: true, timeout: 300 })).rejects.toThrow();
+    await expect(paneToggle).toBeVisible();
+    if (width === 1440) {
+      await expect(paneToggle).toHaveAttribute("aria-expanded", "true");
+      await expect(toolbarSettings).toBeVisible();
+      await expect(toolbarSettings.click({ trial: true, timeout: 300 })).rejects.toThrow(/intercepts pointer events/);
+    } else {
+      await expect(paneToggle).toHaveAttribute("aria-expanded", "false");
+      await expect(toolbarSettings).toBeHidden();
+      // The collapsed pane cannot be reopened while the modal owns the page: the comparison
+      // panel covers it at this width and the background is isolated.
+      expect(await paneToggle.evaluate(node => node.closest("[inert]") !== null)).toBe(true);
+      await expect(paneToggle.click({ trial: true, timeout: 300 })).rejects.toThrow(/intercepts pointer events/);
     }
     await settingsViaPalette();
     await testInfo.attach("settings-paused-comparison", { body: await page.screenshot(), contentType: "image/png" });

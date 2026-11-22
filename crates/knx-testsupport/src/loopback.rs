@@ -17,7 +17,14 @@ pub fn with_udp_trap<T>(
     for _ in 0..MAX_ATTEMPTS {
         let tcp = bind_tcp();
         match UdpSocket::bind(addr_of(&tcp)) {
-            Ok(udp) => return (tcp, udp),
+            Ok(udp) => {
+                assert_eq!(
+                    udp.local_addr().unwrap(),
+                    addr_of(&tcp),
+                    "UDP trap must observe the gateway's own endpoint"
+                );
+                return (tcp, udp);
+            }
             Err(error) if error.kind() == std::io::ErrorKind::AddrInUse => {}
             Err(error) => panic!("UDP trap bind failed: {error}"),
         }
@@ -41,7 +48,10 @@ pub fn udp_socket_with_tcp_trap() -> (UdpSocket, TcpListener) {
     for _ in 0..MAX_ATTEMPTS {
         let udp = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
         match TcpListener::bind(udp.local_addr().unwrap()) {
-            Ok(tcp) => return (udp, tcp),
+            Ok(tcp) => {
+                assert_eq!(udp.local_addr().unwrap(), tcp.local_addr().unwrap());
+                return (udp, tcp);
+            }
             Err(error) if error.kind() == std::io::ErrorKind::AddrInUse => {}
             Err(error) => panic!("TCP trap bind failed: {error}"),
         }

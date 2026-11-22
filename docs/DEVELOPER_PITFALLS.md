@@ -53,7 +53,10 @@ already found lying in the grass.
   (seen 2026-11-21 in `cli_bus_tcp`, only under the full parallel run). Use
   `knx_testsupport::tcp_listener_with_udp_trap`, `udp_socket_with_tcp_trap` or
   `with_udp_trap`, which retry with a fresh candidate; never hand-roll the pair or
-  release a reserved port before the real bind.
+  release a reserved port before the real bind. Never fall back to a random UDP port
+  when the pair cannot be reserved: the trap would watch another endpoint than the
+  gateway the CLI dials and could not see a UDP fallback. Refused-TCP tests hold a
+  bound, non-listening `tokio::net::TcpSocket` inside `with_udp_trap` instead.
 - **Pinned reader tests need their own source fixtures.** Copying a live reader
   into an audited-hash fixture makes every legitimate reader edit break an
   unrelated positive planner test. Use small fixed source-text fixtures and

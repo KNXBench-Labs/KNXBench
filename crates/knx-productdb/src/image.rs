@@ -1342,7 +1342,9 @@ fn assigned_invisible_values(
 /// [`crate::byte_order_probe`], which reads what an image would write.
 ///
 /// A legal value no `when` covers activates nothing; every other evaluation
-/// diagnostic, and every module instance, refuses.
+/// diagnostic refuses. An active module-scoped communication-object ref
+/// refuses as unsupported; module-scoped parameters pass here and are
+/// resolved per instantiation by `build_image_selected`.
 pub(crate) fn activate(
     conn: &Connection,
     request: &ImageRequest,

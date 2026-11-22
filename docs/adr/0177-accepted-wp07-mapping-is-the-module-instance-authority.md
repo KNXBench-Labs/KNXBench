@@ -105,3 +105,10 @@ semantics: `resolve_mi_authority` maps non-`Resolved` outcomes to
 `NoMatch`/`Ambiguous`/`Malformed`; parameter-edit admission refuses the whole
 edit; communication-object activation stays `Undetermined`.
 
+## Amendment 22 November 2026 (WP-48 F14)
+
+The image builder does not yet consume per-instance scoped values. Devices
+whose module instances carry stored, module-qualified parameter values are
+refused at image building (fail-closed: `ParameterValue` download refusal, no
+wrong octets); only unscoped values reach every instantiation. See
+[KL-068](../limitations/KL-068-repeated-module-activation.md).

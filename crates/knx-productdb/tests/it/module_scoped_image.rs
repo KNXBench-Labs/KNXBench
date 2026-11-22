@@ -215,8 +215,9 @@ fn expected_segment(writes: &[(usize, u8)]) -> Vec<u8> {
 
 /// The fallback policy, pinned: one unscoped value reaches every instantiation at its own
 /// base; the product default does the same; every other octet stays as the template.
+/// CURRENT POLICY PIN (WP-48 F14 / KL-068): flips when per-instance image values land.
 #[test]
-fn unscoped_value_is_the_only_value_source_and_reaches_every_instance() {
+fn current_policy_unscoped_value_is_the_only_value_source_and_reaches_every_instance() {
     let program = two_instance_program();
     assert!(program.contains("X_MD-1_M-2") && program.contains("X_MD-1_M-1"));
 
@@ -240,8 +241,9 @@ fn unscoped_value_is_the_only_value_source_and_reaches_every_instance() {
 
 /// Two real module-qualified keys with different values are refused by name and write
 /// nothing: the image seam must not silently fall back to the default or drop either value.
+/// CURRENT POLICY PIN (WP-48 F14 / KL-068): flips when per-instance image values land.
 #[test]
-fn module_qualified_keys_with_different_values_are_refused_not_silently_dropped() {
+fn current_policy_module_qualified_keys_with_different_values_are_refused_not_silently_dropped() {
     let program = two_instance_program();
     let first = format!("X_MD-1_M-1_MI-1_{}", "R-1");
     let second = format!("X_MD-1_M-2_MI-1_{}", "R-1");

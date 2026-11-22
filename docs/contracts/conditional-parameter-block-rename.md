@@ -67,6 +67,10 @@ caption, activations, identifiers and access are untouched.
   labels. The host's `ActiveLabel` keeps the
   base caption; nothing mutates a label or stored source. Every evaluation recomputes the
   result, so no active leaf means the base caption again.
+- The overlay matches an accepted rename to a label by the rename's module scope chain and
+  target node (WP-48.3), so a sibling instance of the same definition whose branch is inactive
+  keeps its base caption. A replacement filled from `@TextParameterRefId` carries the real
+  fill origin on the caption.
 - The server overlay (`parameter_captions::apply`) picks the displayed caption once per
   request and the existing DTO carries it: navigation, heading, context and search read the
   same group label. The group key and every DTO field stay as they were. The replacement

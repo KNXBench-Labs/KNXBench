@@ -190,6 +190,18 @@ fn group_of(dto: &Value, ets_id: &str) -> (String, Value) {
     )
 }
 
+/// The provenance fill of the group caption every field of `etsId` sits in.
+fn group_fill_of(dto: &Value, ets_id: &str) -> Value {
+    dto["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|s| s["fields"].as_array().unwrap())
+        .find(|f| f["etsId"] == ets_id)
+        .unwrap_or_else(|| panic!("{ets_id} is not shown"))["group"]["labelFill"]
+        .clone()
+}
+
 fn unrecognized(dto: &Value) -> usize {
     dto["diagnostics"]
         .as_array()
@@ -557,6 +569,11 @@ async fn a_rename_leaf_fills_its_placeholder_from_its_own_text_parameter() {
         group_of(&dto, "R-S"),
         ("PB-1".into(), json!("fixture_switch_pz Attic"))
     );
+    // The replacement's own substitution keeps its real origin (WP-48.3 lead 3).
+    assert_eq!(
+        group_fill_of(&dto, "R-S"),
+        json!({ "template": "fixture_switch_pz {{0}}", "source": "StoredValue" })
+    );
     let (_dir2, products_two) = products();
     let state_two = Arc::new(state(products_two, &[]));
     let app = knx_server::app(state_two.clone(), None);
@@ -566,6 +583,7 @@ async fn a_rename_leaf_fills_its_placeholder_from_its_own_text_parameter() {
         group_of(&dto, "R-S"),
         ("PB-1".into(), json!("fixture_switch_pz "))
     );
+    assert_eq!(group_fill_of(&dto, "R-S")["source"], json!("EmptyValue"));
 }
 
 /// WP-05k: a rename leaf naming a `ParameterSeparator` retitles that separator's
@@ -642,4 +660,77 @@ async fn a_leaf_naming_a_separator_retitles_its_caption_in_the_panel() {
     let before = state.project.lock().unwrap().clone();
     assert_eq!(panel(&app, None).await, panel(&app, None).await);
     assert_eq!(*state.project.lock().unwrap(), before);
+}
+
+/// Two instances of one module definition; only the instance whose own stored selector is
+/// above ten activates the rename leaf of its `ParameterBlock`.
+const MODULE_PROGRAM: &str = r##"<?xml version="1.0" encoding="utf-8"?>
+<KNX xmlns="http://knx.org/xml/project/11"><ManufacturerData><Manufacturer RefId="M-0001">
+<ApplicationPrograms><ApplicationProgram Id="A-1" Name="Fictional" ApplicationVersion="1" MaskVersion="MV-0701">
+<Static><ParameterRefs/></Static>
+<Dynamic>
+  <Module Id="M-00FA_A-2504-10-C071_MD-2_M-4" RefId="M-00FA_A-2504-10-C071_MD-2" />
+  <Module Id="M-00FA_A-2504-10-C071_MD-2_M-5" RefId="M-00FA_A-2504-10-C071_MD-2" />
+</Dynamic>
+<ModuleDefs><ModuleDef Id="M-00FA_A-2504-10-C071_MD-2" Name="module">
+<Static>
+<ParameterTypes>
+  <ParameterType Id="M-00FA_A-2504-10-C071_MD-2_PT-1" Name="num"><TypeNumber maxInclusive="255" minInclusive="0" SizeInBit="8" Type="unsignedInt" /></ParameterType>
+</ParameterTypes>
+<Parameters>
+  <Parameter Id="M-00FA_A-2504-10-C071_MD-2_P-1" Name="Channel" Text="Channel" ParameterType="M-00FA_A-2504-10-C071_MD-2_PT-1" Access="ReadWrite" Value="5" />
+</Parameters>
+<ParameterRefs>
+  <ParameterRef Id="M-00FA_A-2504-10-C071_MD-2_P-1_R-1" RefId="M-00FA_A-2504-10-C071_MD-2_P-1" DisplayOrder="1" Tag="1" />
+</ParameterRefs>
+</Static>
+<Dynamic>
+  <ParameterBlock Id="MB-1" Text="Base module page">
+    <ParameterRefRef RefId="M-00FA_A-2504-10-C071_MD-2_P-1_R-1" />
+    <choose ParamRefId="M-00FA_A-2504-10-C071_MD-2_P-1_R-1">
+      <when test="&gt;10"><ParameterBlockRename Id="MR-1" RefId="MB-1" Text="Renamed module page" /></when>
+    </choose>
+  </ParameterBlock>
+</Dynamic>
+</ModuleDef></ModuleDefs>
+</ApplicationProgram></ApplicationPrograms></Manufacturer></ManufacturerData></KNX>"##;
+
+/// WP-48.3 lead 3: the overlay keys an accepted rename by `(module_def_id, target node)`, so a
+/// second instance of the same definition whose own branch is inactive must keep its base caption.
+#[tokio::test]
+async fn a_rename_active_in_one_module_instance_does_not_retitle_the_other() {
+    let dir = tempfile::tempdir().unwrap();
+    let conn = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
+    super::native_source_fixture::install(
+        &conn,
+        11,
+        ("M-0001/Hardware.xml", HARDWARE.as_bytes()),
+        ("M-0001/A.xml", MODULE_PROGRAM.as_bytes()),
+    );
+    let state = state(
+        conn,
+        &[("M-00FA_A-2504-10-C071_MD-2_M-4_MI-1_P-1_R-1", "20")],
+    );
+    let app = knx_server::app(Arc::new(state), None);
+    let dto = panel(&app, None).await;
+    let label_of = |module: &str| {
+        dto["sections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|s| s["scope"]["moduleId"] == module)
+            .unwrap_or_else(|| panic!("no section for {module}: {dto}"))["fields"][0]["group"]
+            ["label"]
+            .clone()
+    };
+    assert_eq!(
+        label_of("M-00FA_A-2504-10-C071_MD-2_M-4"),
+        json!("Renamed module page"),
+        "{dto}"
+    );
+    assert_eq!(
+        label_of("M-00FA_A-2504-10-C071_MD-2_M-5"),
+        json!("Base module page"),
+        "{dto}"
+    );
 }

@@ -32,6 +32,7 @@ fn oracle() -> Value {
 }
 
 mod binding_refusal;
+mod module_buttons;
 
 fn state(program: &str) -> (tempfile::TempDir, Arc<knx_server::AppState>) {
     state_with(program, None)
@@ -43,11 +44,20 @@ fn state_with(
     program: &str,
     mutation: Option<&str>,
 ) -> (tempfile::TempDir, Arc<knx_server::AppState>) {
+    state_with_all(program, mutation.as_slice())
+}
+
+/// As [`state_with`], applying each SQL mutation in order; every one must change a row.
+#[allow(clippy::field_reassign_with_default)]
+fn state_with_all(
+    program: &str,
+    mutations: &[&str],
+) -> (tempfile::TempDir, Arc<knx_server::AppState>) {
     let dir = tempfile::tempdir().unwrap();
     let products = knx_productdb::open_and_migrate(&dir.path().join("products.sqlite")).unwrap();
     knx_productdb::ingest_file(&products, "M-FIX/Hardware.xml", HARDWARE.as_bytes()).unwrap();
     knx_productdb::ingest_file(&products, "M-FIX/A-FIX.xml", program.as_bytes()).unwrap();
-    if let Some(mutation) = mutation {
+    for mutation in mutations {
         assert!(products.execute(mutation, []).unwrap() > 0, "{mutation}");
     }
     let mut project = Project::new(Language("en".into()));
@@ -296,10 +306,10 @@ async fn a_button_text_parameter_ref_fills_the_passive_label() {
 }
 
 #[tokio::test]
-async fn a_translated_button_label_carries_the_overlay_fill() {
+async fn a_translated_button_label_claims_no_parameter_fill() {
     // button-text-overlay-v1 (WP-05g) with a requested language: the Button's own
-    // program-scoped `Text` translation overlays the literal, and WP-05m
-    // `button-label-fill-provenance-v1` retains that overlay as the label's fill.
+    // program-scoped `Text` translation overlays the literal. WP-48.3 (F03): a plain
+    // translation substitutes no parameter value, so no stored-value fill is reported.
     let (_dir, state) = state_with(
         ONLY,
         Some(
@@ -315,10 +325,7 @@ async fn a_translated_button_label_carries_the_overlay_fill() {
         .find(|l| l["elementId"] == "B-ONLY")
         .expect("button label present");
     assert_eq!(button["text"], json!("Fiktives Quell-Label übersetzt"));
-    assert_eq!(
-        button["textFill"],
-        json!({ "template": "Fiktives Quell-Label übersetzt", "source": "StoredValue" })
-    );
+    assert!(button.get("textFill").is_none() || button["textFill"].is_null());
 }
 
 #[tokio::test]

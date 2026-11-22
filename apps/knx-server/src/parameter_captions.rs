@@ -11,6 +11,9 @@ pub(crate) type CaptionKey = (Option<Vec<i64>>, i64);
 #[derive(Debug, Default)]
 pub(crate) struct CaptionFills {
     fills: HashMap<CaptionKey, TextFill>,
+    /// F03: requested-language `Text` translations as displayed (placeholders
+    /// already filled), kept apart from `fills`, which hold substitution provenance only.
+    translations: HashMap<CaptionKey, String>,
     budget: TextProjectionBudget,
     /// WP-05n: per-definition overlays; one section's axes never read another
     /// tree's caption.
@@ -184,10 +187,10 @@ impl CaptionFills {
         })
     }
 
-    /// The requested language's own `Text` translation for a defining tree/node,
-    /// if one was admitted; the caller decides the fallback.
+    /// The requested language's own `Text` translation (as displayed) for the label with
+    /// this exact scope key, if one was admitted; the caller decides the fallback.
     pub(crate) fn translated_text(&self, key: CaptionKey) -> Option<String> {
-        self.fills.get(&key).map(|fill| fill.template.clone())
+        self.translations.get(&key).cloned()
     }
 
     pub(crate) fn copy_text(&mut self, text: Option<&str>) -> Result<Option<String>, String> {
@@ -244,24 +247,20 @@ pub(crate) fn apply(
     };
     let mut filled = Vec::new();
     let mut refused = Vec::new();
-    // At most one active replacement per (tree, block) — the evaluator refuses competing
-    // ones. The tree key is the rename's own module scope chain, matching the label's scope.
-    let tree_key = |scope: &Option<std::rc::Rc<knx_productdb::dynamic::ModuleScope>>| {
-        scope
-            .as_ref()
-            .map_or(String::new(), |s| s.module_def_id.clone())
-    };
-    let renames: HashMap<(String, i64), &knx_productdb::dynamic::ActiveRename> = evaluation
+    // The evaluator settles at most one active replacement per (tree, block); which expansion
+    // of that tree it belongs to is the rename's own module scope chain. Key by that chain, as
+    // the label's scope is, so a sibling instance whose branch is inactive keeps its base caption.
+    let renames: HashMap<CaptionKey, &knx_productdb::dynamic::ActiveRename> = evaluation
         .activation
         .renames
         .iter()
         .map(|rename| {
-            let tree = rename
+            let chain = rename
                 .scope
                 .as_ref()
                 .and_then(|c| c.last())
-                .map_or(String::new(), |s| s.module_def_id.clone());
-            ((tree, rename.target_node_id), rename)
+                .map(|s| s.node_chain());
+            ((chain, rename.target_node_id), rename)
         })
         .collect();
     for (index, label) in evaluation.activation.labels.iter().enumerate() {
@@ -282,7 +281,7 @@ pub(crate) fn apply(
         // `ChannelIndependentBlock`), or since WP-05k a `ParameterSeparator`
         // (WP-05 cross-target renames).
         if let Some(rename) = renames
-            .get(&(tree_key(&label.scope), label.node_id))
+            .get(&(label.scope.as_ref().map(|s| s.node_chain()), label.node_id))
             .filter(|_| {
                 matches!(
                     label.kind.as_str(),
@@ -313,7 +312,8 @@ pub(crate) fn apply(
                     budget.copy_text(name).map_err(|e| e.to_string())?,
                 ));
             }
-            let text = if rename.text.contains("{{") && rename.text_parameter_ref.is_some() {
+            let (text, fill) = if rename.text.contains("{{") && rename.text_parameter_ref.is_some()
+            {
                 let place = match rename.scope.as_ref().and_then(|c| c.last()) {
                     None => knx_productdb::text_parameters::TextParameterScope::Program,
                     Some(s) => knx_productdb::text_parameters::TextParameterScope::Module(
@@ -332,11 +332,13 @@ pub(crate) fn apply(
                 if value.source != knx_productdb::dynamic::PositionalSource::NoPlaceholder {
                     budget.admit_copy(&text).map_err(|e| e.to_string())?;
                 }
-                value.text
+                // The shown replacement's own substitution keeps its real origin.
+                let fill = crate::com_object_activation::text_fill(value.source, &text);
+                (value.text, fill)
             } else {
-                text
+                (text, None)
             };
-            filled.push((index, text, None));
+            filled.push((index, text, fill, false));
             continue;
         }
         let tree = label
@@ -356,16 +358,11 @@ pub(crate) fn apply(
             .map_err(|e| e.to_string())?;
         let text = translated_text.as_deref().unwrap_or(&label.text);
         if !text.contains("{{") {
-            // A plain (placeholder-free) translation is retained as the label's
-            // overlay fill, so other readers (e.g. button labels) can pick it up.
+            // A plain (placeholder-free) translation substitutes no parameter value, so
+            // it carries no fill; the translation is retained separately for readers
+            // such as button labels.
             if let Some(text) = translated_text {
-                // NoPlaceholder maps to None in text_fill, so build the fill
-                // directly: the template is the translated text itself.
-                let fill = knx_projection::TextFill {
-                    template: text.clone(),
-                    source: knx_projection::TextFillSource::StoredValue,
-                };
-                filled.push((index, text, Some(fill)));
+                filled.push((index, text, None, true));
             }
             continue;
         }
@@ -380,17 +377,19 @@ pub(crate) fn apply(
         }
         let fill = crate::com_object_activation::text_fill(value.source, text);
         if fill.is_some() || translated_text.is_some() {
-            filled.push((index, value.text, fill));
+            filled.push((index, value.text, fill, translated_text.is_some()));
         }
     }
     let mut fills = HashMap::new();
-    for (index, text, fill) in filled {
+    let mut translations = HashMap::new();
+    for (index, text, fill, was_translated) in filled {
         let label = &mut evaluation.activation.labels[index];
+        let key = (label.scope.as_ref().map(|s| s.node_chain()), label.node_id);
+        if was_translated {
+            translations.insert(key.clone(), text.clone());
+        }
         if let Some(fill) = fill {
-            fills.insert(
-                (label.scope.as_ref().map(|s| s.node_chain()), label.node_id),
-                fill,
-            );
+            fills.insert(key, fill);
         }
         label.text = text;
     }
@@ -409,6 +408,7 @@ pub(crate) fn apply(
     }
     Ok(CaptionFills {
         fills,
+        translations,
         budget,
         axes: Default::default(),
         axis_texts: Default::default(),

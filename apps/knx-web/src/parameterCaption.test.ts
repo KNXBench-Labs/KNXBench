@@ -16,6 +16,14 @@ describe("parameterCaption", () => {
     }
   });
 
+  it("describes no substitution source for a plain translated caption without a fill", () => {
+    for (const labelFill of [undefined, null]) {
+      const caption = parameterCaption({ label: "Küche übersetzt", labelFill }, "Group", t);
+      expect(caption.label).toBe("Küche übersetzt");
+      expect(caption.title).toBeUndefined();
+    }
+  });
+
   it.each([
     ["en", "Fallback caption shown", "literal delimiters in resolved values"],
     ["de", "Ersatztitel", "wörtlichen Klammern in aufgelösten Werten"],

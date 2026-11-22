@@ -26,6 +26,8 @@ pub enum DevconfEditError {
     InvalidRevision,
     Conflict,
     Profile(knx_core::devconf::ProfileError),
+    /// The document bytes are not strict JSON (message is bounded, no document content beyond a member name).
+    Document(String),
     Command(knx_core::CommandError),
     Persistence(String),
 }
@@ -55,6 +57,19 @@ pub struct DevconfEditOutcome {
     pub native_generation: Option<i64>,
 }
 
+/// Largest nesting depth accepted for a stored document (the strict parser's recursion limit).
+pub const MAX_DOCUMENT_DEPTH: usize = 128;
+
+/// Admission rule for NEW or replaced documents: one strict JSON value, UTF-8, at most
+/// `MAX_PROFILE_DOCUMENT_BYTES`, depth at most `MAX_DOCUMENT_DEPTH`, no duplicate member
+/// names, integers only. This is not module/rule validation; stored historical bytes are
+/// never re-checked by load (see `docs/contracts/device-configuration-modules.md`).
+pub fn check_document(document: &[u8]) -> Result<(), String> {
+    knx_devconf::parse_strict_json(document, knx_core::devconf::MAX_PROFILE_DOCUMENT_BYTES)
+        .map(|_| ())
+        .map_err(|message| message.chars().take(200).collect())
+}
+
 /// Validates a profile draft against the current snapshot and builds the
 /// undoable domain command without mutating the snapshot.
 pub fn preview_devconf_edit(
@@ -76,6 +91,7 @@ pub fn preview_devconf_edit(
         draft.document.clone(),
     )
     .map_err(DevconfEditError::Profile)?;
+    check_document(&draft.document).map_err(DevconfEditError::Document)?;
     let command = Command::SetDeviceConfigProfile { profile };
     let mut candidate = snapshot.project.clone();
     command
@@ -366,5 +382,92 @@ mod tests {
             preview_devconf_edit(&snapshot, &revision(), &draft),
             Err(DevconfEditError::Profile(_))
         ));
+    }
+
+    fn draft_with(document: &[u8]) -> DevconfDraft {
+        DevconfDraft {
+            device: DeviceId(7),
+            module_id: "smartsensor".into(),
+            module_version: "1.0.0".into(),
+            module_sha256: "a".repeat(64),
+            document: document.to_vec(),
+        }
+    }
+
+    #[test]
+    fn non_strict_documents_are_refused_before_any_command() {
+        let (snapshot, _stack) = snapshot_with_profile(7);
+        let deep_ok = format!("{}{}", "[".repeat(100), "]".repeat(100));
+        let deep_bad = format!("{}{}", "[".repeat(200), "]".repeat(200));
+        let cases: [(&str, &[u8]); 9] = [
+            ("malformed", b"not json"),
+            ("trailing", b"{} {}"),
+            ("non-utf8", b"{\"a\":\"\xff\"}"),
+            ("duplicate", b"{\"a\":1,\"a\":2}"),
+            ("nested duplicate", b"{\"o\":{\"k\":1,\"k\":1}}"),
+            ("fraction", b"{\"a\":1.5}"),
+            ("exponent", b"{\"a\":1e2}"),
+            ("too deep", deep_bad.as_bytes()),
+            ("empty-ish", b"  "),
+        ];
+        for (name, bytes) in cases {
+            assert!(
+                matches!(
+                    preview_devconf_edit(&snapshot, &revision(), &draft_with(bytes)),
+                    Err(DevconfEditError::Document(_) | DevconfEditError::Profile(_))
+                ),
+                "{name} must be refused"
+            );
+        }
+        for ok in [
+            &b"{}"[..],
+            b"{ \"nodes\" : [ 1 ,2 ],\n \"unknown_member\": {\"x\":null} }",
+            b"[]",
+            deep_ok.as_bytes(),
+        ] {
+            preview_devconf_edit(&snapshot, &revision(), &draft_with(ok)).unwrap();
+        }
+    }
+
+    #[test]
+    fn negative_zero_is_refused_as_a_non_integer_number() {
+        // Pins current engine behaviour: the strict parser reads the JSON integer `-0` as a
+        // float and refuses it (open owner/contract decision, WP-48 F06); `-7` is accepted.
+        let (snapshot, _stack) = snapshot_with_profile(7);
+        assert!(matches!(
+            preview_devconf_edit(&snapshot, &revision(), &draft_with(b"{\"n\":-0}")),
+            Err(DevconfEditError::Document(_))
+        ));
+        preview_devconf_edit(&snapshot, &revision(), &draft_with(b"{\"n\":-7}")).unwrap();
+    }
+
+    #[test]
+    fn historical_non_json_bytes_survive_the_core_constructor_and_removal_stays_possible() {
+        // Load and undo replay go through the lenient core constructor (opaque bytes kept);
+        // only new documents are gated, so a legacy profile can still be removed.
+        let mut project = project_with_device(7);
+        project.devices.set_config_profile(
+            knx_core::devconf::DeviceConfigProfile::new(
+                DeviceId(7),
+                "smartsensor",
+                "1.0.0",
+                &"a".repeat(64),
+                b"legacy \xff bytes".to_vec(),
+            )
+            .unwrap(),
+        );
+        let conn = knx_store::open_and_migrate_in_memory().unwrap();
+        knx_store::save_project(&conn, &project).unwrap();
+        let snapshot = NativeSnapshot::read(&conn).unwrap();
+        assert_eq!(
+            snapshot
+                .project
+                .devices
+                .config_profile(DeviceId(7))
+                .unwrap()
+                .document(),
+            b"legacy \xff bytes"
+        );
+        assert!(preview_devconf_removal(&snapshot, &revision(), DeviceId(7)).is_ok());
     }
 }

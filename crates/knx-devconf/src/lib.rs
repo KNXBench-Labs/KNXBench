@@ -12,6 +12,8 @@ mod schema;
 
 pub use export::crc16_ccitt_false;
 pub use expr::EvalError;
+/// Strict JSON admission shared with project-side document checks (see `Json`).
+pub use json::parse as parse_strict_json;
 pub use json::Json;
 
 use sha2::{Digest, Sha256};

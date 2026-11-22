@@ -43,3 +43,12 @@ against the firmware's own validator are maintained with that firmware.
 - Pixel-accurate device preview (later, owner Q15).
 - Downloading a configuration to a device: needs its own qualification and
   explicit authorisation; not planned here.
+
+## Follow-up WP-48.4 (F04–F06)
+
+Implemented on branch `work/wp48-4-devconf-editor-20261122`, pending review/gate: the
+editor loads and edits the stored document through a bounded single-device read, tracks
+snapshot revisions under an explicit dirty-draft policy, and new documents must be strict
+JSON at the `knx-app` admission boundary while stored historical bytes stay opaque. See the
+contract section "Project-stored documents". Module/rule validation remains a separate
+level that the project edit routes do not run.

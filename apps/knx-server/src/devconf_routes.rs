@@ -2,7 +2,7 @@
 
 use crate::{domain, errors::ApiError, SharedState};
 use axum::{
-    extract::{DefaultBodyLimit, State},
+    extract::{DefaultBodyLimit, Path, State},
     routing::{get, post},
     Json, Router,
 };
@@ -11,6 +11,7 @@ use knx_app::devconf_edit::{self as edit, DevconfEditError, DevconfRevision};
 use knx_core::DeviceId;
 use knx_store::project_history::NativeSnapshot;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::{
     sync::{atomic::Ordering, Arc, Mutex},
     time::{Duration, Instant},
@@ -90,6 +91,8 @@ struct ProfileView {
     module_version: String,
     module_sha256: String,
     document_bytes: usize,
+    /// Lowercase hex SHA-256 of the stored document bytes: content identity, not length.
+    document_sha256: String,
 }
 impl From<&knx_core::devconf::DeviceConfigProfile> for ProfileView {
     fn from(profile: &knx_core::devconf::DeviceConfigProfile) -> Self {
@@ -99,6 +102,7 @@ impl From<&knx_core::devconf::DeviceConfigProfile> for ProfileView {
             module_version: profile.module_version().into(),
             module_sha256: profile.module_sha256().into(),
             document_bytes: profile.document().len(),
+            document_sha256: format!("{:x}", Sha256::digest(profile.document())),
         }
     }
 }
@@ -107,6 +111,30 @@ impl From<&knx_core::devconf::DeviceConfigProfile> for ProfileView {
 #[serde(rename_all = "camelCase")]
 struct View {
     profiles: Vec<ProfileView>,
+    server_incarnation: String,
+    project_incarnation: u64,
+    snapshot_revision: u64,
+    persistence: &'static str,
+}
+
+/// One device's stored document, bound to the snapshot it was read from.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DocumentView {
+    #[serde(flatten)]
+    profile: ProfileView,
+    /// Base64url (no padding) of the exact stored bytes, never reformatted.
+    document_b64: String,
+    /// Why the stored bytes would not be admitted as a new document today (opaque
+    /// historical or foreign bytes are preserved, not discarded); `None` if strict JSON.
+    document_error: Option<String>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DeviceView {
+    device: u32,
+    profile: Option<DocumentView>,
     server_incarnation: String,
     project_incarnation: u64,
     snapshot_revision: u64,
@@ -145,6 +173,10 @@ fn error(error: DevconfEditError) -> ApiError {
         DevconfEditError::Persistence(_) => ApiError::refused(
             "devconfPersistenceFailed",
             "Profile edit was not applied because native recovery persistence failed",
+        ),
+        DevconfEditError::Document(reason) => ApiError::refused(
+            "devconfDocumentInvalid",
+            format!("Profile document is not strict JSON: {reason}"),
         ),
         DevconfEditError::Profile(_) | DevconfEditError::Command(_) => ApiError::refused(
             "devconfInvalid",
@@ -197,6 +229,43 @@ fn read_blocking(state: &SharedState) -> Result<Json<View>, ApiError> {
         snapshot_revision: domain::current_project_revision(state),
         persistence: persistence(state.store_path.known().is_some()),
     }))
+}
+
+fn read_device_blocking(state: &SharedState, device: u32) -> Result<Json<DeviceView>, ApiError> {
+    let lock = state.project.lock().expect("state mutex poisoned");
+    let project = lock
+        .as_ref()
+        .ok_or_else(|| ApiError::bad_request("No project open"))?;
+    if project.devices.get(DeviceId(device)).is_none() {
+        return Err(ApiError::with_kind(
+            axum::http::StatusCode::NOT_FOUND,
+            "devconfDeviceNotFound",
+            "Device not found in the open project",
+        ));
+    }
+    let profile = project
+        .devices
+        .config_profile(DeviceId(device))
+        .map(|stored| DocumentView {
+            profile: ProfileView::from(stored),
+            document_b64: URL_SAFE_NO_PAD.encode(stored.document()),
+            document_error: edit::check_document(stored.document()).err(),
+        });
+    Ok(Json(DeviceView {
+        device,
+        profile,
+        server_incarnation: state.server_incarnation.clone(),
+        project_incarnation: state.project_incarnation.load(Ordering::Relaxed),
+        snapshot_revision: domain::current_project_revision(state),
+        persistence: persistence(state.store_path.known().is_some()),
+    }))
+}
+
+async fn read_device(
+    State(api): State<Api>,
+    Path(device): Path<u32>,
+) -> Result<Json<DeviceView>, ApiError> {
+    crate::routes::off_runtime(move || read_device_blocking(&api.app, device)).await?
 }
 
 async fn read(State(api): State<Api>) -> Result<Json<View>, ApiError> {
@@ -337,6 +406,10 @@ async fn cancel(
 pub fn router(app: SharedState) -> Router<SharedState> {
     Router::new()
         .route("/api/project/device-config-profiles", get(read))
+        .route(
+            "/api/project/device-config-profiles/devices/{device}",
+            get(read_device),
+        )
         .route("/api/project/device-config-profiles/preview", post(preview))
         .route("/api/project/device-config-profiles/apply", post(apply))
         .route("/api/project/device-config-profiles/cancel", post(cancel))

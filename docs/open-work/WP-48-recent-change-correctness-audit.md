@@ -151,6 +151,19 @@ prove unchanged state/history on refusal. Preserve opaque historical bytes rathe
 silently discarding them during load. Define/report module validation separately; this
 finding does not authorize hard-coded modules or private device packages.
 
+**Open (owner/contract decision):** the strict document parser refuses the JSON-grammar
+integer `-0` ("numbers must be integers without fraction or exponent"; serde_json reads it
+as a float). This is pre-existing engine behaviour, left unchanged in WP-48.4; pinned by
+knx-app `negative_zero_is_refused_as_a_non_integer_number`. Other negative integers work.
+
+**WP-48.4 review fixes:** the editor adopts a new revision silently when its stored
+content equals the draft (own apply/remove no longer raises the stale alert); an edit
+during an in-flight preview discards the answer (draft-version check) instead of showing
+a confirmation for text no longer displayed; HTTP save-as/open tests prove byte-identical
+documents, the non-UTF-8 historical path and `projectIncarnation` binding; a Playwright
+fixture spec (`device-config-panel.e2e.ts`, default lane) covers the panel in a real DOM.
+Review MINORs left as is: unstyled `device-config-*` classes, redundant device-id check.
+
 ### F07 — Last-download address marks have no user-accessible enable control (P2)
 
 Commit `b40ab254a`; static trace and production/test reference inventory.
@@ -415,7 +428,7 @@ session coordinates, reviews source/PR plus gate receipts, then integrates each 
 | WP-48.1 | Old reports cannot clear new programming changes; F16 — implemented on branch `work/wp48-1-report-binding-20261121`, pending review/gate | None |
 | WP-48.2 | Structural module ownership; F01 and the shared-resolver/ADR part of F15 — implemented on branch `work/wp48-2-module-owner-20261121`, pending review/gate | None |
 | WP-48.3 | Correct scoped captions and provenance; F02–F03; verify rename/axis/historical-row and nested-reporting leads — implemented on branch `work/wp48-3-scoped-captions-20261122`, pending review/gate | None; coordinate shared ownership code with 48.2 |
-| WP-48.4 | Existing configuration can actually be edited, editor tracks revisions, server enforces document contract; F04–F06 | None; reuse WP-42 storage/preview/history |
+| WP-48.4 | Existing configuration can actually be edited, editor tracks revisions, server enforces document contract; F04–F06 — implemented on branch `work/wp48-4-devconf-editor-20261122`, pending review/gate | None; reuse WP-42 storage/preview/history |
 | WP-48.5 | Usable, honest last-download address marks; F07–F08 | None |
 | WP-48.6 | Correct monitor ordering and stationary readable select controls; F09–F10 | None |
 | WP-48.7 | Effective UDP/settings regressions and per-instance image proof; F11–F12, F14 | None; producer changes may coordinate with 48.2 |

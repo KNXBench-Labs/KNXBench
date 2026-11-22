@@ -1,7 +1,7 @@
 # Restart snapshot — next-task queue (WebUI coordinator; observed 2026-11-22)
-## WP-31 save-time refusal (RUNNING; owner WebUI next-task queue; observed 2026-11-22)
-- Owner chose immediate retryable `projectSaving`, no auto-retry, shared server helper and translated UI. Candidate `30d022415` on `work/wp31-project-saving-20261122`; independent review approved with fixes (catalogue creation and comparison preview retention). Fixes partially implemented; provider-limit interruption, Codex continuation owns remaining verification and package gate. No acceptance or publication yet.
-- WP-06/WP-42 docs closeout published as PR #138, main `965188a5d`; retrospective source review and owner decision to keep rejecting JSON `-0`. Next after WP-31 delivery: bounded docs hash audit. Root checkout stays untouched.
+## WP-31 save-time refusal (STANDING; owner WebUI next-task queue; observed 2026-11-22 20:55)
+- Published as PR #139, main `51b7bc19b`: file-transaction edits and catalogue device creation answer a running save at once with retryable 409 `projectSaving` (no auto-retry); the UI keeps drafts, previews and confirmations. Independent review approve-with-fixes, both IMPORTANT findings fixed after review; change-scoped package gate 15/15 green, frozen inputs, user data untouched. Hardware-fact settlement still waits by design.
+- WP-06/WP-42 docs closeout published as PR #138, main `965188a5d`; retrospective source review and owner decision to keep rejecting JSON `-0`. Next: bounded docs hash audit (alpha-22-line hashes cited as on main). Root checkout stays untouched.
 - REL-01/beta remains PAUSED until explicit owner release. WP-49, stored-profile consumer and PRG-01 stay parked; no bus, hardware, VM, release or deployment authority.
 
 Release freeze: released by claude-release-alpha23 (`v0.1.0-alpha.23` at `81c6bcc62`, observed 2026-11-22); `main` is open for code again. Work merged from now on ships with the next alpha.

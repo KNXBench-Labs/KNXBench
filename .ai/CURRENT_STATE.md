@@ -1,4 +1,7 @@
 # Restart snapshot — WP-37 docs closeout (Slice S1) by subagent (2026-11-20, branch work/wp37-docs-closeout-20261120)
+Release freeze: Alpha 23 owned by claude-release-alpha23; cutoff `c88295dc9`, branch `release/alpha23-20261122`. `main` stays release-frozen for code until the tag is published or this owner explicitly releases the freeze.
+## Alpha 23 preparation (ACTIVE; owner claude-release-alpha23; observed 2026-11-22)
+- Owner Go covers freeze, version/notes, one full integrated gate, the representative pinned cross-section (matrix replaced by a disclosed previous-release ingest differential), packaging dry runs and an upgrade probe. Publication needs a separate owner Go after the gate table. Work merged after the cutoff ships with the next alpha. Other tracks preserved.
 ## Stored device-profile consumer (PAUSED; owner WebUI profile integration; observed 2026-11-22 11:55)
 - PR #137 merged as `1243d13ca`; source and integrated acceptance published at `0ef05a084`. Both selected 16-stage package gates passed with frozen inputs and checked untouched user data; independent sidecar-guard closure approved.
 - Owner boundary: finish merge/push of the export, then pause BEFORE the offline firmware-simulator consumer. That successor has not started; explicit owner Go is required to resume. No device, bus, USB, VM, flash or physical-download authority; concurrent writer/path-swap races remain unproven. Evidence `<profile-scratch>/smartsensor-e2e-20261122/`.

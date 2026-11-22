@@ -3,6 +3,7 @@ import BusTransportFields from "./BusTransportFields";
 import OnlineCatalogueSettings from "./OnlineCatalogueAccount";
 import { emitAchievementEvent } from "./achievementEvents";
 import AchievementSettings from "./AchievementSettings";
+import GroupAddressSettings from "./GroupAddressSettings";
 import UpdateSettings from "./UpdateSettings";
 import MotionCategorySettings from "./MotionCategorySettings";
 import LegacyPasswordSettings, { type LegacyPasswordAccess } from "./LegacyPasswordSettings";
@@ -406,6 +407,7 @@ export default function SettingsPanel(props: {
           ["appearance", "settings.section.appearance"],
           ["language-data", "settings.section.languageData"],
           ["autosave", "settings.section.autosave"],
+          ["group-addresses", "settings.section.groupAddresses"],
           ["bus", "settings.section.busDiagnostics"],
           ...(props.achievementTracker ? [["achievements", "settings.section.achievements"]] as const : []),
           ...(props.legacyPassword ? [["legacy-password", "settings.section.legacyPassword"]] as const : []),
@@ -628,6 +630,7 @@ export default function SettingsPanel(props: {
           />
         </label>
       </section>
+      <GroupAddressSettings />
       <section className="settings-section settings-section-bus">
         <h2 id="settings-bus" tabIndex={-1}>{t("settings.section.busDiagnostics")}</h2>
         <BusTransportFields />

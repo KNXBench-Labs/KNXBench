@@ -170,12 +170,12 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
       await expect(page.locator(".settings-workspace")).toHaveCount(1);
     }
     const jump = workspace.getByRole("navigation", { name: m["settings.jumpNavigation"], exact: true });
-    await expect(jump.getByRole("link")).toHaveCount(9);
+    await expect(jump.getByRole("link")).toHaveCount(10);
     await expect(jump.getByRole("link", { name: m["online.settings"], exact: true })).toHaveAttribute("href", "#settings-catalogues");
     if (loaded) await testInfo.attach("settings-top", { body: await page.screenshot(), contentType: "image/png" });
     const initialUrl = page.url();
     const links = jump.getByRole("link");
-    for (let index = 0; index < 9; index++) {
+    for (let index = 0; index < 10; index++) {
       const link = links.nth(index), id = await link.getAttribute("href");
       await link.focus();
       await link.press("Enter");
@@ -185,8 +185,8 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) f
       expect(page.url()).toBe(initialUrl);
     }
     // Every section stays mounted; jumping never changes to a category subpage.
-    await expect(workspace.locator(":scope > .settings-section")).toHaveCount(9);
-    await expect(workspace.locator(".settings-section:visible")).toHaveCount(9);
+    await expect(workspace.locator(":scope > .settings-section")).toHaveCount(10);
+    await expect(workspace.locator(".settings-section:visible")).toHaveCount(10);
     await expect(workspace.locator(".settings-section-debug input")).toBeInViewport();
     const bounds = await workspace.boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);

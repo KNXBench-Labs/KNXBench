@@ -2,7 +2,7 @@
 
 ## Delivered source
 
-Main-first source `7ea7ff6dd` is published and was read back as the exact local,
+Main-first source `7ea7ff6dd` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `948baa1ce`) is published and was read back as the exact local,
 tracking and live `main` revision. It includes the separate bound-stop backend,
 the shared web controller, the footer control and the migrated monitor panel.
 The earlier non-queueing start prerequisite is `038845ef8`.

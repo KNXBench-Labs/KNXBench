@@ -6,7 +6,7 @@ Observed: 30 October 2026.
 
 The corrected implementation `d6918027bf47b1d1739100ad6ff6c0799836058e` is
 included in branch candidate `3af377a4baabb98957bb8bc109c9410ea900b9e5` and
-main-first runtime merge `e990fd956f3f84b44b2184fbbd4c3c8e7a6cb174` (hash mapping 2026-11-22: alpha-22 history; on current main as `6427977ce`), on base
+main-first runtime merge `e990fd956f3f84b44b2184fbbd4c3c8e7a6cb174` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `6427977ce`), on base
 `a2d606557f22e28c200717fbbf75454388feb6c0`. This is bounded source/software
 acceptance, not publication or a change to immutable Alpha 18 release artifacts.
 

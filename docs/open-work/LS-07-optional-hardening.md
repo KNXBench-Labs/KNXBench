@@ -17,7 +17,7 @@ in force.
   held directory-chain acquisition/synchronization, device-memory writer, and
   service-control writer. The [contract](../contracts/descriptor-pinned-json-backups.md)
   preserves static aliases and `..`, uses same-file-descriptor readback and
-  refuses detected final identity changes. Main-first `98d2e6953` (hash mapping 2026-11-22: alpha-22 history; on current main as `26313bffe`) passed the
+  refuses detected final identity changes. Main-first `98d2e6953` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `26313bffe`) passed the
   complete selected 14-stage software gate and publication readback; see the
   [execution record](../status/2026-11-05-descriptor-pinned-json-backups.md).
   Catalogue SQLite/list/delete/restore and the legacy property-validation

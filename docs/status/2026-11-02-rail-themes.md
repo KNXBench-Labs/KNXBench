@@ -2,7 +2,7 @@
 
 ## Delivered source and scope
 
-Published main-first source: **`ed01e2bd3`**, first parent `249036fde`;
+Published main-first source: **`ed01e2bd3`** (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `51fc8b5d4`), first parent `249036fde`;
 feature `58760ae32` and exact browser-list correction `60e9dd83c`.
 Local, tracking and live main refs matched on publication, 2 November 2026.
 

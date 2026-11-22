@@ -48,7 +48,7 @@ remain distinct from the maintained integrated acceptance below.
 
 ## Integrated acceptance
 
-Published as `1e6229cea3` after independent reviews and all **16 selected
+Published as `1e6229cea3` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `587bf8542`) after independent reviews and all **16 selected
 maintained integrated stages** passed on that exact source:
 
 - Rust: 6,818 passed, zero failed, 229 ignored across 49 result blocks.

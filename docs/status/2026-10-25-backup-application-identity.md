@@ -2,7 +2,7 @@
 
 ## Published source
 
-`08db292f3` (hash mapping 2026-11-22: alpha-22 history; on current main as `8702a72b4`) is published on `main`, with exact remote and tracking-ref readback.
+`08db292f3` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `8702a72b4`) is published on `main`, with exact remote and tracking-ref readback.
 Its main-first parents are upstream `4b77a6cea` and feature `ea18f289f`.
 Upstream README and community updates are preserved. Reviewed runtime inputs
 match the integrated source; the integration also updates the handbook,

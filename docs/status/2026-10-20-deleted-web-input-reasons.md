@@ -39,7 +39,7 @@ results. Final source-bound gate results belong in the delivery handover.
 
 ## Verified delivery
 
-Published on `main` as main-first merge `e49d863d` (hash mapping 2026-11-22: alpha-22 history; on current main as `5e3149d4d`) (feature `fdfb0691`).
+Published on `main` as main-first merge `e49d863d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `5e3149d4d`) (feature `fdfb0691`).
 Independent whole-change review accepted with no findings. The complete gate
 on frozen `cd33b0d0` passed 10 parent and 69 web stages: 22 derived configs,
 4,136 Vitest cases, 863 default browser cases and all 16 production suites;

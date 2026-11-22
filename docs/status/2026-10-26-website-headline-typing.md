@@ -1,6 +1,6 @@
 # WP-21 — Selective website typing acceptance
 
-Date: 26 October 2026. Published source: `b517930e77d9eff8a34222b429e11e1a3c6f6043`.
+Date: 26 October 2026. Published source: `b517930e77d9eff8a34222b429e11e1a3c6f6043` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `486b69642`).
 Feature: `a54aaaffb`; independent review and correction re-review: APPROVE.
 
 ## Outcome

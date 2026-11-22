@@ -1,6 +1,6 @@
 # WP-21 — Selective live-typing headlines on the website
 
-Status: delivered and published on 26 October 2026 as `b517930e7`.
+Status: delivered and published on 26 October 2026 as `b517930e7` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `486b69642`).
 *Superseded on 27 October 2026: every heading now types once, then rolls again, and the
 selective marker and `#release-title` are gone ([website contract](../WEBSITE.md#highlights-instead-of-release-notes-27-october-2026)).*
 Owner authorised implementation through the next-open-tasks assignment and

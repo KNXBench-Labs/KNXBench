@@ -46,7 +46,7 @@ first declaration's `Other`/`Date`, including NULL Time fields. It does not
 rewrite original history or released migrations. Registered semantic RED/GREEN,
 focused ProductDB suites and corrected-source real-v14/v31/fresh/reopen copies
 were accepted after independent review, ten semantic mutant kills and complete
-branch/main-first 14-stage gates. Published as `5c405bfde` (hash mapping 2026-11-22: alpha-22 history; on current main as `0d365d7f3`); see the
+branch/main-first 14-stage gates. Published as `5c405bfde` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `0d365d7f3`); see the
 [acceptance record](../status/2026-11-03-wp08-color-time-successor.md) and
 [repair contract](../contracts/color-time-successor-repair.md).
 Date/native/image and Colour/Picture codec evidence remains unchanged.

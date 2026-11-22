@@ -2,7 +2,7 @@
 
 ## Delivered source
 
-Main-first source `5296e56c5` is published. Local, tracking and live `main`
+Main-first source `5296e56c5` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `83aeaec94`) is published. Local, tracking and live `main`
 were read back as the same revision after publication. The controller/fixture
 correction comprises `09833e8b7`, `cb5155b77` and `1213e6ff9`; the final
 combined source, not the first intermediate fix, is the accepted candidate.

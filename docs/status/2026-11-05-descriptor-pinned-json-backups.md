@@ -15,7 +15,7 @@ public backup readers, file formats, protocol and hardware remain excluded.
 
 ## Software acceptance and publication — 6 November 2026
 
-Corrected source `a79c12bac` was integrated main-first as `98d2e6953` (hash mapping 2026-11-22: alpha-22 history; on current main as `26313bffe`) on
+Corrected source `a79c12bac` was integrated main-first as `98d2e6953` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `26313bffe`) on
 `61e28d225`. The complete maintained change-scoped gate passed all 14 selected
 ordered stages with valid proofs, frozen inputs and no touched or unchecked
 user-data paths. Warning-denied Clippy and tests covered `knx-app`, `knx-cli`,

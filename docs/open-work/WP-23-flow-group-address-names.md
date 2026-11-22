@@ -1,6 +1,6 @@
 # WP-23 — Show group-address names in Flow
 
-Status: delivered on 26 October 2026 as `903d5d0c1`, after independent review,
+Status: delivered on 26 October 2026 as `903d5d0c1` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `42fe4068b`), after independent review,
 correction re-review and complete integrated scoped acceptance. No release or
 hardware acceptance is assigned. [Acceptance](../status/2026-10-26-flow-group-names.md).
 

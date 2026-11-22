@@ -31,7 +31,7 @@ Small and optional; none blocks a delivery.
 - The cause of the earlier observed SIGTERM-test timeouts remains unproven;
   no field timeout is attributed to the separately repaired spawn/signal window.
 
-The spawn/signal correction was delivered as `ed156ef9b`; its
+The spawn/signal correction was delivered as `ed156ef9b` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `1fb35e6d8`); its
 [acceptance record](../status/2026-10-26-browser-tmp-spawn-signals.md) owns the
 bounded result. It is no longer pending work; the two performance bullets and
 unresolved historical timeout causes above remain open.
@@ -49,7 +49,7 @@ first timeout and asserts the fallback ran. Reinstating the earlier Popen-signal
 fallback in memory still fails it. This closes that flake only; it says nothing
 about the older SIGTERM timeouts above.
 
-Delivered as main-first merge `0791ddb77` (hash mapping 2026-11-22: alpha-22 history; on current main as `211a37a60`) on `909412381` (feature `081ccb1a5`,
+Delivered as main-first merge `0791ddb77` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `211a37a60`) on `909412381` (feature `081ccb1a5`,
 review correction `953b2c9b8`). Independent review first blocked on a lost
 cleanup-fallback oracle; the corrected test forces its first timeout and the
 confirmation review approved it. The integrated change-scoped gate passed
@@ -134,7 +134,7 @@ causes above remain unproven.
 
 ## Proportionate input selection — 3 November 2026
 
-Published main-first `703ec2904` (hash mapping 2026-11-22: alpha-22 history; on current main as `11953086d`) refines ADR-0144 with evidence-bound font and
+Published main-first `703ec2904` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `11953086d`) refines ADR-0144 with evidence-bound font and
 reader projections, representative production dialogs for font/app-shell HTML
 changes, and an explicit nonzero diagnostic Rust stage for bounded theme
 metadata. Complete web/default-browser checks and conservative full/unknown

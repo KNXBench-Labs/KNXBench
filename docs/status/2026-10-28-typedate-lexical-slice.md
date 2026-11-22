@@ -1,6 +1,6 @@
 # WP-08 — TypeDate lexical slice (28 October 2026 source delivery)
 
-Published main-first merge `4beabe531` (hash mapping 2026-11-22: alpha-22 history; on current main as `6fd5c6568`) (code `b5dc92aa8`, feature documentation
+Published main-first merge `4beabe531` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `6fd5c6568`) (code `b5dc92aa8`, feature documentation
 `c57ba4147`) on `58375375b`. Local candidate, tracking ref and live `main`
 readback matched after publication. This is source delivery, not a release,
 native date-editor acceptance or device compatibility claim.
@@ -56,7 +56,7 @@ published source branch.
 | Attempt | Candidate | Verdict | Rust passed / failed / ignored | Selected corpus |
 | --- | --- | --- | --- | --- |
 | Publication branch | `c57ba4147` | 14/14 stages, frozen inputs | 4,476 / 0 / 165 | 97/97 in six targets |
-| Main-first merge | `4beabe531` | 14/14 stages, frozen inputs | 4,476 / 0 / 165 | 97/97 in six targets |
+| Main-first merge | `4beabe531` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `6fd5c6568`) | 14/14 stages, frozen inputs | 4,476 / 0 / 165 | 97/97 in six targets |
 
 Both change-scoped receipts are complete with every selected stage exit zero
 and valid execution proof. User-data inventories were checked, with no touched

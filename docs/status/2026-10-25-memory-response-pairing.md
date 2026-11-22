@@ -2,7 +2,7 @@
 
 ## Published source
 
-`53400189e` (hash mapping 2026-11-22: alpha-22 history; on current main as `fb4d58790`) is published on `main` with matching live and tracking-ref readback.
+`53400189e` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `fb4d58790`) is published on `main` with matching live and tracking-ref readback.
 The main-first merge preserves upstream `1cc975ff0`, including the separately
 delivered System-2 prestate observations. Only the two commissioning response
 matchers, their shared private helper, test wiring, tests and contract/index are

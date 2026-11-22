@@ -55,7 +55,7 @@ technical import/export page is clarified without rewriting its dated history.
 The preceding audit actually ran 385 targeted Web unit tests in 12 files on
 `2ff5b370` (296 + 89, both exit 0). That is retained evidence, not a new run on
 this documentation candidate. Its other cited Rust/test paths were inspected,
-not executed. Fresh acceptance on main-first merge `52a42218` (hash mapping 2026-11-22: alpha-22 history; on current main as `d29c1a4b1`): all 13 planned
+not executed. Fresh acceptance on main-first merge `52a42218` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d29c1a4b1`): all 13 planned
 scoped-gate stages passed with frozen inputs, including 317 tool tests, 103
 xtask tests, Clippy, all 1,636 anchors across 680 Markdown files and 208 ledger
 rows. The separate 14-test catalogue/preservation preflight passed too. The

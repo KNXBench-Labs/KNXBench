@@ -200,7 +200,7 @@ projects `Undetermined` with no channel after evaluation. Genuine unscoped and
 resolved-instance controls, `NotEvaluated` without an evaluable program and the
 module write stop-line are unchanged. Corrected source `8873e0150f` has retained
 17 unit + 9 HTTP passes and independent finding-specific approval (F1 closed).
-Main-first `e31f0e062` (hash mapping 2026-11-22: alpha-22 history; on current main as `da2b12808`) is software-accepted and published: complete selected
+Main-first `e31f0e062` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `da2b12808`) is software-accepted and published: complete selected
 gate 14/14, Rust 2090 passed / 73 ignored, separate corpus 51/51; frozen inputs
 and checked user data untouched. Tool tests: 547 passed / 16 optional skips.
 Browser suites were not selected; ships in Alpha 22 without native UI/deployment claims. The
@@ -227,7 +227,7 @@ integration base `52559229b` or main-first candidate `994d9bd5d`. Native05
 preserves exact draft text, full backend/43 SQLite tables including history and
 whole-file identity, with no Apply; equality does not prove zero mutating HTTP
 requests. The linked record separates native audit and delivery acceptance.
-The main-first delivery is software-accepted and published as `ea7ac7ae1` (hash mapping 2026-11-22: alpha-22 history; on current main as `6cc02a44c`):
+The main-first delivery is software-accepted and published as `ea7ac7ae1` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `6cc02a44c`):
 selected package gate 11/11, nested web 43/43, inputs frozen and checked user
 data untouched; tool tests 547 passed / 16 optional skips. No Rust tests or
 private corpus were selected. Ships in Alpha 22 without deployment or current-main
@@ -239,7 +239,7 @@ remain unchanged or open.
 ## Evaluated parameter navigation (14 November 2026)
 
 The bounded generic display-container/leaf relationship is software-accepted
-and published on main as `2867ee1b5` (hash mapping 2026-11-22: alpha-22 history; on current main as `4780e6a38`). Scope, container and leaf remain distinct;
+and published on main as `2867ee1b5` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `4780e6a38`). Scope, container and leaf remain distinct;
 source ordering, caption provenance, existing write targets, stable editor keys
 and presentation-only disclosures are retained. Independent Spec/Standards
 reviews approve the corrected source. The selected 15-stage package gate and a
@@ -284,7 +284,7 @@ extras, an authentic Alpha 20 upgrade probe and packaging dry runs. Publication
 and historical private-corpus restoration require separate owner approval;
 no release acceptance is inferred from this preparation entry.
 
-Published on 13 November 2026 at immutable `616d26d2ec86ceeadd86a3441a7e3b2bfaa9b6cc`
+Published on 13 November 2026 at immutable `616d26d2ec86ceeadd86a3441a7e3b2bfaa9b6cc` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `1e74045c2`)
 from the first and only candidate (23/23 release stages green; one earlier gate
 attempt aborted by a session disconnect is kept as aborted). Owner-approved pinned
 lanes ran on a 28-file cross-section: the legacy-name check passed and Alpha 20 vs
@@ -335,7 +335,7 @@ lifecycle as the row dots: no client comparison, nothing for module rows or
 unusable comparisons. Web only, no server change. Tests: 10 component tests
 (`ParameterPanel.sectionMarks.test.tsx`), the forced-colours rule test and 4
 browser cases (`parameter-last-download.e2e.ts`: en/de, 1440/400 px) plus the
-extended forced-colours case. Published as `54d243ae8`; independent review
+extended forced-colours case. Published as `54d243ae8` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `72f75b341`); independent review
 APPROVE, selected package gate 11/11 (nested web 37/37): 5731 Vitest tests,
 default browser 1229 (1132 functional + 97 exclusive), production devices 112
 (111 + 1); frozen inputs, checked user data untouched. No Rust suite selected.
@@ -357,7 +357,7 @@ section does not hide the other's marks. Forced colours paint the dots in
 `CanvasText`. Web only, no server change. Tests: 18 component tests
 (`ComObjectTable.lastDownload.test.tsx`), the forced-colours rule test and 5
 browser cases (`parameter-last-download.e2e.ts`, dev and devices lanes: en/de,
-1440/400 px, forced colours). Published as `6817638aa`; independent review
+1440/400 px, forced colours). Published as `6817638aa` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `c4156d4bb`); independent review
 APPROVE, selected package gate 11/11 (nested web 37/37): 5721 Vitest tests,
 default browser 1225 (1128 functional + 97 exclusive), production devices 108
 (107 + 1); frozen inputs, checked user data untouched. No Rust suite selected.
@@ -957,7 +957,7 @@ German copy also removes leftover English UI wording in history, achievements,
 appearance, activity records and download guidance. Source tokens remain in
 tooltips; manufacturer captions/options/values, product-language selection,
 write permissions and confirmation phrases are unchanged. Catalogue parity and
-mounted/browser regressions cover the display boundary. Main-first `33f072e8a` (hash mapping 2026-11-22: alpha-22 history; on current main as `2ea7ae0df`)
+mounted/browser regressions cover the display boundary. Main-first `33f072e8a` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `2ea7ae0df`)
 passed all 11 selected package stages: web 40 stages, 5,480 unit tests and
 1,380 browser executions across overlapping default/production lanes; no Rust
 runtime or private-corpus stage was selected. Twelve metadata crops were inspected.
@@ -983,7 +983,7 @@ and the AppImage packaging repair (glibc 2.39 ceiling, readable for every user).
 hardware acceptance follows; the allocation mismatch of #30/#22 stays unresolved.
 Scope, upgrade notes and boundaries: [Alpha 20 release notes](releases/alpha20.md).
 
-Published on 9 November 2026 at immutable `1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22`
+Published on 9 November 2026 at immutable `1d3c7d433d2b2139a1ecbfac1314bacc4ef9fc22` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `7dfad07fd`)
 after two rejected candidates (a 51-line restart snapshot; then a load-sensitive
 knx-net fault test and three native evidence specs that refused the status bar's
 activity poll, both fixed test-only). Both tag publishers succeeded; downloaded
@@ -1175,7 +1175,7 @@ A v33 report rewrite validates the stored report first; an invalid one becomes u
 [research](research/2026-11-09-conditional-parameter-block-rename.md). Tests: evaluator, ProductDB
 ingest/migration, HTTP edit/undo/redo, Vitest and the `parameters` browser lane; no bus, no
 download claim. WP-05 stays open for its other items.
-Accepted on main `da7d667d1` (hash mapping 2026-11-22: alpha-22 history; on current main as `1cd7cf3ec`); [source-bound software acceptance and remaining boundaries](status/2026-11-09-conditional-block-captions.md).
+Accepted on main `da7d667d1` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `1cd7cf3ec`); [source-bound software acceptance and remaining boundaries](status/2026-11-09-conditional-block-captions.md).
 
 **Update 19 November 2026 (WP-05i):** a leaf's `@RefId` may now also name another caption host
 of the same tree — a different `ParameterBlock`, or a `Channel`/`ChannelIndependentBlock` — a
@@ -1288,7 +1288,7 @@ The bounded schema-23 observation preserves declared raw, both omission causes
 and explicit unavailability through core, native17, working/history/undo/redo
 and the required read-only device-detail GET. Historical images remain NotCaptured;
 no opaque backfill or effective/wire interpretation is introduced. Main-first
-`ed0cf7737` is published (exact readback) after a selective-import provenance fix
+`ed0cf7737` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `a6f240a34`) is published (exact readback) after a selective-import provenance fix
 and genuine historical-fixture setups; the full selected 17-stage gate passed
 with fresh nested web stages, Rust 8,341 passed/248 ignored and private corpus
 155/155. The actual server build reports `0.1.0-alpha.19+ged0cf7737`. The
@@ -1356,7 +1356,7 @@ The first run retained a test-fixture SQL setup failure, corrected by using the
 existing translation insertion API. Independent whole-feature review approved
 the bounded increment; three compiled origin mutants fail their intended
 assertions and the original/restored controls each pass five tests. Those are
-discrimination experiments, not pre-feature semantic REDs. Main-first `edd41cd25` (hash mapping 2026-11-22: alpha-22 history; on current main as `0cc343498`)
+discrimination experiments, not pre-feature semantic REDs. Main-first `edd41cd25` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `0cc343498`)
 passed all fourteen selected package stages: Rust 5,500/0 with 177 ignored,
 517 tooling tests with six optional skips, and selected corpus 97/97. Ordered
 proofs, frozen inputs, checked/untouched user data and exact live publication
@@ -1376,7 +1376,7 @@ the UI discloses provenance and searches only the selected display label.
 [Verification contract and evidence levels](status/2026-11-06-declared-product-folder-captions.md)
 separate original-member reader calibration, synthetic lifecycle and production
 client/browser checks from complete package/publication acceptance. Source
-`1e3b441d3` and main-first `252b11c3c` (hash mapping 2026-11-22: alpha-22 history; on current main as `55ce05d4b`) passed both complete selected17-stage
+`1e3b441d3` and main-first `252b11c3c` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `55ce05d4b`) passed both complete selected17-stage
 gates, source-bound server build/version and exact publication readback. No original
 package importer, original-tool, native, hardware or release equivalence is claimed;
 templates/translations/modules/staleness/priority and whole WP-06 remain open.
@@ -1386,7 +1386,7 @@ templates/translations/modules/staleness/priority and whole WP-06 remain open.
 The device-memory and service-control JSON writers now create, verify and sync
 through held file/directory descriptors. Static aliases and `..` remain supported;
 relative receipts are anchored to the initial CWD, detected namespace substitutions
-and unusable full pathnames refuse receipts. Main-first `98d2e6953` (hash mapping 2026-11-22: alpha-22 history; on current main as `26313bffe`) passed all
+and unusable full pathnames refuse receipts. Main-first `98d2e6953` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `26313bffe`) passed all
 14 selected maintained stages: Rust 3,532/0 with 144 ignored, selected corpus
 91/91, plus independent reviews, 43 focused tests and four compiled negative
 controls. The actual server build/version passed. Catalogue/legacy recorder paths,
@@ -1400,7 +1400,7 @@ server-local by-id candidate list. Strict HTTP admission, typed unavailable vers
 empty/unsupported results and EN/DE error/omission states retain manual paths and
 separate selection from Connect. No port is opened/probed and no IP discovery is
 triggered. Candidates are not KNX compatibility or availability evidence.
-Published `edc6c90d5` passed source-bound software acceptance: 1,748 scoped Rust
+Published `edc6c90d5` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `5733ed7f1`) passed source-bound software acceptance: 1,748 scoped Rust
 tests (72 routinely ignored), a separate selected 51/51 corpus run, 5,169 UI tests
 and selected development/production browser coverage. The unchanged complete Web
 proof and final Rust-test-only delta retain their distinct source bindings. This
@@ -1418,7 +1418,7 @@ passive versus active mode and server-local firmware/device prerequisites.
 Passive sends are refused at the server boundary. Review corrections bind serial
 group sends to session/process identity, retain admission through serial cleanup,
 expose conservative active-start uncertainty and preserve known serial provenance
-on fresh monitor attach. Published main-first `eab79cc5b` (hash mapping 2026-11-22: alpha-22 history; on current main as `fb73a1ff4`) passed independent
+on fresh monitor attach. Published main-first `eab79cc5b` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `fb73a1ff4`) passed independent
 correction review, the selected 15-stage package gate and all 16 affected production
 configurations on the same accepted build. Scoped Rust 1,741/72 ignored, corpus
 51/51, UI 5,099 and isolated real-server HTTP checks passed. Execution populations
@@ -1442,7 +1442,7 @@ retain those distinctions.
 
 ## System-2 E1–E17 software consolidation (5 November 2026, main-only)
 
-Source `d4e1332d4`, main-first `cee41bf0d` (hash mapping 2026-11-22: alpha-22 history; on current main as `38babefc5`), closes the named finite caption-class
+Source `d4e1332d4`, main-first `cee41bf0d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `38babefc5`), closes the named finite caption-class
 software matrix with App integrity/ownership adversaries, actual-worker lease/proof
 counts and causal command contention, lifecycle/history/full-recovery conservation,
 changed-caption large-project observations and exact retained-byte limits.
@@ -1464,7 +1464,7 @@ open. [Scope, evidence and limits](status/2026-11-04-usb-tpuart.md).
 
 ## Caption-positive original recovery authority (4 November 2026, main-only)
 
-Test-only source `806b25236`, main-first `77edfc3b3` (hash mapping 2026-11-22: alpha-22 history; on current main as `05dd69639`), exercises actual original
+Test-only source `806b25236`, main-first `77edfc3b3` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `05dd69639`), exercises actual original
 recovery after caption-positive settlement for standalone/retained sources and
 namespaces 20/23 (four leaves). Exact OLD model restoration, original evidence,
 confirmation refusals and conservative MEMORY/history settlement are checked.
@@ -1497,7 +1497,7 @@ protocol, physical-recovery or field-outcome claim follows.
 
 ## System-2 caption-only settlement (3 November 2026, main-only)
 
-The finite selected-caption software rule is accepted main-first as `288bd8005` (hash mapping 2026-11-22: alpha-22 history; on current main as `9c15583a2`)
+The finite selected-caption software rule is accepted main-first as `288bd8005` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `9c15583a2`)
 (source `d77f77be9`). Both selector families keep their provenance; strict-pin
 success remains separate and start/recovery authority is unchanged. Independent
 review closed an unindexed-ZIP inventory gap; both complete selected 14-stage
@@ -1515,14 +1515,14 @@ include the review-found orphan isolation correction. Earlier owning ProductDB
 checks remain bound to their original candidate; corrected-source package and
 retained database copies were independently accepted. Ten compiled semantic
 mutants were detected; both selected 14-stage gates passed with frozen inputs
-and checked, untouched user data. Published main-first as `5c405bfde` (hash mapping 2026-11-22: alpha-22 history; on current main as `0d365d7f3`).
+and checked, untouched user data. Published main-first as `5c405bfde` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `0d365d7f3`).
 [Acceptance, counts and exclusions](status/2026-11-03-wp08-color-time-successor.md).
 No codec or broader WP-08 closure follows.
 [Contract and retained-artifact boundaries](contracts/color-time-successor-repair.md).
 
 ## Proportionate gate selection (3 November 2026, source)
 
-Main-first `703ec2904` (hash mapping 2026-11-22: alpha-22 history; on current main as `11953086d`) selects a representative production dialogs suite for
+Main-first `703ec2904` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `11953086d`) selects a representative production dialogs suite for
 proven font-only/app-shell HTML changes while retaining complete web/default
 checks, and an explicit Rust diagnostic stage for exactly bounded theme metadata.
 Unknown/functional changes and full/release gates keep conservative coverage.
@@ -1537,7 +1537,7 @@ No application, native-shell, hardware, release or deployment compatibility clai
 The device editor now offers **Compare** beside Download. It opens the existing
 explicit read-only review for exactly that device and shares one retained
 controller/dialog with the device table; it does not start an automatic read or
-create a second queue. Main-first `080f2723d` (hash mapping 2026-11-22: alpha-22 history; on current main as `06c1ad027`) is published after independent
+create a second queue. Main-first `080f2723d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `06c1ad027`) is published after independent
 review, a complete 11-stage runtime gate and an exact 10-stage documentation
 delta acceptance. The runtime-tested source is `51d8f417f`; results are not
 relabeled as a second full run. [Coverage and boundaries](status/2026-11-03-wp27-device-editor-compare.md).
@@ -1548,7 +1548,7 @@ No new device-family, native-shell, hardware or release acceptance follows.
 Explicit Columns/Atlas navigation replaces the initial Explorer scope rather
 than intersecting unrelated ranges. A subsequent Explorer activation wins again,
 including the same range ID; address selection does not reset local navigation.
-Main-first source `e1d6f916e` is published after independent review and a complete
+Main-first source `e1d6f916e` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `4d4749091`) is published after independent review and a complete
 selected 11-stage gate: Vitest 5,043; default Chromium 848 functional + 46 exclusive;
 production group-addresses 29 + 1 and table-columns 164 + 4. Exact docs-only upstream
 composition and four delta checks preserve the accepted build/tool binding. No
@@ -1558,7 +1558,7 @@ or deployment acceptance follows.
 
 ## Catalogue poll and disposed-owner lifetime (3 November 2026, source)
 
-Main-first `5296e56c5` (hash mapping 2026-11-22: alpha-22 history; on current main as `83aeaec94`) stops queued automatic reads after valid terminal status,
+Main-first `5296e56c5` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `83aeaec94`) stops queued automatic reads after valid terminal status,
 keeps replacement timers and operation snapshots isolated from old callbacks,
 and models the existing typed 410 response for disposed fixture owners without
 relaxing request guards. Manual terminal refresh remains available. Independent
@@ -1591,7 +1591,7 @@ rail under the toolbar. Both share one trusted presentation
 request it. Effects (start-up rail draw, hover base line, dialog settle, File
 menu unroll, workspace-bar hand-over) sit in the new reduction-only motion
 category **Theme effects (Rail)** and stop under Off or OS reduced motion.
-Main-first source `ed01e2bd3` is published after independent review/closure and
+Main-first source `ed01e2bd3` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `51fc8b5d4`) is published after independent review/closure and
 all 15 selected package stages, with unchanged inputs and checked user data
 untouched. [Acceptance and measured coverage](status/2026-11-02-rail-themes.md).
 Chromium uses intercepted synthetic replies; native WebKitGTK/Orca and Firefox
@@ -1610,7 +1610,7 @@ web controller shares the activity-derived view and a single action token
 between the footer and the panel. Details and limits:
 [KL-180](limitations/KL-180-named-gateway-refusals.md#session-bound-stop-and-status-bar-connection-2-november-2026-source).
 Software-tested only (fake connectors, Vitest, intercepted Chromium). Main-first
-source `7ea7ff6dd` is published after independent review and the selected 15-stage
+source `7ea7ff6dd` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `948baa1ce`) is published after independent review and the selected 15-stage
 package gate. [Acceptance and remaining boundaries](status/2026-11-02-wp26-status-bar-connection.md).
 
 ## Monitor start refuses a held tunnel reservation at once (2 November 2026, source; WP-26 backend prerequisite)
@@ -1701,7 +1701,7 @@ the `zip` 9/`rustls` security updates. No hardware acceptance follows; the
 allocation mismatch of #30/#22 stays unresolved. Scope, upgrade notes and
 boundaries: [Alpha 19 release notes](releases/alpha19.md).
 
-Published on 1 November 2026 at immutable `0b827abee222c459ce068cbce83a941691a16805`
+Published on 1 November 2026 at immutable `0b827abee222c459ce068cbce83a941691a16805` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `90344a46b`)
 after a rejected first candidate (its release-only device-diagnostics browser run caught
 the bundle withholding a token-reached raw recording; fixed in `0695115ac`). Both real
 tag publishers succeeded; downloaded AppImage/MCP/checksum bytes, the AppImage
@@ -1925,7 +1925,7 @@ false, and every limitation is listed
 
 ## Settings center workspace (30 October 2026 source)
 
-Published main-first as `fd1dfa0e4` (hash mapping 2026-11-22: alpha-22 history; on current main as `fac158209`). Independent reviews closed the retained-modal
+Published main-first as `fd1dfa0e4` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `fac158209`). Independent reviews closed the retained-modal
 and unavailable-focus findings; the final branch and integrated package gates
 accepted 11/11 stages each, including 4,688 unit tests and all 1,001 default
 browser cases. Inputs stayed frozen and the named user-data guard was clean.
@@ -1978,7 +1978,7 @@ it; the allocation mismatch of #30/#22 stays unresolved and no hardware acceptan
 follows. Scope, upgrade notes and boundaries:
 [Alpha 18 release notes](releases/alpha18.md).
 
-Published on 29 October 2026 at immutable `80386a154231f327d60ba0d89f1ba6fa2719f137`.
+Published on 29 October 2026 at immutable `80386a154231f327d60ba0d89f1ba6fa2719f137` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `7c195f293`).
 Both real tag publishers succeeded; downloaded AppImage/MCP/checksum bytes and the
 amd64/arm64 registry identities were checked separately from the source gate.
 Isolated amd64 auth/create/import/legacy-native-save-as probes and the unchanged
@@ -2030,7 +2030,7 @@ no release, device retry or hardware-support claim follows.
 
 ## Legacy long-enum binary storage and authenticated backfill (28 October 2026 source)
 
-Published main-first `6dbdaf8b9` (hash mapping 2026-11-22: alpha-22 history; on current main as `8ef6931e2`) after independent Opus correction approval.
+Published main-first `6dbdaf8b9` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `8ef6931e2`) after independent Opus correction approval.
 Branch and integrated selected gates14/14 each accepted: Rust4,494/165ignored,
 selected corpus97/97, frozen inputs and checked/unchanged user data.
 [Exact acceptance and limits](status/2026-10-28-wp03-legacy-binary-retention.md).
@@ -2047,7 +2047,7 @@ No legacy image, programming, hardware or broad conversion-equivalence claim.
 
 ## TypeDate lexical contract and evidence-safe promotion (28 October 2026 source)
 
-Published main-first `4beabe531` (hash mapping 2026-11-22: alpha-22 history; on current main as `6fd5c6568`) (code `b5dc92aa8`, documentation `c57ba4147`).
+Published main-first `4beabe531` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `6fd5c6568`) (code `b5dc92aa8`, documentation `c57ba4147`).
 `TypeDate` is kind `Date` with schema-spelled calendar validation; productdb
 v29 preserves historical evidence or explicitly refuses ambiguous promotion.
 Independent correction and final mode reviews approved; branch and merge gates
@@ -2067,7 +2067,7 @@ GATE-01 remains open; no timeout, scheduler, native or hardware claim.
 
 ## S2-03 defaults v3 and explicit-Background admission (28 October 2026 source delivery)
 
-Published main-first `d39668393` (hash mapping 2026-11-22: alpha-22 history; on current main as `7300a91aa`) after a no-findings review and a 10/10 full
+Published main-first `d39668393` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `7300a91aa`) after a no-findings review and a 10/10 full
 package gate (Rust 7,113 passed / 236 ignored summed, corpus155/155, frozen
 inputs, unchanged user data). Defaults profile v3 keeps the source `Data` of
 inactive parameters like the configured path; new physical v1/v2 execution
@@ -2078,7 +2078,7 @@ Simulator-only: no ETS equivalence, hardware or `DefaultValue` claim.
 
 ## Experimental System-2 patient waits (28 October 2026 source delivery)
 
-Published main-first `3583ab8e0` (hash mapping 2026-11-22: alpha-22 history; on current main as `80e4da9c6`) after independent confirmation APPROVE and
+Published main-first `3583ab8e0` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `80e4da9c6`) after independent confirmation APPROVE and
 14/14 branch/integrated package gates; integrated Rust3,479/140ignored,
 corpus91/91, frozen inputs and unchanged user data. The
 [bounded timing package and acceptance](status/2026-10-27-system2-patient-waits.md)
@@ -2090,7 +2090,7 @@ Source-only: no new Alpha image, release or successful device test.
 
 ## Ordinary server tunnel persistence (27 October 2026 source)
 
-Published main-first `ca940e2ed` (hash mapping 2026-11-22: alpha-22 history; on current main as `eaec0252d`) after whole-feature/correction review and
+Published main-first `ca940e2ed` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `eaec0252d`) after whole-feature/correction review and
 14/14 branch/integrated package gates; integrated Rust1446/64ignored,
 corpus51/51, with frozen inputs and unchanged user data.
 On multi-thread runtimes, the ordinary download worker and service-control
@@ -2137,7 +2137,7 @@ preparation is complete; approval, implementation and operational acceptance are
 not. No signing, registry write, key creation, workflow or runtime change occurred;
 existing container limitations and ledger statuses are unchanged.
 
-Published as main-first `7b76dd22c` (hash mapping 2026-11-22: alpha-22 history; on current main as `6af74c4a6`) (feature `0e9dfab3a`) after independent
+Published as main-first `7b76dd22c` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `6af74c4a6`) (feature `0e9dfab3a`) after independent
 whole-design, correction and final reviews APPROVE. Both maintained
 change-scoped package gates passed 10/10 planned stages with frozen inputs and
 no touched/unchecked user data. Tooling registered 461 methods with six optional
@@ -2148,7 +2148,7 @@ executed signing or registry-integration test.
 
 ## Explicit catalogue installation target (27 October 2026 source)
 
-Published as main-first `a17420239` (hash mapping 2026-11-22: alpha-22 history; on current main as `9472a7a85`) after independent reviews APPROVE;
+Published as main-first `a17420239` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `9472a7a85`) after independent reviews APPROVE;
 branch/integrated14 green (integrated Rust1503/62ignored, corpus51/51,
 Vitest4568 and Chromium932; frozen inputs and unchanged user data).
 [Acceptance and retained boundaries](status/2026-10-27-catalogue-installation-target.md).
@@ -2164,7 +2164,7 @@ No cross-installation transfer, new site model or native-platform claim follows.
 
 ## CLI report language selection (27 October 2026 source)
 
-Published as main-first `5679ba3c5` (hash mapping 2026-11-22: alpha-22 history; on current main as `84de2a71a`) after whole-feature and correction reviews
+Published as main-first `5679ba3c5` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `84de2a71a`) after whole-feature and correction reviews
 APPROVE; both maintained 13-stage gates passed (integrated Rust529,
 corpus17/17; frozen inputs and unchanged user data).
 [Acceptance and exclusions](status/2026-10-27-cli-report-language.md).
@@ -2179,7 +2179,7 @@ bytes on refusal. No new language, schema, renderer, PDF or report-parity claim.
 
 ## Group-address CSV column profiles (27 October 2026 source)
 
-Published as main-first `ed8b8ec13` (hash mapping 2026-11-22: alpha-22 history; on current main as `9f62e0f36`) after whole-feature and correction reviews
+Published as main-first `ed8b8ec13` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `9f62e0f36`) after whole-feature and correction reviews
 APPROVE; both maintained 14-stage gates passed (integrated Rust2,878,
 corpus91/91; frozen inputs and unchanged user data).
 [Acceptance and exclusions](status/2026-10-27-group-address-csv-profiles.md).
@@ -2258,7 +2258,7 @@ coverage remain open. [Record and exclusions](status/2026-11-03-wp11-native-prop
 
 ## WP-11 bounded native Alpha 17 acceptance (27 October 2026)
 
-Published as `cc9d8fab2` after independent review/re-review APPROVE and the
+Published as `cc9d8fab2` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `55abaab65`) after independent review/re-review APPROVE and the
 13-stage integrated scoped gate (103 xtask tests; tooling 461 methods,
 six skips; no selected corpus cases, web/browser or bindings). The owner authorised isolated desktop tests; the actual published Alpha 17
 AppImage was exercised under native Wayland/WebKitGTK, with loopback-only
@@ -2301,7 +2301,7 @@ public assets, Docker index/revision and isolated artifact smokes are verified:
 
 ## Regular CLI durable-tunnel runtime, PRG-01/S2-03 slice (26 October 2026)
 
-Published main-first merge `a8004cb2e` (hash mapping 2026-11-22: alpha-22 history; on current main as `d589d971d`) (feature `46c38df26`), independent review
+Published main-first merge `a8004cb2e` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d589d971d`) (feature `46c38df26`), independent review
 APPROVE. Download, restore and service-control reuse the existing two-worker
 tunnel runtime; synchronous backup/history barriers stay on the operation caller
 while spawned tunnel tasks can service ACKs. Maintained merge gate 13/13 green:
@@ -2313,7 +2313,7 @@ claim. [Acceptance and boundaries](status/2026-10-26-cli-durable-tunnel-runtime.
 
 ## Browser temp-wrapper spawn/signal protection, GATE-01 slice (26 October 2026)
 
-Published main-first merge `ed156ef9b` (hash mapping 2026-11-22: alpha-22 history; on current main as `1fb35e6d8`); independent review and correction re-review
+Published main-first merge `ed156ef9b` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `1fb35e6d8`); independent review and correction re-review
 APPROVE. Signal forwarders precede process spawn and replay observed pending
 TERM/INT/HUP after the group identity is known. Nine focused regressions plus the
 12 existing launch cases pass. Merge package11/web65 accepted: 4,539 Vitest and
@@ -2325,7 +2325,7 @@ SIGKILL and remaining GATE-01 performance work stay open.
 
 ## ZIP WinZip AES metadata consistency, WP-16 (26 October 2026)
 
-Independently reviewed (APPROVE, no Critical/Important findings) and delivered on `main` as `161e3b14b` (hash mapping 2026-11-22: alpha-22 history; on current main as `1883e07c6`) (feature `305609215`, review fix `bdaf3bfc9`); maintained change-scoped 14/14 gate green: 5,033 Rust tests in 33 binaries (220 ignored), 155/155 selected corpus cases, frozen inputs, no touched or unchecked user data; local/tracking/live readback equal. Project and product ZIP admission refuses contradictory WinZip AES (AE-x)
+Independently reviewed (APPROVE, no Critical/Important findings) and delivered on `main` as `161e3b14b` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `1883e07c6`) (feature `305609215`, review fix `bdaf3bfc9`); maintained change-scoped 14/14 gate green: 5,033 Rust tests in 33 binaries (220 ignored), 155/155 selected corpus cases, frozen inputs, no touched or unchecked user data; local/tracking/live readback equal. Project and product ZIP admission refuses contradictory WinZip AES (AE-x)
 metadata by validated member name before any member codec opens: differing local
 and central 0x9901 fields, a 0x9901 field without method 99, method 99 without
 exactly one field, and method 99 without bit 0. This covers outer and nested
@@ -2337,7 +2337,7 @@ or new compatibility claim. [Sources, measured behaviour and decision](research/
 
 ## Regular-download failure diagnostic, DIAG-02 (26 October 2026 source)
 
-Delivered on `main` as `4209645b4` (hash mapping 2026-11-22: alpha-22 history; on current main as `b45ad0be2`) after the owner's Go; change-scoped 15/15 package gate
+Delivered on `main` as `4209645b4` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `b45ad0be2`) after the owner's Go; change-scoped 15/15 package gate
 green (2,686 Rust tests in 14 binaries, 91/91 corpus cases, 968 browser tests, frozen inputs,
 no touched user data); local/tracking/live readback equal. A failed server/web memory download now keeps one payload-free
 diagnostic (`knx_app::download_failure::DownloadFailure`: closed cause code and
@@ -2365,7 +2365,7 @@ history row, `--report` failure with `stoppedInStep`, one `diagnostic:` terminal
 
 ## System-2 memory diagnostics in the web dialog (26 October 2026 source)
 
-DIAG-01 is delivered on `main` as `a4bb0aa4e` (hash mapping 2026-11-22: alpha-22 history; on current main as `9a416f5aa`); independent review and fix re-review APPROVE; maintained change-scoped 15/15 gate green (919 browser tests, 1,522 Rust tests in 9 binaries, 51/51 selected corpus cases, frozen inputs, no touched user data); local/tracking/live readback equal.
+DIAG-01 is delivered on `main` as `a4bb0aa4e` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `9a416f5aa`); independent review and fix re-review APPROVE; maintained change-scoped 15/15 gate green (919 browser tests, 1,522 Rust tests in 9 binaries, 51/51 selected corpus cases, frozen inputs, no touched user data); local/tracking/live readback equal.
 The device diagnostic dialog (File menu and a device's *Analyse device*) offers
 `system2-declared-segments-v1` beside the generic identity profile, through the
 CLI's own `prepare_memory`/`acquire_memory`/`bundle_export` service: required
@@ -2387,7 +2387,7 @@ only, no hardware run, no package gate.
 
 ## Sortable catalogue table (26 October 2026 source)
 
-WP-24 is published as `8dd6cf72d` after independent implementation/correction
+WP-24 is published as `8dd6cf72d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `1d38c89c3`) after independent implementation/correction
 reviews and all 11 package/34 nested web stages: 4,475 Vitest tests, 908 default
 browser cases and 22 separate production catalogue cases passed. Native columns
 sort without changing catalogue data, selected product identity or authoring
@@ -2407,7 +2407,7 @@ hardware recovery or application deployment is claimed.
 
 ## Flow group-address names (26 October 2026 source)
 
-WP-23 is published as `903d5d0c1`: Flow adds the interpreting project's unique
+WP-23 is published as `903d5d0c1` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `42fe4068b`): Flow adds the interpreting project's unique
 group name after its address, preserving ambiguity, raw identities and the
 existing generation lifecycle. Independent implementation and Unicode-fix reviews
 approve; all 11 package/36 nested web stages passed, including 4,419 Vitest tests,
@@ -2425,7 +2425,7 @@ Deployment happens with the push that touches `website/`.
 
 ## Selective website typing (26 October 2026)
 
-WP-21 is published as `b517930e7`: only the hero and Features headings type,
+WP-21 is published as `b517930e7` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `486b69642`): only the hero and Features headings type,
 with an inline finite blinking cursor and static/reduced-motion fallback.
 Independent review and correction re-review approve; the 11-stage scoped gate,
 737 preview checks and 81 public-build checks passed. Pages deployment succeeded;
@@ -2442,7 +2442,7 @@ session reads share the helper; simulator modeled capacities and all write
 admission gates stay unchanged ([contract](contracts/memory-transfer-budget.md)).
 Original semantic RED was independently replayed; initial and correction
 reviews approved. All 16 selected maintained integrated stages passed;
-published as `1e6229cea3` with local/tracking/live readback equality
+published as `1e6229cea3` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `587bf8542`) with local/tracking/live readback equality
 ([record](status/2026-10-26-memory-transfer-budget.md)). No measured extended
 path, new family, hardware outcome or complete recovery is claimed.
 
@@ -2456,7 +2456,7 @@ No error message/path/raw exception is retained, no reason is reconstructed afte
 restart, and no safety admission or automatic retry changes.
 The [S2-02 record](open-work/S2-02-gateway-busy-after-failed-runs.md) remains P1:
 this is diagnostics, not a reproduced fix for the reporter's actual start failure.
-Delivered in `aa2f39f1b` (main `a15b8f0eb` (hash mapping 2026-11-22: alpha-22 history; on current main as `7accddfab`)): independent review APPROVE, change-scoped
+Delivered in `aa2f39f1b` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `b036331fe`) (main `a15b8f0eb` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `7accddfab`)): independent review APPROVE, change-scoped
 package gate 15/15 green. Ships in Alpha 17; reporter re-test is open.
 Status update (15 November 2026): S2-02 and S2-04 are closed without a reproduced or
 proven original cause; the 8 November reporter run started and finished verified
@@ -2469,7 +2469,7 @@ procedure instead of omitting them. Both planner entry points preserve identity
 and procedure-count priority; actual offline application preparation reports
 `procedure-shape` ([contract](contracts/regular-merge-fragment-admission.md)).
 Original semantic RED, final focused GREEN, independent review and all 14
-selected integrated stages passed; published as `be2687796`
+selected integrated stages passed; published as `be2687796` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d2a8566a8`)
 ([acceptance](status/2026-10-25-regular-merge-fragment-admission.md)). Raw source
 retention and the fragment-free literal plan are regression-tested. No new
 fragment semantics, family, device operation or recovery authority is added;
@@ -2477,18 +2477,18 @@ fragment semantics, family, device operation or recovery authority is added;
 
 ## System-2 PID 7 wrong-width diagnostics (25 October 2026 source)
 
-Published as `5f1ad454e` after independent APPROVE and all 14 integrated stages
+Published as `5f1ad454e` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `5956f1e0a`) after independent APPROVE and all 14 integrated stages
 ([acceptance](status/2026-10-25-system2-pid7-diagnostic.md)).
 A wrong-width resource-pointer answer stops the legacy path before the first write.
 Its refusal names object, element count, actual byte count and a bounded hex prefix
 in the private journal and CLI error result. Raw text, bytes and the prefix stay
 kept out of the HTTP status and the shareable report. The 26 October field reply now establishes two octets on object 1
 only; an independently retrieved public package declares two/four-octet metadata.
-The exact-profile width-aware correction is published as `54b052885`; independent
+The exact-profile width-aware correction is published as `54b052885` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `898024716`); independent
 whole-feature and correction reviews APPROVE, all 15 integrated stages passed
 ([record](status/2026-10-26-up258-pid7-width.md),
 [research](research/2026-10-26-up258-pid7-width.md)).
-[S2-01](open-work/S2-01-pid7-raw-response.md) is **delivered** as `536e492bc`
+[S2-01](open-work/S2-01-pid7-raw-response.md) is **delivered** as `536e492bc` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d7294970d`)
 for its projection scope: a closed-allowlist typed diagnostic (run, reason, object,
 property, element/octet counts) reaches safe status, report, reopen and the EN/DE UI
 with the same privacy, no raw text or bytes
@@ -2512,7 +2512,7 @@ Server graceful shutdown can stop an existing regular download before its first
 mutation, with run registration before tunnel/spawn and atomic stop/commit ordering
 ([contract](contracts/regular-download-prewrite-stop.md)). After commitment the
 existing download continues unchanged. Independent implementation and amendment
-reviews approved; all 14 integrated stages passed, published as `6c9ca2d7d`
+reviews approved; all 14 integrated stages passed, published as `6c9ca2d7d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `b6103facf`)
 ([acceptance](status/2026-10-25-regular-prewrite-stop.md)). No public stop button,
 CLI interrupt, mid-procedure cancellation or whole-device recovery is admitted.
 
@@ -2522,7 +2522,7 @@ The regular memory planner refuses multiple data-bearing segments at an allocate
 start instead of silently choosing the first payload. Raw source and payload-free
 RAM/stack allocations stay unchanged
 ([contract](contracts/duplicate-image-segment-start.md)). Independent review and all
-14 integrated stages passed; published as `d73a2413b`
+14 integrated stages passed; published as `d73a2413b` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `12af24b49`)
 ([acceptance](status/2026-10-25-duplicate-segment-start.md)). Synthetic ambiguity
 coverage and selected corpus regression do not establish hardware compatibility.
 
@@ -2530,7 +2530,7 @@ Numeric TypeNumber bounds no longer silently vanish when declared but unreadable
 The shared image builder refuses them before range comparison; source text and
 encoding remain unchanged ([contract](contracts/parameter-number-bound-admission.md)).
 Independent review and correction re-review approved; all 14 integrated stages
-passed, published as `87d71d4aa`
+passed, published as `87d71d4aa` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `2af6604b2`)
 ([acceptance](status/2026-10-25-parameter-number-bounds.md)). Selected corpus
 regression is not an exhaustive bound census or hardware acceptance.
 
@@ -2542,7 +2542,7 @@ become its refusal; the unchanged answer ladder and one-mutation rule remain.
 Read-back without active Verify inherits the same guard
 ([contract](contracts/memory-response-service-pairing.md)). Independent review
 and narrow re-review approved; all 14 integrated package stages passed.
-Published as `53400189e` ([acceptance](status/2026-10-25-memory-response-pairing.md)).
+Published as `53400189e` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `fb4d58790`) ([acceptance](status/2026-10-25-memory-response-pairing.md)).
 This is synthetic nonconforming-response robustness, not observed device failure
 or new hardware compatibility.
 
@@ -2555,7 +2555,7 @@ Malformed, unknown and forbidden changed responses cannot be hidden by a later
 poll. Existing deadlines, verification polling, public APIs and the memory-mapped
 three-read mechanism remain unchanged
 ([contract](contracts/load-control-response-state.md)). Independent source review
-and all 14 maintained integrated package stages passed; published as `e4f5e7c6f`
+and all 14 maintained integrated package stages passed; published as `e4f5e7c6f` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `efb742b95`)
 ([acceptance](status/2026-10-25-load-control-response.md)). No additional device or hardware support is claimed.
 
 ## Memory-region read service and count (25 October 2026 source)
@@ -2566,7 +2566,7 @@ when the negotiated APDU budget permits 63. This closes a wire-encoding failure
 and a per-chunk service mismatch without changing writes, device admission or
 backup persistence ([contract](contracts/memory-region-read-service.md)).
 Independent review and all 14 selected integrated package stages passed;
-published as `a4a4ebcf1` ([acceptance](status/2026-10-25-memory-region-reads.md)).
+published as `a4a4ebcf1` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `cbec1ada4`) ([acceptance](status/2026-10-25-memory-region-reads.md)).
 No hardware claim is made.
 
 ## Source-bound programming marks after download (25 October 2026 source)
@@ -2580,7 +2580,7 @@ The check is a settlement snapshot, not a catalogue subscription, device read or
 proof about parts the run never wrote
 ([contract](contracts/download-settlement-source-freshness.md)). Independent
 logic and persistence reviews approved the source; strengthened assertions pass.
-Published as `fa4c18213` after all 14 maintained integrated package stages passed
+Published as `fa4c18213` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `edcd5e885`) after all 14 maintained integrated package stages passed
 ([acceptance](status/2026-10-25-download-source-freshness.md)). No hardware claim is made.
 
 ## Regular restore exemplar binding (29 October 2026 software acceptance)
@@ -2617,7 +2617,7 @@ remains readable without rewriting, but complete backups without evidence no
 longer prepare a restore. Old format-1-only builds refuse format 2. The
 [contract](contracts/backup-application-identity.md) defines the bounded guard
 and downgrade limits. Independent persistence, corrected core and integration
-reviews approved the source. Published as `08db292f3` after all 16 selected
+reviews approved the source. Published as `08db292f3` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `8702a72b4`) after all 16 selected
 integrated package stages passed, including 155/155 corpus cases
 ([acceptance](status/2026-10-25-backup-application-identity.md)).
 No whole-device recovery, final restored identity or hardware acceptance is
@@ -2648,7 +2648,7 @@ recorded in one payload-free record shared by CLI output, server status, the
 tester's report (additive, format 1) and the activity history; absent means
 not checked, runtime is always unknown ([contract](contracts/post-download-check.md)).
 Independent source and correction reviews, integration and all 15 selected
-package-gate stages passed; published as `8b5edad7f`. The isolated corpus gate
+package-gate stages passed; published as `8b5edad7f` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d4136192c`). The isolated corpus gate
 executed all 29 HTTP download cases, including the status/report/history joins.
 EN/DE browser coverage and the real CLI runner/report/exit composition passed
 ([acceptance](status/2026-10-25-post-download-check.md)). An older format-2 reader
@@ -2674,7 +2674,7 @@ Explicit scopes are unchanged and every plan also reports the advice. The flags
 are the project's belief, not device evidence ([KL-142](limitations/KL-142-partial-download-evidence.md)).
 Synthetic offline tests only: all 32 flag patterns with and without an address
 (core), and all 32 through the app service, HTTP route and built CLI; no bus, no
-hardware. Published as `78fd9d780` after independent review and the maintained
+hardware. Published as `78fd9d780` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `0a500a7e6`) after independent review and the maintained
 17-stage integrated package gate
 ([acceptance](status/2026-10-25-programming-scope-and-identity.md)).
 
@@ -2699,7 +2699,7 @@ generic comparison rule. The diagnostic collector/archive retain their prior
 exact-length guards and use the shared resource comparison too
 ([contract](contracts/hardware-identity-comparison.md)). Independent source review
 approved the bounded correction; focused simulator regressions and owning-crate
-Clippy passed. Published as `07fe2e67f` after the maintained 16-stage integrated
+Clippy passed. Published as `07fe2e67f` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d446b7210`) after the maintained 16-stage integrated
 package gate: 6,433 Rust tests passed (225 ignored), 62 binding tests and 155/155
 selected corpus tests; frozen inputs and user-data guards clear
 ([delivery](status/2026-10-25-hardware-identity-width.md)). No hardware acceptance,
@@ -2778,7 +2778,7 @@ chain and says why a folder is withheld (ambiguous, unidentified node,
 unresolved tree, module object, inactive). Projection-only: no domain, storage
 schema, import or command change; placements survive native save/reopen and
 undo because the retained row does. No product label is looked up.
-**Folder grouping view delivered on `main` as `e6f227c4` (hash mapping 2026-11-22: alpha-22 history; on current main as `e98787011`) (24 October).** The
+**Folder grouping view delivered on `main` as `e6f227c4` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `e98787011`) (24 October).** The
 table offers *By saved project folder* next to By channel (default) and All
 objects; groups join on the opaque key, the rest falls into one fallback group,
 and each heading shows the full saved path
@@ -2792,7 +2792,7 @@ membership or refusals. Owning schema/namespace admission and a 4,096-byte
 display bound are explicit; empty values remain raw, source placeholders stay
 literal, and IDs remain visible/searchable. Independent reviews, selected branch
 and main-first package gates, browser checks and isolated server build/version
-passed; runtime source is published as `61e28d225` (feature `e4aa31945`).
+passed; runtime source is published as `61e28d225` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `00d871e96`) (feature `e4aa31945`).
 This closes only literal saved-text display, not manufacturer mapping, module
 placement, staleness, priority, native or hardware acceptance
 ([bounded result](status/2026-11-05-saved-schema20-node-text.md)).
@@ -2908,7 +2908,7 @@ verified. The old receipt remains historical; overlapping runs are not summed.
 Catalogue-authored save/reopen against an empty product database
 already has historical gate evidence and is not reopened as missing work.
 
-**Alpha 16 is published at immutable `f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d`;
+**Alpha 16 is published at immutable `f2e3ec6e4b227b49dc74fdba4cdadc3ab91e7c3d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `0a72bf687`);
 local amd64 software/package acceptance remains bound to runtime `86b4a7fc`.**
 The owner explicitly authorized only the exact historical restoration and limited
 local preacceptance to amd64. No further materialization or repinning is authorized;
@@ -2994,7 +2994,7 @@ foreign-key flag. Owning evidence: 731 unit and 772 integration passes/31 ignore
 two 13-test examples and two doctests; one separate opt-in measurement ignored.
 Parent independently re-executes the 23 focused methods on the retained owning
 binary; this is not fresh compilation or additional unique coverage. Source
-`7decb65ce` published on main-first `9d4014638` (hash mapping 2026-11-22: alpha-22 history; on current main as `e4935bee9`), with immediate local/tracking/live
+`7decb65ce` published on main-first `9d4014638` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `e4935bee9`), with immediate local/tracking/live
 equality verified. Maintained branch and integrated gates each pass 14/14,
 3883 Rust passes/151 ignored across 24 binary results, 97/97 selected corpus;
 ordered proofs, frozen inputs and empty data guards verified. Full B08/configuration
@@ -3020,7 +3020,7 @@ the 18 exact focused tests on the retained library binary; this is not a fresh
 compile or additional unique coverage. Header and test-layout checks pass.
 Independent source/evidence review ACCEPT has no blockers and verifies the exact
 seven-file source binding, original-runtime semantic failures and nine compiled
-wrong variants. Source `f1365471d` (hash mapping 2026-11-22: alpha-22 history; on current main as `23b670f48`) is published on main-first merge `937aa60d6` (hash mapping 2026-11-22: alpha-22 history; on current main as `440a1faba`);
+wrong variants. Source `f1365471d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `23b670f48`) is published on main-first merge `937aa60d6` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `440a1faba`);
 immediate local/tracking/live equality verified. Both maintained branch and
 integrated gates pass all 14 ordered stages, each with 3860 Rust passes,
 151 ignored across 24 binary results and 97/97 selected corpus tests. Stage
@@ -3041,7 +3041,7 @@ package versus retained-source closure selection, bounded compact v2 evidence,
 XML admission, simulator-only execution and actual-state backup requirements.
 Synthetic tests exercise refusal, byte retention, replay and independent simulated
 pre-state recovery. Existing defaults-only preparation and hardware guards remain
-separate. Source `224a500ef` (hash mapping 2026-11-22: alpha-22 history; on current main as `6e2f69b04`) was published on main-first merge `25b5b6a88` (hash mapping 2026-11-22: alpha-22 history; on current main as `7ae9dcc72`). Maintained
+separate. Source `224a500ef` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `6e2f69b04`) was published on main-first merge `25b5b6a88` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `7ae9dcc72`). Maintained
 branch and integrated gates accepted the scoped package, with ordered stages,
 frozen inputs and user-data guards verified. This is not ETS compatibility,
 physical restoration certification or hardware-download admission.
@@ -3058,7 +3058,7 @@ failures and eight compiled wrong variants were independently reproduced, with
 partial parameter-row discrimination documented rather than overstated.
 Recorded owning evidence:688 unit,752 integration, two 13-test examples and two
 doctests pass;32 opt-in cases ignored. Focused selections overlap owning counts.
-Source `6670514e` (hash mapping 2026-11-22: alpha-22 history; on current main as `70e85ebf6`) is published on main-first merge `bd8191f20` (hash mapping 2026-11-22: alpha-22 history; on current main as `6e8cae001`), incorporating
+Source `6670514e` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `70e85ebf6`) is published on main-first merge `bd8191f20` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `6e8cae001`), incorporating
 the separate offline-preparation delivery without changing its source. Immediate
 local/tracking/live equality verified. The original branch gate passes14/14
 (3748 Rust passes/151 ignored,97/97 corpus); fresh integrated acceptance on the
@@ -3084,7 +3084,7 @@ ACCEPT/CLOSED resolve ORCH-1. Its original native S-close/W-rollback refusal
 failures and corrected passes remain separately retained. Recorded corrected
 owning execution: 682 unit, 752 integration, two doctests and two 13-test examples;
 32 opt-in tests ignored. Focused and reviewer selections overlap these counts.
-Published source `d2f5b57a5` on main-first merge `d736dbee0` (hash mapping 2026-11-22: alpha-22 history; on current main as `6982facd9`), with immediate
+Published source `d2f5b57a5` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `3fe9def78`) on main-first merge `d736dbee0` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `6982facd9`), with immediate
 local/tracking/live equality verified. Maintained branch and integrated gates
 each pass all 14 ordered stages: 3742 Rust passes / 151 ignored across 24 binary
 results and 97/97 selected corpus tests, frozen inputs and empty touched/unchecked
@@ -3169,7 +3169,7 @@ vendor contact or hardware claim.
 
 ## WP-04.3 stage D complete preview identity — delivered (22 October 2026)
 
-Source merge `78d4be3c0` is published with exact live/tracking readback; the
+Source merge `78d4be3c0` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `465fdceec`) is published with exact live/tracking readback; the
 feature branch `987a46691` is its second parent and byte-exact tree. The
 change-scoped maintained gate passes all 14 ordered stages on the frozen
 merged tree: 3,588 Rust passes across 24 binary results (151 ignored), 97/97
@@ -3192,7 +3192,7 @@ See [the contract](contracts/catalogue-jobs/preview-identity-increment.md).
 
 ## WP-04.3 stage D preview binding composition — delivered (22 October 2026)
 
-Source merge `cd959df78` is published with exact live/tracking readback; the
+Source merge `cd959df78` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `92486c881`) is published with exact live/tracking readback; the
 feature branch `99df706df` is its second parent and byte-exact tree. The
 change-scoped maintained gate passes all 14 ordered stages on the frozen
 merged tree: 3,566 Rust passes across 24 binary results (151 ignored), 97/97
@@ -3214,7 +3214,7 @@ See [the contract](contracts/catalogue-jobs/preview-binding-increment.md).
 
 ## WP-04.3 stage D controlled source + policy identity — delivered (22 October 2026)
 
-Source merge `d0ee6323d` is published with exact live/tracking readback; the
+Source merge `d0ee6323d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `313a47778`) is published with exact live/tracking readback; the
 feature branch `016ef28c` is its second parent and byte-exact tree. The
 change-scoped maintained gate passes all 14 ordered stages on the frozen
 merged tree: 3,560 Rust passes across 24 binary results (151 ignored), 97/97
@@ -3235,7 +3235,7 @@ WP-04.3 and WP-19 remain open. See
 
 ## WP-04.3 stage D managed catalogue stamp + witness binding — delivered (22 October 2026)
 
-Source merge `030d53f57` is published with exact live/tracking readback; the
+Source merge `030d53f57` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `bb9997e20`) is published with exact live/tracking readback; the
 feature branch `31525e05` is its second parent and byte-exact tree. The
 change-scoped maintained gate passes all 14 ordered stages on the frozen
 merged tree: 3,552 Rust passes across 24 binary results (151 ignored), 97/97
@@ -3258,7 +3258,7 @@ WP-19 remain open. See
 
 ## WP-04.3 stage D catalogue jobs owner + close/drain — delivered (22 October 2026)
 
-Source merge `564da29e2` is published with exact live/tracking readback; the
+Source merge `564da29e2` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `14723a8ac`) is published with exact live/tracking readback; the
 feature branch `8095de7a` is its second parent and byte-exact tree. The
 change-scoped maintained gate passes all 14 ordered stages on the frozen
 merged tree: 1,215 Rust passes across 7 binary results (53 ignored), 51/51
@@ -3278,7 +3278,7 @@ open. See [the contract](contracts/catalogue-jobs/owner-close-drain-increment.md
 
 ## WP-04.3 stage D ArtifactDir root + lease + fence — delivered (22 October 2026)
 
-Source merge `985c1b71c` is published with exact live/tracking readback; the
+Source merge `985c1b71c` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `cb16712c1`) is published with exact live/tracking readback; the
 feature branch `81508d8a` is its second parent and byte-exact tree. The
 change-scoped maintained gate passes all 14 ordered stages on the frozen
 merged tree: 1,210 Rust passes across 7 binary results (53 ignored), 51/51
@@ -3298,7 +3298,7 @@ drain is wired; WP-04.3 and WP-19 remain open. See
 
 ## WP-04.3 stage D upload spool + status snapshots — delivered (22 October 2026)
 
-Source merge `4222b81ce` is published with exact live/tracking readback; the
+Source merge `4222b81ce` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `9539b3166`) is published with exact live/tracking readback; the
 feature branch `492f9f470` is its second parent and byte-exact tree. The
 change-scoped maintained gate passes every ordered stage on the frozen merged
 tree (the `rustix` server dependency widened the scope to the full workspace):
@@ -3319,7 +3319,7 @@ remain open. See
 
 ## WP-04.3 stage D strict wire DTO layer — delivered (22 October 2026)
 
-Source merge `fecee1fd9` is published with exact live/tracking readback; the
+Source merge `fecee1fd9` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `2fc2e670c`) is published with exact live/tracking readback; the
 feature branch `ffbd3e923` is its second parent and byte-exact tree. The
 change-scoped maintained gate passes all 14 ordered stages on the frozen
 merged tree: 1,195 Rust passes across 7 binary results (53 ignored), 51/51
@@ -3340,7 +3340,7 @@ upload, spool, status or drain is wired; WP-04.3 and WP-19 remain open. See
 
 ## WP-04.3 stage D job admission/replay kernel — delivered (22 October 2026)
 
-Source merge `4bca86b2` is published with exact live/tracking readback; the
+Source merge `4bca86b2` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `78ff8789f`) is published with exact live/tracking readback; the
 feature branch `06542d48a` is its second parent and byte-exact tree. The
 change-scoped maintained gate passes all 14 ordered stages on the frozen
 merged tree: 1,156 Rust passes across 7 binary results (53 ignored), 51/51
@@ -3361,7 +3361,7 @@ and WP-19 remain open. See
 
 ## WP-04.3 stage C transitive installer — delivered (22 October 2026)
 
-Source merge `56e00c833` is published with exact live/tracking readback; the
+Source merge `56e00c833` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `fb37e7df9`) is published with exact live/tracking readback; the
 feature branch `f1ae0a487` is its second parent and byte-exact tree. The
 change-scoped maintained gate passes all 14 ordered stages on the frozen
 merged tree: 3,452 Rust passes across 24 target results (151 ignored), 97/97
@@ -3381,7 +3381,7 @@ See [the contract](contracts/catalogue-jobs/transitive-installer-increment.md).
 
 ## WP-04.3 stage-B server CatalogueOwner wrapper — delivered (22 October 2026)
 
-Source merge `3d58a7ff8` is published with exact live/tracking readback; the
+Source merge `3d58a7ff8` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `58d39491f`) is published with exact live/tracking readback; the
 feature branch `01ec46d86` is its second parent and byte-exact tree. The
 change-scoped maintained gate passes all 14 ordered stages on the frozen
 merged tree: 3,447 Rust passes across 24 target results (151 ignored), 97/97
@@ -3431,7 +3431,7 @@ selector reuses `ScanPlan::range(addr, addr)`.
 
 ## WP-04.3 stage-B copy — source delivered (22 October 2026)
 
-Source merge `9fc0d9e27` is published with exact live/tracking readback; the
+Source merge `9fc0d9e27` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `519a0bb70`) is published with exact live/tracking readback; the
 feature branch `da006cff7` is its second parent and byte-exact tree. The
 change-scoped maintained gate passes all 14 ordered stages on the frozen
 candidate: 3,437 Rust passes across 24 target results (151 ignored), 97/97
@@ -3451,7 +3451,7 @@ See [the contract](contracts/catalogue-jobs/copy-increment.md).
 
 ## WP-04.3 stage-B witness — source delivered (22 October 2026)
 
-Source merge `9e57258c7` is published with exact live/tracking readback; the
+Source merge `9e57258c7` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `0123d7422`) is published with exact live/tracking readback; the
 feature branch `efb8426f7` is its second parent and byte-exact tree. The
 change-scoped maintained gate passes all 14 ordered stages on the frozen
 candidate: 3,428 Rust passes across 24 target results (151 ignored), 97/97
@@ -3480,7 +3480,7 @@ community-recognition contract).
 
 ## WP-04.3 B1 schema admission — source delivered (21 October 2026)
 
-Source merge `2e0302028154` is published with exact live/tracking readback;
+Source merge `2e0302028154` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `b43bb0163`) is published with exact live/tracking readback;
 reviewed candidate `cde9e5147271` is its byte-exact tree and second parent.
 Independent corrected-source rereview ACCEPTS with B1-I1 CLOSED/no findings.
 The original REVISE, old-test control qualification and actual corrected-test
@@ -3561,7 +3561,7 @@ constructor, installer or job route is claimed. WP-04.3 and WP-19 remain open.
 <a id="monitoring-snapshot-export--source-delivery"></a>
 ## Monitoring snapshot export — source delivery (21 October 2026)
 
-Published on `main` as `4eee65d89fcd55fc1febd5496bd851b7355c9e2c` (hash mapping 2026-11-22: alpha-22 history; on current main as `9fe8fcbf6`), with immediate
+Published on `main` as `4eee65d89fcd55fc1febd5496bd851b7355c9e2c` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `9fe8fcbf6`), with immediate
 local/tracking/live-ref equality and feature/integration ancestry verified.
 Feature `2d258acb` and first main-first integration `d1f32756` each pass all
 fifteen ordered maintained gate stages: 2,056 Rust passes / 119 ignored,
@@ -3643,7 +3643,7 @@ or bus operation is added.
 ## WP-04.3 A2 admission kernel — delivered (21 October 2026)
 
 The construction-disabled private server kernel is published on `main` as
-main-first merge `9ebb7cc6` (hash mapping 2026-11-22: alpha-22 history; on current main as `efb037fa7`) (feature `29a52f53`). Local, tracking and live remote
+main-first merge `9ebb7cc6` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `efb037fa7`) (feature `29a52f53`). Local, tracking and live remote
 refs agree immediately after publication. The selected shared checkout is not
 synchronized; its foreign work is untouched by this delivery.
 
@@ -3909,7 +3909,7 @@ review accepts with zero findings and three exact passes; two isolated compiled
 wrong-owner/raw-tree mutations fail as intended between baseline/restored passes.
 Fourteen reviewer result-corruption controls calibrate assertions separately.
 The literals do not distinguish encounter order from lexicographic sorting.
-Delivered on `main` as main-first `9145b03f` (hash mapping 2026-11-22: alpha-22 history; on current main as `b823c9037`) (feature `04754bc3`): maintained
+Delivered on `main` as main-first `9145b03f` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `b823c9037`) (feature `04754bc3`): maintained
 13/13-stage scoped gate, 579 Rust passes (58 ignored), 55/55 selected corpus
 cases and 340 registered tooling tests (one existing optional skip). Exact
 ordered proofs, frozen inputs, empty user-data guards and publication readback
@@ -3932,7 +3932,7 @@ outside the correction. Native/model16, import grammar and programming
 admission are unchanged. [ADR-0148](adr/0148-repair-product-column-promotions.md)
 and [contract](contracts/product-promotion-repair.md).
 
-Published source is `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38`; final integration acceptance
+Published source is `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `63974a0f0`); final integration acceptance
 is bound to `8fa0d76b9fd41f81c4e135c29e54f2a98d516b38`.
 The final maintained migration/clock delta passed all 11 parent stages and
 29 web stages, including the web build, 22 derived typecheck configurations,
@@ -3993,7 +3993,7 @@ Original-source execution of the final 43 test methods produces 85 intended
 assertion failures in seven methods; the corrected guard passes all 43, and
 its real repository scan reports zero untagged uses in 90 specs. These are
 focused checks. Independent review accepts with zero findings, 43 methods and
-121 separate probes. Delivered on main-first `c7a6aa8e` (hash mapping 2026-11-22: alpha-22 history; on current main as `513b3670b`) (feature `0a3ce3aa`):
+121 separate probes. Delivered on main-first `c7a6aa8e` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `513b3670b`) (feature `0a3ce3aa`):
 maintained gate 11/11 parent and 29/29 web stages, 22 derived typechecks,
 4,136 Vitest and all 863 default browser cases (798 functional/65 exclusive),
 340 registered tooling tests. Ordered proofs, frozen inputs, clear user-data
@@ -4022,7 +4022,7 @@ in an isolated snapshot; canonical runtime never mutated. Scoped application
 snapshots/native reopen prove quiescent early refusal, not live WAL/crash/general
 cross-store atomicity. Independent full-diff review accepts with zero
 Critical/Important findings; its minor stale-status wording is corrected.
-Delivered on `main` as main-first merge `cf5b0fb0` (hash mapping 2026-11-22: alpha-22 history; on current main as `851fcc9f9`) (feature `14fdd4b2`):
+Delivered on `main` as main-first merge `cf5b0fb0` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `851fcc9f9`) (feature `14fdd4b2`):
 maintained scoped gate 14/14 GREEN, 2,638 Rust passes across 27 binaries
 (175 ignored) and 149/149 selected corpus cases. Ordered stage proofs, frozen
 inputs and clear user-data guards verified; local/tracking/live publication
@@ -4037,7 +4037,7 @@ or missing known web inputs. Existing static-analysis fallback reasons and every
 selection/admission field remain unchanged; unknown inputs still require the
 complete gate. Three original named assertion failures become 32 planner passes;
 22 synthetic original/candidate comparisons preserve selection and prior reasons.
-Delivered on `main` as `e49d863d` (hash mapping 2026-11-22: alpha-22 history; on current main as `5e3149d4d`) after independent review, complete acceptance
+Delivered on `main` as `e49d863d` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `5e3149d4d`) after independent review, complete acceptance
 on `cd33b0d0` (10 parent/69 web stages) and a 14-stage main-first integration
 delta acceptance: 2,638 Rust passes and 149 selected corpus passes. Unchanged
 web evidence remains bound to its original candidate; publication readback and
@@ -4085,7 +4085,7 @@ quiescent database preservation and intentional restore continuation are exercis
 Parent-run owning tests and all-targets Clippy pass. Project-path synthetic cost
 measurements are disclosed; they are not installation or real-project compatibility
 proof. Independent full-diff review accepted with zero Critical/Important findings
-and all seven source/test bindings verified. Delivered on `main` as `8ccb99b3` (hash mapping 2026-11-22: alpha-22 history; on current main as `77de14eb0`):
+and all seven source/test bindings verified. Delivered on `main` as `8ccb99b3` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `77de14eb0`):
 maintained scoped gate 14/14 GREEN, 2,500 Rust tests across 27 binaries (175
 ignored) and 149/149 selected corpus cases. Valid proofs, frozen source inputs,
 clear user-data guards and local/tracking/live publication equality verified.
@@ -4105,7 +4105,7 @@ fresh/populated wrapper rollback have complete closed-database byte assertions.
 The added decoder uses fixed 8 KiB/64 KiB buffers. Direct-reader synthetic costs
 are measured and disclosed (1.38–1.84 times baseline), not an installation-speed
 claim. Independent full-diff review accepted with zero Critical/Important findings;
-source hashes rechecked. Delivered on `main` as `29b69f36` (hash mapping 2026-11-22: alpha-22 history; on current main as `c3f3b91e6`): maintained scoped gate
+source hashes rechecked. Delivered on `main` as `29b69f36` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `c3f3b91e6`): maintained scoped gate
 14/14 GREEN, 3,072 Rust tests across 22 binaries (144 ignored) and 97/97 selected
 corpus cases. All stage proofs valid, inputs frozen and user-data guards clear;
 local/tracking/live publication equality verified. Product file-stream claim
@@ -4124,7 +4124,7 @@ multi-chunk controls. Fresh/populated database preservation, historical retry
 and rollback of earlier wrapper members are covered. Independent source review
 accepted with zero Critical/Important findings. Repair-removal controls cause
 eleven and 29 named failures; exact restoration passes 40 cases and Clippy.
-Delivered on `main` as `9c79634b` (hash mapping 2026-11-22: alpha-22 history; on current main as `35709e176`); maintained scoped gate 14/14 passed,
+Delivered on `main` as `9c79634b` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `35709e176`); maintained scoped gate 14/14 passed,
 including 3,034 Rust tests and 97/97 selected corpus cases. Frozen source inputs,
 valid proofs and clear user-data guards verified; publication read back equal.
 The product-directory claim is released.
@@ -4138,7 +4138,7 @@ pins discovery, inheritance and the spec root. Real compiler controls prove
 that a deliberate type error in that spec is invisible to the application-only
 config but refused by the new config; the spec is restored byte-exact and the
 new typecheck passes. No UI behavior, browser case, retry, lane policy or
-dependency changes. Delivered on main-first `73d02240` (hash mapping 2026-11-22: alpha-22 history; on current main as `0f751c352`), independent review
+dependency changes. Delivered on main-first `73d02240` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `0f751c352`), independent review
 accepted; maintained scoped gate11/11 and web29/29passed:4136Vitest,863default
 browser cases, all23derived configs and323registered tool tests (one existing
 optional skip). Inputs frozen; user-data guards clear. No Rust/corpus selected.
@@ -4160,7 +4160,7 @@ missing-file hints from the shared argument parser. Two built-CLI regressions
 pin that distinction; password handling and actual format admission are unchanged.
 [Scope and retained source observations](research/2026-10-18-product-database-programmability-census.md#g16-diagnostic-follow-up-20-october-2026).
 Legacy binary enums, new import compatibility and programming remain outside
-this slice. Delivered on main-first merge `b13b0ff9` (hash mapping 2026-11-22: alpha-22 history; on current main as `c03eca5f7`), independent review accepted;
+this slice. Delivered on main-first merge `b13b0ff9` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `c03eca5f7`), independent review accepted;
 maintained scoped gate14/14passed:2994Rust tests,97/97selected corpus and322registered
 tool tests (one existing optional skip). Inputs frozen; user-data guards clear.
 
@@ -4176,7 +4176,7 @@ native library can be inherited through a symlink to the original loader.
 The AppImage job also runs those regressions. No dependency or product-source
 change; the original Alpha 15 npm omission cause remains unestablished. This
 local check is not a fresh hosted AppImage build or desktop acceptance.
-Delivered on main-first merge `f9cf7a65` (hash mapping 2026-11-22: alpha-22 history; on current main as `e251c0a74`), independent review accepted and
+Delivered on main-first merge `f9cf7a65` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `e251c0a74`), independent review accepted and
 maintained scoped gate 13/13 green: 322 registered tool tests (one existing
 optional skip), 103 Rust tests; frozen inputs and user-data guards clear.
 The selected xtask corpus stage is empty, not a new corpus run.
@@ -4193,7 +4193,7 @@ of neighbouring bits. No second evaluator, schema, codec or download route.
 [Evidence, focused test/mutation results and unresolved semantics](research/2026-10-20-system2-download-integrity.md).
 This is bounded source-integrity hardening, not implemented inactive/default/
 LegacyPatchAlways policy, ETS byte-equivalence or public System-2 programming
-support. Main-first merge `76864b51` (hash mapping 2026-11-22: alpha-22 history; on current main as `233bb4eeb`) passed the maintained scoped gate14/14:
+support. Main-first merge `76864b51` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `233bb4eeb`) passed the maintained scoped gate14/14:
 317tool tests,2990Rust passed/0failed/144ignored and97/97selected corpus cases;
 inputs frozen and user-data guards clear. Exact code pushed/read back. Final
 source received separate self-review, not independent approval. The later
@@ -4233,8 +4233,8 @@ than pretending to be fresh observations. Earlier failed attempts stay retained.
 The maintained branch gate on `d2807f70` passed all 15 stages, including 4,136
 component tests, 863 default browser cases, 18 catalogue production cases,
 2,985 Rust tests and 97 selected corpus tests, with frozen inputs and no changes
-to real user directories. Main-first merge `7aed9ddd` (hash mapping 2026-11-22: alpha-22 history; on current main as `cfd7aa431`) and its result-only
-follow-up `d18ce65e` (hash mapping 2026-11-22: alpha-22 history; on current main as `95fcfc768`) are published on `main`; the final merged 15-stage gate
+to real user directories. Main-first merge `7aed9ddd` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `cfd7aa431`) and its result-only
+follow-up `d18ce65e` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `95fcfc768`) are published on `main`; the final merged 15-stage gate
 passes the same complete scope, including all 863 default browser cases and
 18 production cases. Local/tracking/live refs were verified equal after push.
 The earlier merged browser-page acquisition failure remains retained (root cause
@@ -4365,7 +4365,7 @@ without the barrier; the complete table-column spec passes 50/50 with it. No
 application code, width tolerance or retry policy changed. Both reviews
 accepted; complete package gate green on `72e92e86` (68 web stages, 855
 browser cases, Rust 5,023/0, corpus 155/155; no user data touched or
-unchecked); delivered in merge `9535e132`.
+unchecked); delivered in merge `9535e132` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `fa652e1da`).
 
 The same day as the `doc-export` fix, a second gate migrated the owner's fresh
 product database (an ETS import made at 14:37 with the Alpha 14 AppImage) to
@@ -4989,7 +4989,7 @@ Follow-up to [census 3](research/2026-10-18-product-database-programmability-cen
 ## Alpha 14 preparation (18 October 2026)
 
 Owner instruction: wait for P1 and the product-database series, then prepare and
-publish Alpha 14. Both prerequisites are on `main` (P1 `4b961475` (hash mapping 2026-11-22: alpha-22 history; on current main as `ea8d88f4e`), series
+publish Alpha 14. Both prerequisites are on `main` (P1 `4b961475` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `ea8d88f4e`), series
 `bfc0a9c5`); cutoff `a0c2537d` adds the Docker frontend-stage fix found by the
 first candidate's dry run, the native-spec fold fix found by the second
 candidate's gate, two test-race fixes (ux-feedback, knx-net IGMP snapshot) and
@@ -5347,13 +5347,13 @@ and source snapshots remained unchanged. The integrated built shell also passed
 the four new configuration browser cases. Full tracked frontend and tooling
 inputs match the accepted feature tree exactly, so web results retain their
 original provenance rather than being represented as a new merged execution.
-The tested source was published with result-only documentation as `8e121074`;
+The tested source was published with result-only documentation as `8e121074` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `27fb358d7`, same patch, trees differ);
 this is a source delivery, not a new packaged release or deployment.
 See [the editing contract](contracts/parameter-object-refresh.md).
 
 ## Recent deliveries
 
-- 2026-11-18 — WP-44 bus monitor polish on main `62ac2e6a7` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `3eefc2b95`): the telegram-details
+- 2026-11-18 — WP-44 bus monitor polish on main `62ac2e6a7` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `3eefc2b95`): the telegram-details
   pane stays visible while the table scrolls (sticky, own scroll; narrow-pane
   fallback stacks it), the status bar counts the session's received (↓) and sent
   (↑) telegrams live beside the connected state and resets on a new session, and
@@ -5411,7 +5411,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
 
 - 2026-10-16 — Exact UP258/issue #22 continuation: original MP p140 exposes
   inverted checksum-disable encoding in the offline absolute-property codec.
-  Named RED preceded the correction, published as `6d26a1e3`. Actual merged
+  Named RED preceded the correction, published as `6d26a1e3` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `9693f41e1`, same parents and changed paths, trees differ). Actual merged
   acceptance passes Core863/0, Net property7/0, exact public package1/0,
   owning all-target Clippy and eight docs/repository/format/whitespace stages.
   The separate private evaluator experiment passes for both proposed values;
@@ -5421,7 +5421,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   is prepared, not posted. This is not a complete image, production download or
   physical validation; issue #22 remains open.
 
-- 2026-10-16 — System-300 S-mode property-table image adapter published as `af9431cb`: reuse existing
+- 2026-10-16 — System-300 S-mode property-table image adapter published as `af9431cb` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `99fa4d3f0`, same parents and changed paths, trees differ): reuse existing
   Type6 link validation/encoding, separate immutable length/element payloads,
   explicit format and capacity. Intended missing-module RED, twelve literal/
   boundary/negative tests and owning Core862/0/0ignored in19targets pass;
@@ -5462,7 +5462,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   [Dossier](research/2026-10-16-up258-public-package-evidence.md) ·
   [Scoped acceptance](evidence/public-up258-review-2026-10-16.json).
 
-- 2026-10-16 — P6 shared FixupList guard published as `39c88aba` after two named
+- 2026-10-16 — P6 shared FixupList guard published as `39c88aba` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `026984de8`, same parents and changed paths, trees differ) after two named
   runtime REDs: Easy3/System-2 now refuse unhandled direct declarations alongside
   System-1, before image assembly. Positive sources, empty/populated declarations,
   exact ancestry and unchanged DB tests pass; owning ProductDB928/0/28ignored in56
@@ -5478,7 +5478,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   [Contract](contracts/source-fixup-integrity.md) ·
   [Evidence](evidence/source-fixup-integrity-2026-10-16.json).
 
-- 2026-10-16 — P5 bounded System-1 image entry published as `ccfe5b74`:0012/DefaultProcedure
+- 2026-10-16 — P5 bounded System-1 image entry published as `ccfe5b74` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `2ba6d8b4e`, same parents and changed paths, trees differ):0012/DefaultProcedure
   library entry reuses actual evaluation and Core Type-1/indexed association
   codecs, protects original source pointers and refuses unmodeled FixupList.
   Nine targeted tests,926owning ProductDB tests and all-target Clippy pass;
@@ -5517,7 +5517,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   or new hardware support. [Contract](contracts/offline-systemb-object-table.md#p4d-explicit-complete-construction-16-october-2026) ·
   [Evidence](evidence/offline-systemb-complete-table-2026-10-16.json).
 
-- 2026-10-16 — P4c explicit System-B address/association codec integrated and published as `c74038cd`:
+- 2026-10-16 — P4c explicit System-B address/association codec integrated and published as `c74038cd` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `057f11cb6`, same parents and changed paths, trees differ):
   word counts, no individual slot, one-based wide indices, explicit formats0/1
   and preserved first-match sender. Twelve literal/boundary tests pass after
   missing-module RED; a realistic sender-order mutant fails the intended test,
@@ -5532,7 +5532,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   pass with no critical/important/security finding. [Contract](contracts/offline-systemb-link-tables.md) ·
   [Evidence](evidence/offline-systemb-link-tables-2026-10-16.json).
 
-- 2026-10-16 — P4b relative source view integrated and published as `4bfc3780`: distinct relative
+- 2026-10-16 — P4b relative source view integrated and published as `4bfc3780` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `9a7991799`, same parents and changed paths, trees differ): distinct relative
   metadata/Data/Mask, shared source blob decoder, duplicate-ID refusal and an
   explicit absolute-image guard. Missing-field compile RED and mixed-source
   omission runtime RED observed before their fixes; ten reader tests and the
@@ -5549,7 +5549,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   [Contract](contracts/offline-relative-source-segments.md) ·
   [Evidence](evidence/offline-relative-source-segments-2026-10-16.json).
 
-- 2026-10-16 — P4a System-B prerequisite integrated and published as `adb52990`:
+- 2026-10-16 — P4a System-B prerequisite integrated and published as `adb52990` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `52445de1b`, same parents and changed paths, trees differ):
   pure Type-7 /
   Format-1 group-object rewriting, one-based u16 indices, explicit initial read,
   extended value types and preserved source/tail. Ten focused tests pass after
@@ -5593,7 +5593,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   frontend build, documentation/tooling/five repository checks and the explicit
   Release real-source refusal regression. Merged acceptance adds isolated
   corpus152/152 in33targets;2899source paths remain unchanged. Local HEAD,
-  fetched main and live remote main read back equal to `7632fb1a` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `eb76b9836`, same parents and changed paths, trees differ).
+  fetched main and live remote main read back equal to `7632fb1a` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `eb76b9836`, same parents and changed paths, trees differ).
   The selected dirty root checkout was deliberately not synchronized.
   ProductDB translation, restart, real-source16-bit encoding, complete durable
   recovery and any new public/hardware support remain open.
@@ -5613,11 +5613,11 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   workspace Clippy/build, frontend build, tooling/five repository checks and the
   explicit Release real-source refusal regression. Merged acceptance also runs
   isolated corpus152/152 in33targets;2892source paths remain frozen. Local HEAD,
-  fetched main and live remote main were read back equal to `79156a5d` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `113af1d4b`, same parents and changed paths, trees differ).
+  fetched main and live remote main were read back equal to `79156a5d` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `113af1d4b`, same parents and changed paths, trees differ).
   The selected dirty root checkout was deliberately not synchronized. [Receipt](evidence/offline-download-system2-image-2026-10-16.json) ·
   [Contract](contracts/offline-download-system2-image.md).
 
-- 2026-10-15 — Offline download P1 **integrated and published** as `ad5f0e49`:
+- 2026-10-15 — Offline download P1 **integrated and published** as `ad5f0e49` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `652221aa7`, same parents and changed paths, trees differ):
   source-bound System2 tool metadata with complete source order, explicit legacy
   Type1/Type2 descriptor codec and ten-byte absolute property-load encoders.
   Direct original-PDF review pins distinct layouts and opposite checksum-bit
@@ -5738,7 +5738,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   approval remain separate and pending. No hardware operation or release claimed.
   [Preparation evidence](evidence/alpha12-media-2026-10-15.json).
 
-- 2026-10-15 — **P4 delivered on main `17cfd5b7`** (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `44971197e`, same parents and changed paths, trees differ), normal push and exact
+- 2026-10-15 — **P4 delivered on main `17cfd5b7`** (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `44971197e`, same parents and changed paths, trees differ), normal push and exact
   local/tracking/live readback verified. Both packages, feature519eff4b and
   separate corpus-fixa6cdfd9d are included. Runtime tested mergefacdd62e has
   full51/51, Vitest3626, Chromium574, Rust4597, repeated87 and corpus152/152+
@@ -5804,7 +5804,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   public-data-provision wording, no overflow or outgoing requests. Five explicit-
   root repository checks, reference validation, docs, matching approval and
   release38-file build pass. Complete story/site inputs remain unchanged.
-  Published commit `022d85a0` has successful Pages run `38701307431`; live HTTP200
+  Published commit `022d85a0` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `3fd109eaf`, same patch, trees differ) has successful Pages run `38701307431`; live HTTP200
   HTML matches the accepted build byte for byte and carries the exact approved
   digest. No product release, bus operation or root-checkout synchronization.
   [Publication acceptance](evidence/story-publication-2026-10-15.json).
@@ -5880,7 +5880,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   lockfile-pinned frontend dependencies required by a tools test. All five
   fresh-built repository checks and documentation validation pass. Real public
   GitHub generation verifies consistent README/page/JSON, unchanged award ledger
-  and unchanged XP. Published source `fe1f4101`; all eleven files pass exact
+  and unchanged XP. Published source `fe1f4101` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `7b5d6e493`, same parents and changed paths, trees differ); all eleven files pass exact
   GitHub content readback. Manual community workflow `38694177327` succeeds on
   that source, including its 47-test verification and real GitHub reconciliation.
   No UI/domain/storage/bus change or release/deployment.
@@ -5902,7 +5902,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   private OriginalData151/151 in33 targets, network-isolated. Eight merged images
   inspected. Later story/docs-only integration preserves all application path
   sets, modes and blobs; runtime evidence remains bound to its tested revision.
-  Published on main `9b8d176a` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `cb2a37c20`, same patch, trees differ) with exact local/tracking/live/source readback;
+  Published on main `9b8d176a` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `cb2a37c20`, same patch, trees differ) with exact local/tracking/live/source readback;
   fifteen frozen post-merge documentation/story/tooling closure stages pass.
   No binary release, deployment or selected-root synchronization.
   Publication/readback is recorded separately in the aggregate evidence.
@@ -5928,7 +5928,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   spec types pass. All eight EN/DE 1440/400 production images inspected. The
   inherited achievement toast can temporarily overlap lower narrow-screen content;
   no horizontal overflow observed. Self-review, not independent approval.
-  Published on main `8307ff6d` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `d1325d813`, same parents and changed paths, trees differ); issue #23 closed after exact remote/source
+  Published on main `8307ff6d` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `d1325d813`, same parents and changed paths, trees differ); issue #23 closed after exact remote/source
   readback. Eight documentation-only closure checks pass with runtime inputs
   unchanged. [Aggregate acceptance](evidence/issue23-navigation-2026-10-14.json).
   [Behaviour and boundaries](contracts/diagnostic-sidebar-selection.md),
@@ -6051,7 +6051,7 @@ See [the editing contract](contracts/parameter-object-refresh.md).
   End-to-end probe (not committed): two real ZipCrypto exports restored without
   password (4/4 and 2/2 devices) and the largest private project (76/76 devices,
   248 files, 18 MiB carried). Branch gate on `ed8edea9`: Rust 4487/0 (200
-  ignored), Vitest 3546/0. Merged gate on `8aab7c27` (with #20; published as `ceb54d2f` after a
+  ignored), Vitest 3546/0. Merged gate on `8aab7c27` (with #20; published as `ceb54d2f` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `0ed9ce7af`, same parents and changed paths, trees differ) after a
   rebase over the docs-only `5ed264aa`, its Python, Hall-of-Fame and build checks
   rerun): fmt, Clippy,
   build, 16 typechecks 0, Rust 4487/0 (200 ignored, 324 suites), Vitest 3577/0

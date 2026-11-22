@@ -1,6 +1,6 @@
 # WP-24 — Sortable catalogue table acceptance
 
-Published runtime: `8dd6cf72d3aa72dac6cbcde4eab934c391073c1f`, 26 October 2026.
+Published runtime: `8dd6cf72d3aa72dac6cbcde4eab934c391073c1f` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `1d38c89c3`), 26 October 2026.
 Feature `c8fd79532`; independent implementation/correction reviews: APPROVE.
 Local, tracking and live main matched immediately after publication.
 

@@ -1,6 +1,6 @@
 # WP-06 — Communication-object organisation: remaining slices
 
-**Status:** Saved schema-20 text display delivered; bounded literal installed-product declaration fallback and captured saved-instance priority foundation software-accepted on main. WP06-S1 same-schema namespace/explicit-language caption runtime is independently reviewed, software-accepted and published on main `8de9487de` (hash mapping 2026-11-22: alpha-22 history; on current main as `02cb3beca`); its result-only documentation successor is published on main (`1dab91cfa`) and was reviewed retrospectively against source on 22 November 2026 ([note](../status/2026-11-14-wp06-folder-caption-language.md#retrospective-source-review--22-november-2026); not a new gate). Broader slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
+**Status:** Saved schema-20 text display delivered; bounded literal installed-product declaration fallback and captured saved-instance priority foundation software-accepted on main. WP06-S1 same-schema namespace/explicit-language caption runtime is independently reviewed, software-accepted and published on main `8de9487de` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `02cb3beca`); its result-only documentation successor is published on main (`1dab91cfa`) and was reviewed retrospectively against source on 22 November 2026 ([note](../status/2026-11-14-wp06-folder-caption-language.md#retrospective-source-review--22-november-2026); not a new gate). Broader slices remain evidence-gated. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
 **Evidence route (8 November 2026):** clean-room observation is admitted by the owner ([OWN-01](OWN-01-owner-decisions.md#decisions-recorded--8-november-2026), [rules](../RESEARCH.md#evidence-routes)); no observation has been made for this package yet.
 
@@ -10,7 +10,7 @@ The [source observation and bounded contract](../research/2026-11-05-saved-schem
 admit literal saved `Node/@Text` as additional read-only display, without changing
 folder identity or resolving manufacturer text/templates. Source `e4aa31945`
 was independently reviewed and software-accepted through the complete selected
-branch and main-first gates; runtime `61e28d225` (hash mapping 2026-11-22: alpha-22 history; on current main as `00d871e96`) is published and its original
+branch and main-first gates; runtime `61e28d225` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `00d871e96`) is published and its original
 live/tracking readback is retained. The [acceptance record](../status/2026-11-05-saved-schema20-node-text.md)
 keeps original failures and narrow-viewport limits separate. No new compatibility
 or hardware claim follows. The remaining requirements below stay independent.
@@ -26,7 +26,7 @@ The [implementation/verification boundary](../status/2026-11-06-declared-product
 distinguishes the four real-source reader calibrations from synthetic fallback,
 HTTP lifecycle and production-client evidence. It does not establish original
 package import, original-tool rendering, current placement or whole-WP acceptance.
-Source `1e3b441d3` and main-first `252b11c3c` (hash mapping 2026-11-22: alpha-22 history; on current main as `55ce05d4b`) passed both complete selected
+Source `1e3b441d3` and main-first `252b11c3c` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `55ce05d4b`) passed both complete selected
 17-stage gates; the integrated server build/version and exact publication
 readback passed. This closes this literal-only software slice, not the broader
 requirements below or any hardware/native/release/deployment acceptance.
@@ -34,7 +34,7 @@ requirements below or any hardware/native/release/deployment acceptance.
 ## Additional bounded increment — same-schema and explicit-language captions
 
 The [WP06-S1 result](../status/2026-11-14-wp06-folder-caption-language.md)
-records corrected source `9b0d937dc`, main-first integration `789ab6143` and
+records corrected source `9b0d937dc`, main-first integration `789ab6143` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `a6b7fda7e`) and
 published runtime `8de9487de` on `041df68a0` (the Alpha 22 history identity; the
 tree-identical runtime merge on main is `a6b7fda7e`, see the
 [22 November source review](../status/2026-11-14-wp06-folder-caption-language.md#retrospective-source-review--22-november-2026)). Independent correction review APPROVE
@@ -64,7 +64,7 @@ full manufacturer/reference compatibility or multi-program importer repair.
 
 ## Task
 
-**Delivered foundation, software-accepted on main `ed0cf7737` (hash mapping 2026-11-22: alpha-22 history; on current main as `a6f240a34`):**
+**Delivered foundation, software-accepted on main `ed0cf7737` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `a6f240a34`):**
 [captured saved-instance priority](../contracts/saved-instance-priority.md)
 adds a schema-23 source observation through native model/history and read-only
 projection. The additive 16→17 migration does not infer old declarations or
@@ -88,7 +88,7 @@ priority losslessly.
 
 1. Broader product-folder captions: the bounded literal installed-product subset
    is software-accepted on main; WP06-S1 same-schema/explicit-language runtime is
-   also software-accepted and published as `8de9487de` (above), not whole-WP
+   also software-accepted and published as `8de9487de` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `02cb3beca`) (above), not whole-WP
    acceptance. Templates, rename and broader
    source-schema mapping still need evidence, not guessed manufacturer behavior.
 2. Folders for module objects (depends on
@@ -104,7 +104,7 @@ priority losslessly.
    comparison. [ADR-0158](../adr/0158-object-priority-provenance.md) defines
    raw/effective provenance and the bounded product-query origin increment;
    the captured instance/native-history/read-only GET slice is software-accepted
-   on main (`ed0cf7737`, see above); a read-only object-editor row displays it.
+   on main (`ed0cf7737` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `a6f240a34`), see above); a read-only object-editor row displays it.
    Project comparison compares it and the documentation report shows it.
    Read-only effective resolution is delivered
    ([contract](../contracts/effective-object-priority.md)); editing as a

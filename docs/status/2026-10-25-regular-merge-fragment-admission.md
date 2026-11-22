@@ -39,7 +39,7 @@ barriers are not weakened.
 
 ## Integrated acceptance and publication
 
-The source was published as `be2687796` (feature `85fa16e04`) after independent
+The source was published as `be2687796` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d2a8566a8`) (feature `85fa16e04`) after independent
 review, the complete local same-base comparison and **14/14** selected stages of
 the maintained package gate on that actual main-first merge. Local, tracking and
 live remote main were read back equal immediately after the push.

@@ -2,7 +2,7 @@
 
 ## Delivered boundary
 
-Published merge: `5f1ad454eb27da49685062dbe37b3ed89aa8a3ac`, with main as first parent.
+Published merge: `5f1ad454eb27da49685062dbe37b3ed89aa8a3ac` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `5956f1e0a`), with main as first parent.
 Feature `a2d04899e` and correction `28148aaed` preserve the existing wrong-width
 refusal. A reply with a positive element count and a byte count other than four
 still stops prewrite acquisition before mutation. The diagnostic now includes the

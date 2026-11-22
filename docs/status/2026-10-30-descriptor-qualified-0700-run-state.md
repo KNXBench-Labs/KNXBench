@@ -4,7 +4,7 @@
 
 Software acceptance: **30 October 2026**; source/design work began on 29 October.
 Implementation `5f075cf99`, implementation documentation `74491c65d`, main-first
-runtime merge **`0af68438f`**, with published claim `2ff821ec5` as its first parent.
+runtime merge **`0af68438f`**, with published claim `2ff821ec5` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `04b6ec518`) as its first parent.
 The runtime merge's complete tree equals the accepted feature tree. This record
 certifies that runtime, not a later documentation-only revision or a release.
 Publication/readback and the documentation-tail gates remain separate delivery

@@ -5,7 +5,7 @@ Read-only triage of the six linked worktrees the owner asked to keep during the
 them. Each recommendation is a proposal for the owner. It is not a status change:
 per-ID status stays in the [ledger](LEDGER.md).
 
-**Basis:** `origin/main` `5a33e95c` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `81261d9e9`, same patch, trees differ) (fetched 2026-10-12). Self-review only.
+**Basis:** `origin/main` `5a33e95c` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `81261d9e9`, same patch, trees differ) (fetched 2026-10-12). Self-review only.
 
 ## Method
 
@@ -47,7 +47,7 @@ Recorded the same day; do not reopen without a new decision.
 | Package | Decision | Carried out |
 | --- | --- | --- |
 | native-evidence | Adopt (unchanged recommendation) | Waits for the web lock |
-| native-evidence (residue, 2026-10-13) | Nothing left to adopt | Re-checked against main `efb5e0ed` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `a7dbcffff`, same patch, trees differ): of the 5,520 lines the branch adds outside `.ai/` (`4e0e874d..b76ee907`, 100 files), all but 29 are on main verbatim, and those 29 are package 1's documented adaptations (Dashboard placement, `div`/`h4` panels, quiet Cancel, corrected DE scope text, updated status lines). **No schema/version bump**: no change in `knx-store`/`knx-core`, no migration; ADR-0113 keeps a version-1 envelope in the existing passthrough rows and main tests the refusal of version 2. The branch's import-lifecycle `preflight_initial_save` appears only as prose about another checkout; no such code is on main. The worktree can go after an owner go |
+| native-evidence (residue, 2026-10-13) | Nothing left to adopt | Re-checked against main `efb5e0ed` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `a7dbcffff`, same patch, trees differ): of the 5,520 lines the branch adds outside `.ai/` (`4e0e874d..b76ee907`, 100 files), all but 29 are on main verbatim, and those 29 are package 1's documented adaptations (Dashboard placement, `div`/`h4` panels, quiet Cancel, corrected DE scope text, updated status lines). **No schema/version bump**: no change in `knx-store`/`knx-core`, no migration; ADR-0113 keeps a version-1 envelope in the existing passthrough rows and main tests the refusal of version 2. The branch's import-lifecycle `preflight_initial_save` appears only as prose about another checkout; no such code is on main. The worktree can go after an owner go |
 | ux-feedback | Adopt AP1/2/3/5, **drop AP4** | Ported 2026-10-13 ([evidence](../evidence/ux-feedback-port-2026-10-13.json)): AP2/3/5 whole, AP1 without what main already had (archive, Dashboard links, row timestamp); ADR-0122; AP4 left out |
 | native-evidence, ux-feedback (retire, 2026-10-13) | Remove both worktrees (owner go) | Ignored files archived first (`KNXBench.backups/2026-10-13-parked-adoption-retire/`, sha256 manifest); three Codex ux-feedback logs that existed only there added to main verbatim. Worktrees removed; local branches `feature/ux-feedback-20261010` and `fix/native-evidence-20261011` kept, so the original Codex commits stay reachable |
 | functions-sites | **Keep as WIP** | Whole residue committed as `wip(functions)` `1154b72f` on local branch `feature/functions-sites-20261009` (91 files, each byte-checked against the backup; unreviewed, unpushed). Worktree removed |
@@ -271,7 +271,7 @@ store, server and doc edits.
 **Already on main.** All 13 files exist on main:
 
 - 7 reverse-apply, so they are identical in effect.
-- The other 6 are later revisions on main (since `4e0e874d` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `e24d38682`, same patch, trees differ)). Main adds the
+- The other 6 are later revisions on main (since `4e0e874d` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `e24d38682`, same patch, trees differ)). Main adds the
   512-MiB cumulative decoded budget, prefix-only size accounting, schema
   12/13/current snapshot acceptance and the extended ADR and contract text.
 - The residue's remaining differences are older variants of lines that main has
@@ -289,8 +289,8 @@ exists (see the prune record in the handover).
 
 ## native-import-diagnostics-20261011
 
-**Delivers.** Its HEAD `8b4d249d` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `610459203`, same patch, trees differ) is on main. The import-status package was
-published as `3d6c9d1f`. The uncommitted residue is the native
+**Delivers.** Its HEAD `8b4d249d` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `610459203`, same patch, trees differ) is on main. The import-status package was
+published as `3d6c9d1f` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `e516b440d`, same parents and changed paths, trees differ). The uncommitted residue is the native
 import-diagnostics availability notice: `ImportDiagnosticsNotice`, the
 projection flag, an HTTP test, an e2e spec and the contract
 `native-import-evidence.md`.
@@ -350,7 +350,7 @@ verified local bundle outside the repository before deletion.
 | --- | --- | --- |
 | `feature/history-20261009` (local) | Ancestor of main | Deleted (`branch -d`) |
 | `design/group-address-studies-aca414` (local) | Its 7 tool files are identical on main; main's `docs/design-studies/group-addresses.md` is the branch's file plus a later owner-decision section | Deleted (fully contained) |
-| `docs/hygiene-audit-20261011` (local) | Unpublished docs audit `2cda0d37` against main `0bed9e2a` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `5701ee45f`, same patch, trees differ); unique, but its corrections encode facts that have since moved again (model v13, "shell mount pending") | Bundled and deleted; stale claims recorded below instead of replaying old text |
+| `docs/hygiene-audit-20261011` (local) | Unpublished docs audit `2cda0d37` against main `0bed9e2a` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `5701ee45f`, same patch, trees differ); unique, but its corrections encode facts that have since moved again (model v13, "shell mount pending") | Bundled and deleted; stale claims recorded below instead of replaying old text |
 | `test/import-integrity-revalidation-20261010` (remote) | Ancestor of main; no open PR | Deleted with an expected-SHA lease |
 | `KNXBench.worktrees/co-publication-20261009`, `co-stats-20261009` | Empty directories | Removed |
 | `KNXBench.worktrees/xdg` | A single `mise` migration marker from 2026-10-06, no process using it | Copied to the backup, removed |

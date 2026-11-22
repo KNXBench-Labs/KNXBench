@@ -2,7 +2,7 @@
 
 ## Software-accepted on main
 
-Source `e2d5a4914` was integrated main-first as `99a78fe35` (hash mapping 2026-11-22: alpha-22 history; on current main as `104514e57`) and publication was
+Source `e2d5a4914` was integrated main-first as `99a78fe35` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `104514e57`) and publication was
 read back exactly. Independent Standards and Spec reviews APPROVE with no
 in-scope findings; all 13 selected package stages passed (726 Rust tests,
 0 failed, 22 ignored; separate corpus 17/17), inputs frozen and user data

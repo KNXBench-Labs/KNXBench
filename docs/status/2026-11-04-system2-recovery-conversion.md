@@ -93,7 +93,7 @@ Finding-specific independent review is APPROVE; the production fix is unchanged.
 
 ## Package acceptance and source delivery
 
-Published main-first as `1e0d0a6de` (hash mapping 2026-11-22: alpha-22 history; on current main as `49e96c9a6`) (production/test source `41b1bf61d`,
+Published main-first as `1e0d0a6de` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `49e96c9a6`) (production/test source `41b1bf61d`,
 final branch checkpoint `73b340d18`). Independent whole-feature and finding-specific
 reviews approved the corrected final test set before package acceptance. Local,
 tracking and live remote refs and all owned blobs were read back equal after push.

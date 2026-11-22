@@ -46,7 +46,7 @@ the reconnect-overflow test (each 3 passed, 1 failed). The equivalent
 inputs were restored exactly; the feature sources were unchanged.
 
 Source commit `b8f4d2ee9` passed the complete selected 14-stage package gate on
-main-first integration `a3eea3696` (hash mapping 2026-11-22: alpha-22 history; on current main as `09b21b5c6`) (first parent `eab79cc5b`): every stage exited
+main-first integration `a3eea3696` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `09b21b5c6`) (first parent `eab79cc5b`): every stage exited
 zero with valid proof, inputs frozen and user data checked and untouched.
 The run passed 4,366 Rust tests with 153 explicitly ignored tests across
 17 result blocks, plus a separate selected corpus run of 91/91. Python tool

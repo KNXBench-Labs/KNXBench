@@ -6,7 +6,7 @@ Loopback and simulator evidence only: no real-gateway interoperability.
 
 ## Acceptance
 
-The reviewed source was integrated main-first as `fef417bb9` (hash mapping 2026-11-22: alpha-22 history; on current main as `09466cb77`) and publication was
+The reviewed source was integrated main-first as `fef417bb9` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `09466cb77`) and publication was
 read back exactly. Two independent reviews (Standards, Spec) returned APPROVE with
 no blocker. Standards noted one medium finding (a complete success with null actual
 transport was admitted; fixed before commit) and three low judgments. Spec noted

@@ -2,7 +2,7 @@
 
 ## Scope and evidence boundary
 
-Checked against published source `1039a78793` (the WP-13 claim, based on
+Checked against published source `1039a78793` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `111df4ca6`) (the WP-13 claim, based on
 `2a4b60b6`). This is a bounded source/documentation reconciliation, not a new
 application, native, browser, corpus, hardware or release acceptance. Existing
 receipts retain their original revision and counts. Formal ledger dispositions,

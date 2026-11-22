@@ -1,6 +1,6 @@
 # Server/Web TCP line scans — main-only software acceptance
 
-Date: 10 November 2026. Runtime-tested and published revision: `ebee02cdf20f1e175ff0890b5b47c64092fceb3b`.
+Date: 10 November 2026. Runtime-tested and published revision: `ebee02cdf20f1e175ff0890b5b47c64092fceb3b` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `f62b1278e`).
 Source feature `12e4fd5ac6a957c8c5d9c3bdac9ea55f8ba49493` was integrated main-first
 as `7fd0153d1e2c801084e4086dc00caea9dd7f273e` over `7e5612b62`. The runtime-tested
 successor additionally corrects checkpoint vocabulary and a deterministic tooling

@@ -2,7 +2,7 @@
 
 ## Published source
 
-`a4a4ebcf1` (hash mapping 2026-11-22: alpha-22 history; on current main as `cbec1ada4`) is published on `main` with matching live and tracking-ref readback.
+`a4a4ebcf1` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `cbec1ada4`) is published on `main` with matching live and tracking-ref readback.
 Its main-first parents are upstream `82a4a5d34` and feature `007dea532`.
 Upstream community changes and the separate System-2 reservation are preserved.
 The [contract](../contracts/memory-region-read-service.md) defines the correction.

@@ -2,7 +2,7 @@
 
 ## Delivered source scope
 
-Main-first merge `5679ba3c5d00afb75a454b81d4a1682db683936a` (hash mapping 2026-11-22: alpha-22 history; on current main as `84de2a71a`) publishes
+Main-first merge `5679ba3c5d00afb75a454b81d4a1682db683936a` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `84de2a71a`) publishes
 feature `fe8b57981` and documentation correction `41c7c84cc`. Local, tracking
 and live `main` were read back equal after publication. The user checkout was
 not synchronized; unrelated local changes and parked worktrees were preserved.

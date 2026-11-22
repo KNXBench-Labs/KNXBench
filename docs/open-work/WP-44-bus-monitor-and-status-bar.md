@@ -16,7 +16,7 @@ issue; intake through the owner.
    may carry a fitting animation ("surprise me") — calm, theme-aware and off
    under reduced motion.
 
-## Current basis (source anchors on `origin/main` `9af5c698a` (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `bd8a1f547`))
+## Current basis (source anchors on `origin/main` `9af5c698a` (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `bd8a1f547`))
 
 - Details pane: `apps/knx-web/src/BusMonitorPanel.tsx:1310`
   (`<aside className="telegram-details">`) inside the same scroll container as
@@ -42,7 +42,7 @@ issue; intake through the owner.
 
 | Package | Outcome | Status |
 | --- | --- | --- |
-| 44.1 | Sticky telegram-details pane in the bus monitor (both densities, narrow-pane fallback, keyboard/a11y unchanged) | Delivered; merged on main 62ac2e6a7 (hash mapping 2026-11-22: not on alpha-22 or current main; on current main as `3eefc2b95`), merged gate green (inputsFrozen) |
+| 44.1 | Sticky telegram-details pane in the bus monitor (both densities, narrow-pane fallback, keyboard/a11y unchanged) | Delivered; merged on main 62ac2e6a7 (hash mapping 2026-11-22: on neither alpha-22 nor current main; current-main counterpart `3eefc2b95`), merged gate green (inputsFrozen) |
 | 44.2 | Session rx/tx counters beside "Verbunden" in the status bar, live counting, reset on new session, i18n de/en | Delivered; merged on main 62ac2e6a7, merged gate green (inputsFrozen) |
 | 44.3 | Subtle connected-state animation on the bus indicator, theme-aware, reduced-motion off, honouring existing motion settings | Delivered; merged on main 62ac2e6a7, merged gate green (inputsFrozen) |
 

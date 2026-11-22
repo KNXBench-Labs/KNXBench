@@ -2,7 +2,7 @@
 
 ## Delivered scope
 
-Main-first merge `ac9b23814dac72c240d548aac8299fa9ba988ddd` (hash mapping 2026-11-22: alpha-22 history; on current main as `69bad2911`) was published on
+Main-first merge `ac9b23814dac72c240d548aac8299fa9ba988ddd` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `69bad2911`) was published on
 10 November 2026. Local, tracking and live `main` refs were read back equal.
 The [WP-29 contract](../contracts/tcp-tunnelling.md) now covers explicit
 `--tunnel-transport udp|tcp` on CLI `knx bus scan`, for `--device` and

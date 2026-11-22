@@ -122,7 +122,7 @@ verified summary, isolation and restoration/closure receipts).
 
 ## Reviewed source delivery
 
-The bounded evidence is published as main-first `923b34599` (hash mapping 2026-11-22: alpha-22 history; on current main as `d1dbb450b`), with focused documentation
+The bounded evidence is published as main-first `923b34599` (hash mapping 2026-11-22: alpha-22 history; current-main counterpart `d1dbb450b`), with focused documentation
 corrections `f4244c5b1` and `523f726b9` after the initial `58c50f867`. Independent review
 and correction re-review approved. Feature and integrated change-scoped gates each
 passed 10/10 stages with frozen inputs and checked, unchanged user data (466 registered

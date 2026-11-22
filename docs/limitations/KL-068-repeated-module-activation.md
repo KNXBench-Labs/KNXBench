@@ -79,6 +79,7 @@ corrected corpus also passes; its four inherited test contracts were updated
 only with owner authorization after exact fresh-main failures (`e74be53a`),
 without runtime changes or private expected values. This closes the old parser
 and corpus delivery blockers, not the Repeat/activation/write boundary.
+<!-- END retained catalogue record -->
 
 **Image-building gap (WP-48 F14, 22 November 2026).** Devices whose module
 instances carry stored, module-qualified parameter values are refused at image
@@ -88,4 +89,3 @@ downloaded. Per-instance image values are not implemented; the lift condition
 is in [WP-07](../open-work/WP-07-module-instance-authority.md). Current policy
 is pinned by the `current_policy_*` tests in
 `crates/knx-productdb/tests/it/module_scoped_image.rs`.
-<!-- END retained catalogue record -->

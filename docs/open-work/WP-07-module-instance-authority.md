@@ -34,6 +34,13 @@ The read-only overlay adds no persisted owner, numbering or write authority;
 constructed missing/foreign-owner states are not malformed-store load/reopen
 evidence. [Epochs, controls and limits](../status/2026-11-14-wp07-unresolved-module-owner.md).
 
+**Remaining open item (WP-48 F14):** the image builder refuses devices whose
+module instances carry stored, module-qualified parameter values
+(fail-closed, `ParameterValue` download refusal; KL-068, ADR-0177 amendment).
+Lift condition: per-instance scoped values wired into `ImageRequest` via the
+evaluator, with per-instance octet tests (the `current_policy_*` pins in
+`module_scoped_image.rs` flip).
+
 ## First deliverable
 
 One admitted mapping contract backed by a real, independently counted

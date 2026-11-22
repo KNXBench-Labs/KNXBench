@@ -307,7 +307,7 @@ fn ambiguous_device_unknown_program_and_unsupported_live_program_refuse_without_
 #[test]
 fn tcp_refusal_and_rejected_handshake_do_not_fallback_or_replay_and_keep_inputs() {
     let fixture = Fixture::new();
-    let (port, udp) = super::super::refused_tcp_with_udp_trap();
+    let (port, udp, _held) = super::super::refused_tcp_with_udp_trap();
     let output = collect(&mut fixture.command(&format!("127.0.0.1:{port}"), Some("tcp")));
     failed(&output, "could not connect");
     udp.set_nonblocking(true).unwrap();

@@ -88,16 +88,19 @@ fn expect_disconnect_and_close(stream: &mut TcpStream) {
     }
 }
 
-/// A port nothing listens on, with a UDP socket on the same number to catch a fallback.
-fn refused_tcp_with_udp_trap() -> (u16, UdpSocket) {
-    let port = {
-        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
-        listener.local_addr().unwrap().port()
-    };
-    let trap = UdpSocket::bind((Ipv4Addr::LOCALHOST, port)).unwrap();
+/// A bound, non-listening TCP port (kept alive by the caller) with a UDP trap on the same number.
+fn refused_tcp_with_udp_trap() -> (u16, UdpSocket, tokio::net::TcpSocket) {
+    let (held, trap) = knx_testsupport::with_udp_trap(
+        || {
+            let socket = tokio::net::TcpSocket::new_v4().unwrap();
+            socket.bind((Ipv4Addr::LOCALHOST, 0).into()).unwrap();
+            socket
+        },
+        |socket| socket.local_addr().unwrap(),
+    );
     trap.set_read_timeout(Some(Duration::from_millis(400)))
         .unwrap();
-    (port, trap)
+    (held.local_addr().unwrap().port(), trap, held)
 }
 fn assert_no_datagram(trap: &UdpSocket) {
     let mut buffer = [0u8; 64];
@@ -492,7 +495,7 @@ fn monitor_over_tcp_reports_the_actual_protocol_closure_instead_of_blame() {
 
 #[test]
 fn refused_tcp_is_an_error_and_never_falls_back_to_udp() {
-    let (port, trap) = refused_tcp_with_udp_trap();
+    let (port, trap, _held) = refused_tcp_with_udp_trap();
     let gateway = format!("127.0.0.1:{port}");
     for args in [
         vec![

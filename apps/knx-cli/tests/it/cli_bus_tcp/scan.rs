@@ -70,17 +70,8 @@ fn accept_before_deadline(listener: TcpListener) -> TcpStream {
 fn tcp_scan_gateway(
     rest: impl FnOnce(&mut TcpStream) + Send + 'static,
 ) -> (SocketAddr, JoinHandle<()>, UdpSocket) {
-    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+    let (listener, trap) = knx_testsupport::tcp_listener_with_udp_trap();
     let address = listener.local_addr().unwrap();
-    let trap = (0..64)
-        .find_map(|_| UdpSocket::bind(address).ok())
-        .or_else(|| {
-            // Fall back to an ephemeral UDP port when the TCP port is still in
-            // TIME_WAIT from a parallel test binary: the trap only needs to keep
-            // the CLI from falling back to UDP, any free port works.
-            UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).ok()
-        })
-        .expect("a UDP trap socket");
     trap.set_read_timeout(Some(Duration::from_millis(150)))
         .unwrap();
     let worker = thread::spawn(move || {
@@ -355,7 +346,7 @@ fn tcp_scan_peer_close_during_probe_is_failure_without_udp_fallback() {
 
 #[test]
 fn tcp_scan_refusal_and_handshake_eof_never_fall_back() {
-    let (port, trap) = refused_tcp_with_udp_trap();
+    let (port, trap, _held) = refused_tcp_with_udp_trap();
     let output = run_scan(
         &format!("127.0.0.1:{port}"),
         &["--device", "1.1.5", "--tunnel-transport", "tcp"],
@@ -366,17 +357,8 @@ fn tcp_scan_refusal_and_handshake_eof_never_fall_back() {
     assert_no_datagram(&trap);
 
     for reject in [false, true] {
-        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let (listener, trap) = knx_testsupport::tcp_listener_with_udp_trap();
         let address = listener.local_addr().unwrap();
-        let trap = (0..64)
-            .find_map(|_| UdpSocket::bind(address).ok())
-            .or_else(|| {
-                // Fall back to an ephemeral UDP port when the TCP port is still in
-                // TIME_WAIT from a parallel test binary: the trap only needs to keep
-                // the CLI from falling back to UDP, any free port works.
-                UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).ok()
-            })
-            .expect("a UDP trap socket");
         trap.set_read_timeout(Some(Duration::from_millis(150)))
             .unwrap();
         let worker = thread::spawn(move || {
@@ -409,18 +391,9 @@ fn tcp_scan_refusal_and_handshake_eof_never_fall_back() {
 
 #[test]
 fn scan_invalid_transport_targets_and_dry_runs_open_neither_transport() {
-    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+    let (listener, trap) = knx_testsupport::tcp_listener_with_udp_trap();
     listener.set_nonblocking(true).unwrap();
     let address = listener.local_addr().unwrap();
-    let trap = (0..64)
-        .find_map(|_| UdpSocket::bind(address).ok())
-        .or_else(|| {
-            // Fall back to an ephemeral UDP port when the TCP port is still in
-            // TIME_WAIT from a parallel test binary: the trap only needs to keep
-            // the CLI from falling back to UDP, any free port works.
-            UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).ok()
-        })
-        .expect("a UDP trap socket");
     trap.set_read_timeout(Some(Duration::from_millis(150)))
         .unwrap();
     for (extra, expected) in [

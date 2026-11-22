@@ -253,6 +253,16 @@ Acceptance: reserve a matching TCP/UDP address pair together, retrying selection
 pair rather than moving only the observer. Assert endpoint equality and prove a deliberate
 UDP-fallback mutant fails the tests. Retain the strict no-fallback contract.
 
+Implementation note (WP-48.7): every CLI TCP-gateway or refused-TCP site with a UDP trap
+(`scan.rs`, `find_serial.rs`, `diagnostics.rs`, `cli_bus_tcp.rs::refused_tcp_with_udp_trap`)
+now goes through `knx_testsupport::{tcp_listener_with_udp_trap, with_udp_trap}`; the refused
+variants hold a bound, non-listening `TcpSocket` for the whole run. The random-UDP-port
+fallback is gone, and the helpers assert `trap.local_addr() == gateway address`. Proof: a
+mutant in `KnxNetIpClient::connect_tunnel` that retried over UDP after a failed TCP connect
+failed 11 `cli_bus_tcp` tests covering diagnostics, compare, find-serial, download, restore,
+scan, service-control, probe and System 2 (log retained in the slice scratch); restored
+byte-identical.
+
 ### F12 — Narrow-settings tests accept contradictory states (P2)
 
 Commit `f97b75914`; static test trace.
@@ -269,6 +279,18 @@ controls must be present before the modal-blocking assertion. A mutation that br
 collapse or removes blocking must fail a maintained browser test. Do not blanket-remove
 all conditional setup: distinguish legitimate viewport preparation from vacuous checks.
 
+Implementation note (WP-48.7): `settings-workspace.e2e.ts` now states the single contract
+`openSettings()` implements (collapse the navigation pane at <= 650 px, leave it open
+above) as explicit `aria-expanded` expectations after each step; the self-comparing
+assertion and the "accept either steady state" branches are gone. `devices-navigation.e2e.ts`
+requires the pane toggle before the modal assertion: at 1440 px the Settings entry must be
+visible and its pointer action blocked; at 400 px the pane must be collapsed, the entry
+hidden and the toggle isolated (`[inert]` ancestor, pointer blocked). Mutants: never
+collapsing in `openSettings()` failed the four 400 px settings tests; removing modal
+blocking (overlay `pointer-events: none` plus no `inert` on siblings) failed all four
+retained-comparison tests (the 1440 px ones on the blocking assertion). Removing only one
+of the two mechanisms is deliberately not detected: either one blocks the pointer.
+
 ### F14 — Scoped-image tests do not distinguish per-instance values (P2)
 
 Commit `e0738472a`; static test/producer trace.
@@ -283,6 +305,24 @@ Acceptance: two real scoped keys, different values, shared local reference, MI c
 and RefId collision negative cases; assert exact written octets and unchanged neighbours.
 Separately decide/test when an unscoped fallback is allowed. This finding is a test gap,
 not proof that every module image is wrong or that hardware behaviour was verified.
+
+Implementation note (WP-48.7), policy and finding: `ImageRequest.values` reaches the image
+as an unscoped map (`activate_values` -> `resolve_values`); the scoped half of the
+`ValueMap` is filled only by `device_evaluation::evaluate_device`, which the image path never
+calls. A scoped value read in `build_image_selected` therefore falls back (via
+`ValueMap::get`, then `get_unscoped`) to the one unscoped value, which every instantiation
+shares at its own `BaseOffset`; module-qualified request keys are refused by name
+(`no such ParameterRef`). The `ImageRequest.values` doc comment claimed such keys were
+decomposed and consumed per instance (ADR-0177); it was wrong and is corrected. Per-instance
+image values are not implemented: that is a producer gap, recorded here, not changed in
+this slice, and no hardware claim. Tests in `module_scoped_image.rs` pin the policy (exact
+octets, unchanged neighbours, default and shared unscoped value), the refusal of scoped
+keys, and the evaluator-side per-instance ownership (two scoped keys with different values
+and one shared local reference, MI counter mismatch, duplicate-owner collision, sibling
+never read). Mutants: removing the unscoped fallback (both `ValueMap::get` and the image
+`get_unscoped`) failed the policy tests; dropping the owner/counter guard in
+`evaluate_device` failed the counter/collision test. Removing only the image-side
+`get_unscoped` survives because `ValueMap::get` already falls back.
 
 ### F15 — Decision/status references conflict (P3)
 
@@ -443,7 +483,7 @@ session coordinates, reviews source/PR plus gate receipts, then integrates each 
 | WP-48.4 | Existing configuration can actually be edited, editor tracks revisions, server enforces document contract; F04–F06 — implemented on branch `work/wp48-4-devconf-editor-20261122`, pending review/gate | None; reuse WP-42 storage/preview/history |
 | WP-48.5 | Usable, honest last-download address marks; F07–F08 — implemented on branch `work/wp48-5-ga-last-download-20261122`, pending review/gate | None |
 | WP-48.6 | Correct monitor ordering and stationary readable select controls; F09–F10 — implemented on branch `work/wp48-6-monitor-select-20261122`, pending review/gate | None |
-| WP-48.7 | Effective UDP/settings regressions and per-instance image proof; F11–F12, F14 | None; producer changes may coordinate with 48.2 |
+| WP-48.7 | Effective UDP/settings regressions and per-instance image proof; F11–F12, F14 — implemented on branch `work/wp48-7-test-proof-20261122`, pending review/gate; F14 also records that per-instance image values are not implemented | None; producer changes may coordinate with 48.2 |
 | WP-48.8 | Catalogue cache availability follows the selected digest; F17 | None |
 | WP-48.9 | Resolve evidence/compatibility leads and reconcile remaining decision/status references; remaining F15 | Existing source evidence for semantic/write claims; status closeout follows the relevant earlier slices |
 

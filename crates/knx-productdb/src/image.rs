@@ -175,9 +175,12 @@ pub struct ImageRequest {
     /// The device's individual address, for the address table.
     pub individual_address: IndividualAddress,
     /// Chosen parameter values by `ParameterRef` id. Everything absent
-    /// takes its product default. Keys may be module-qualified
-    /// (`…_M-<m>_MI-<k>_<local-ref>`); they are decomposed on the write side
-    /// and consumed per instantiation (ADR-0177).
+    /// takes its product default. Keys are unscoped declared `ParameterRef` ids: one value
+    /// is shared by every module instantiation of that reference (each still writes at
+    /// its own `BaseOffset`). Module-qualified keys (`…_M-<m>_MI-<k>_<local-ref>`) are
+    /// refused by name here; per-instance values exist only in
+    /// `device_evaluation::evaluate_device` and are not yet consumed by the image
+    /// (WP-48 F14, pinned in `tests/it/module_scoped_image.rs`).
     pub values: BTreeMap<String, String>,
     /// The group address links.
     pub links: Vec<Link>,
@@ -1339,7 +1342,9 @@ fn assigned_invisible_values(
 /// [`crate::byte_order_probe`], which reads what an image would write.
 ///
 /// A legal value no `when` covers activates nothing; every other evaluation
-/// diagnostic, and every module instance, refuses.
+/// diagnostic refuses. An active module-scoped communication-object ref
+/// refuses as unsupported; module-scoped parameters pass here and are
+/// resolved per instantiation by `build_image_selected`.
 pub(crate) fn activate(
     conn: &Connection,
     request: &ImageRequest,

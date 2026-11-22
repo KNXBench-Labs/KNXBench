@@ -1,4 +1,7 @@
 # Restart snapshot — WP-37 docs closeout (Slice S1) by subagent (2026-11-20, branch work/wp37-docs-closeout-20261120)
+## Stored device-profile export (IN PROGRESS; owner WebUI profile integration; observed 2026-11-22 10:59)
+- PR #137 adds generic `knx devconf export-stored`; independent review and sidecar-guard closure approved. Branch `ac3f6aeb0` passed all 16 selected package-gate stages (frozen inputs, checked untouched user data); integrated acceptance/publication is still pending after upstream catalogue changes.
+- Next: publish the accepted main-first integration, then continue the separately maintained offline firmware-simulator consumer. No device, bus, USB, VM, flash or physical-download authority; concurrent writer/path-swap races remain unproven. Evidence `<profile-scratch>/smartsensor-e2e-20261122/`.
 ## WP-48 corrective backlog (PARKED; owner WebUI audit; observed 2026-11-21)
 - Owner requested defect search since 14 November and one work package, not implementation. `docs/open-work/WP-48-recent-change-correctness-audit.md` records 16 source-confirmed findings, six separate verification-lead groups and nine planned slices. Audit target `163e38b85`; helper probes are not full runtime/browser/device acceptance.
 - Await explicit implementation Go; no bus/hardware/provider/VM/release/deploy authority. Runtime fixes remain open; source ownership must be rechecked on fresh main before each sequential subagent slice. Shared dirty root and foreign tracks stay untouched.

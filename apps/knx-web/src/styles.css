@@ -5646,21 +5646,33 @@ html[data-motion-flow="off"] .flow-camera,
   position: absolute; visibility: hidden; white-space: nowrap;
   pointer-events: none;
 }
-/* Hover marquee: the select's own text is not addressable, so the scroll is
-   a transform on the control itself, clipped by the wrapper. Soft start
-   (ease-in-out), one slow pass, then a 2 s pause at the end before looping.
-   Gated twice: OS reduced motion and the in-app motion level "off" both keep
-   the field static (ellipsis only). Duration derives from the shared motion
-   clock so subtle/standard levels scale it; the pause is a fixed 2 s. */
+/* Hover/focus reveal: a native select's clipped text cannot be scrolled from
+   outside, and moving the select would shift its border and arrow. So the
+   select stays put and an aria-hidden overlay over its text area (right of it
+   the arrow stays free) scrolls the complete label while the select's own
+   text is transparent; options keep their own ink so the list stays readable.
+   One slow soft-start pass, then a pause at the end before looping. Gated
+   twice: OS reduced motion and the in-app motion level "off" leave the overlay
+   hidden (ellipsis + title only). The duration derives from the shared motion
+   clock so subtle/standard levels scale it. Keyboard focus reveals only for
+   :focus-visible, so a mouse click does not start an endless loop. */
+.select-compact { position: relative; }
+.select-compact-reveal {
+  display: none; position: absolute; top: 0; bottom: 0;
+  left: var(--select-reveal-left, 0); width: var(--select-reveal-width, 0);
+  overflow: hidden; align-items: center; pointer-events: none;
+  color: var(--knx-foreground); white-space: nowrap;
+}
+.select-compact-reveal > span { display: inline-block; }
 @media (prefers-reduced-motion: no-preference) {
-  :root:not([data-motion-level="off"]) .select-compact.is-marquee:hover > select,
-  :root:not([data-motion-level="off"]) .select-compact.is-marquee:focus-within > select {
+  :root:not([data-motion-level="off"]) .select-compact.is-marquee:is(:hover, :has(> select:focus-visible)) > .select-compact-reveal { display: flex; }
+  :root:not([data-motion-level="off"]) .select-compact.is-marquee:is(:hover, :has(> select:focus-visible)) > select { color: transparent; }
+  :root:not([data-motion-level="off"]) .select-compact.is-marquee:is(:hover, :has(> select:focus-visible)) > select option { color: var(--knx-foreground); }
+  :root:not([data-motion-level="off"]) .select-compact.is-marquee:is(:hover, :has(> select:focus-visible)) > .select-compact-reveal > span {
     animation: knx-select-marquee calc(var(--knx-transition-duration) * 30) ease-in-out infinite;
   }
 }
 @keyframes knx-select-marquee {
-  0% { transform: translateX(0); opacity: 0.3; }
-  6% { opacity: 1; }
-  60% { transform: translateX(calc(var(--select-marquee-distance, 0px) * -1)); }
-  100% { transform: translateX(calc(var(--select-marquee-distance, 0px) * -1)); }
+  0%, 6% { transform: translateX(0); }
+  60%, 100% { transform: translateX(calc(var(--select-marquee-distance, 0px) * -1)); }
 }

@@ -478,6 +478,7 @@ describe("one editing workspace", () => {
       "messages/tlh.ts",
       "modalIsolation.ts",
       "monitorExport.ts",
+      "monitorRowOrder.ts", // WP-48.6: pure table-row ordering; no IO.
       "motion.ts",
       "postDownloadCheck.ts", // Pure admission of a stored read-only check result.
       "programmingState.ts",
@@ -495,6 +496,7 @@ describe("one editing workspace", () => {
       "settingsStore.ts",
       "sourceReports.ts",
       "tableWordFloors.ts", // Computed-font DOM measurement only; checked for API/fetch above.
+      "timestampOrder.ts", // WP-48.6: pure RFC 3339 comparison; no IO.
       "treeUtils.ts",
       "uiLanguage.ts",
       "useActiveOptionScroll.ts", // Issue #51: pure scroll-into-view hook; no API.

@@ -1,72 +1,102 @@
-/** WP-45: bounded select (WP-41 scalar slot) with a hover marquee on overflow. */
+/** Bounded select (WP-41 scalar slot) that reveals an overflowing value in a stationary overlay. */
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import React, { useRef, useState, type ReactNode, type SelectHTMLAttributes } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode, type SelectHTMLAttributes } from "react";
+
+/** Width a native select keeps free on the right for its dropdown arrow. */
+const ARROW_RESERVE_PX = 24;
+
+interface Reveal {
+  text: string;
+  /** How far the text must travel to show its tail; 0 when the value fits. */
+  distance: number;
+  /** Left inset and width of the select's text area, in px. */
+  left: number;
+  width: number;
+  fontFamily: string;
+  fontSize: string;
+  fontWeight: string;
+  letterSpacing: string;
+}
+
+const EMPTY: Reveal = { text: "", distance: 0, left: 0, width: 0, fontFamily: "", fontSize: "", fontWeight: "", letterSpacing: "" };
+
+function sameReveal(a: Reveal, b: Reveal): boolean {
+  return (Object.keys(a) as (keyof Reveal)[]).every((key) => a[key] === b[key]);
+}
 
 /**
- * A `<select>` capped at the shared WP-41 scalar value slot (10 rem, about
- * 20–25 monospace characters). The full selected value stays reachable
- * through the `title` tooltip and the native option list; when the value
- * does not fit, hovering starts a slow marquee scroll (CSS, gated on the
- * motion level and `prefers-reduced-motion` in styles.css). Keyboard and
- * screen-reader access are untouched: this renders the same native select,
- * only wrapped in a clipping span.
+ * A `<select>` capped at the shared WP-41 scalar value slot (10 rem). It stays
+ * the one native control: hit box, border, arrow, keyboard and screen-reader
+ * behaviour never change. Text a native select clips cannot be scrolled from
+ * outside, so while the pointer rests on it (or it has keyboard focus) and
+ * motion is allowed, an `aria-hidden` overlay laid over the select's text
+ * area (the select's own text turns transparent meanwhile) scrolls the
+ * complete label. Everywhere else (reduced motion, motion "off") the control
+ * stays static and the full value is reachable through the `title` tooltip
+ * and the native option list. The overlay is measured after every commit and
+ * whenever the select is resized.
  */
 export default function CompactSelect(
   props: SelectHTMLAttributes<HTMLSelectElement> & { children: ReactNode },
 ) {
-  const { children, onChange, onMouseEnter, onMouseLeave, onFocus, onBlur, ...rest } = props;
+  const { children, title, ...rest } = props;
   const selectRef = useRef<HTMLSelectElement>(null);
   const measureRef = useRef<HTMLSpanElement>(null);
-  const [distance, setDistance] = useState(0);
-  // Measure after mount too: the first render has no layout yet, and a value
-  // that overflows on load should already carry its title before any hover.
+  const [reveal, setReveal] = useState<Reveal>(EMPTY);
 
-  // The select's own text lives in the UA shadow DOM and is not measurable,
-  // so the selected option's label is measured in a hidden span with the
-  // same font. `distance` is the overflow in px, or 0 when the value fits.
-  // Read on every render so a changed value refreshes the tooltip; the ref is
-  // only set after mount, hence the state-driven title below.
-  const [title, setTitle] = useState<string | undefined>(undefined);
   function measure() {
     const select = selectRef.current;
     const meter = measureRef.current;
     if (!select || !meter) return;
-    const text = select.selectedOptions[0]?.text ?? "";
-    setTitle(text);
-    meter.textContent = text;
+    const text = select.options[select.selectedIndex]?.text ?? "";
     const styles = getComputedStyle(select);
-    // The measure span inherits the wrapper's font; copy the select's own
-    // font onto it so the measurement matches what the select would render.
+    meter.textContent = text;
+    // The select's own text lives in the UA shadow DOM and cannot be
+    // measured, so a hidden twin in the same font stands in for it.
     meter.style.fontFamily = styles.fontFamily;
     meter.style.fontSize = styles.fontSize;
     meter.style.fontWeight = styles.fontWeight;
     meter.style.letterSpacing = styles.letterSpacing;
-    // A native select clips its rendered value and reserves ~24 px for its
-    // dropdown arrow, so the authoritative measurement is the hidden span's
-    // text width (in the select's own font) against the client width minus
-    // that arrow reserve: only genuine text overflow engages the marquee.
-    const overflow = meter.offsetWidth - (select.clientWidth - 24);
-    setDistance(overflow > 0 ? overflow : 0);
+    const left = (parseFloat(styles.paddingLeft) || 0) + (parseFloat(styles.borderLeftWidth) || 0);
+    const width = Math.max(0, select.clientWidth - (parseFloat(styles.paddingLeft) || 0) - ARROW_RESERVE_PX);
+    // Sub-pixel width: `offsetWidth` rounds and would leave the last glyph clipped.
+    const overflow = meter.getBoundingClientRect().width - width;
+    const next: Reveal = {
+      text, distance: overflow > 0 ? overflow : 0, left, width,
+      fontFamily: styles.fontFamily, fontSize: styles.fontSize, fontWeight: styles.fontWeight, letterSpacing: styles.letterSpacing,
+    };
+    setReveal((current) => (sameReveal(current, next) ? current : next));
   }
 
-  // The marquee class marks the value as overflowing; the animation itself is
-  // hover/focus-scoped in CSS, so the scroll runs only while hovered/focused.
-  const marquee = distance > 0;
+  // Mount and every later commit (value or option labels may have changed),
+  // so the tooltip and overflow are right before any hover.
+  useLayoutEffect(measure);
+  // Width changes without a re-render: container resize, UI zoom, font load.
+  useLayoutEffect(() => {
+    const select = selectRef.current;
+    if (!select || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => measure());
+    observer.observe(select);
+    return () => observer.disconnect();
+  }, []);
+
+  const overflowing = reveal.distance > 0 && !rest.disabled;
+  const wrapperStyle = overflowing ? {
+    "--select-marquee-distance": `${reveal.distance}px`,
+    "--select-reveal-left": `${reveal.left}px`,
+    "--select-reveal-width": `${reveal.width}px`,
+  } as CSSProperties : undefined;
   return (
-    <span className={marquee ? "select-compact is-marquee" : "select-compact"}>
-      <select
-        ref={selectRef}
-        title={title}
-        style={marquee ? { "--select-marquee-distance": `${distance}px` } as React.CSSProperties : undefined}
-        onChange={(e) => { measure(); onChange?.(e); }}
-        onMouseEnter={(e) => { measure(); onMouseEnter?.(e); }}
-        onFocus={(e) => { measure(); onFocus?.(e); }}
-        onBlur={(e) => { onBlur?.(e); }}
-        {...rest}
-      >
+    <span className={overflowing ? "select-compact is-marquee" : "select-compact"} style={wrapperStyle}>
+      <select ref={selectRef} title={title ?? (reveal.text || undefined)} {...rest}>
         {children}
       </select>
       <span ref={measureRef} className="select-compact-measure" aria-hidden="true" />
+      {overflowing ? (
+        <span className="select-compact-reveal" aria-hidden="true">
+          <span style={{ fontFamily: reveal.fontFamily, fontSize: reveal.fontSize, fontWeight: reveal.fontWeight, letterSpacing: reveal.letterSpacing }}>{reveal.text}</span>
+        </span>
+      ) : null}
     </span>
   );
 }

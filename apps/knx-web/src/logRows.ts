@@ -1,11 +1,14 @@
 /** Pure session-log row logic: stable keys, newest first, short detail previews. */
 import type { LogEntry } from "./api";
+import { compareInstants, parseInstant, type Instant } from "./timestampOrder";
 
 export interface LogRow {
   key: string;
   entry: LogEntry;
   /** `Date.parse(entry.timestamp)`, parsed once per snapshot (NaN if invalid). */
   time: number;
+  /** Exact instant incl. sub-millisecond digits for ordering; `null` if invalid. */
+  instant: Instant | null;
 }
 
 /** Rows rendered at once; "Show more" adds the next step. Search covers all. */
@@ -16,16 +19,22 @@ export const DETAIL_PREVIEW_LINES = 1;
 export function serverRows(entries: readonly LogEntry[]): LogRow[] {
   // The entry text is part of the key: indices shift when the server drops
   // entries, and a stale key must not select a different entry.
-  return entries.map((entry, index) => ({ key: `server:${index}:${JSON.stringify(entry)}`, entry, time: Date.parse(entry.timestamp) }));
+  return entries.map((entry, index) => ({ key: `server:${index}:${JSON.stringify(entry)}`, entry, time: Date.parse(entry.timestamp), instant: parseInstant(entry.timestamp) }));
 }
 
 export function notificationRows(notifications: readonly { id: number; entry: LogEntry }[]): LogRow[] {
-  return notifications.map(n => ({ key: `ui:${n.id}`, entry: n.entry, time: Date.parse(n.entry.timestamp) }));
+  return notifications.map(n => ({ key: `ui:${n.id}`, entry: n.entry, time: Date.parse(n.entry.timestamp), instant: parseInstant(n.entry.timestamp) }));
 }
 
-/** Newest first; equal or unparsable times fall back to the key, later index first. */
+function newestFirstInstant(a: LogRow, b: LogRow): number {
+  if (a.instant && b.instant) return compareInstants(b.instant, a.instant);
+  // An unparsable time has no place in the order; keep it above dated entries so it stays visible.
+  return a.instant ? 1 : b.instant ? -1 : 0;
+}
+
+/** Newest first by exact instant (sub-millisecond digits count); equal or unparsable times fall back to the key, later index first. */
 export function newestFirst(rows: readonly LogRow[]): LogRow[] {
-  return [...rows].sort((a, b) => (b.time - a.time) || b.key.localeCompare(a.key, undefined, { numeric: true }));
+  return [...rows].sort((a, b) => newestFirstInstant(a, b) || b.key.localeCompare(a.key, undefined, { numeric: true }));
 }
 
 /** The first line of `detail` and how many lines the list leaves to the dialog. */

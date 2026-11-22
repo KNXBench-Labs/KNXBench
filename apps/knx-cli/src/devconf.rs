@@ -1,6 +1,8 @@
 //! `knx devconf`: checks device configuration modules, validates documents and writes exports.
 //!
-//! Files only (ADR-0175): nothing here opens a project, a bus connection or a device.
+//! Module and document commands are files only (ADR-0175). `export-stored` additionally reads one
+//! saved project read-only (no migration in place, no write); nothing here opens a bus connection
+//! or a device.
 
 use knx_devconf::{ExportError, Finding, FindingKind, Module, Validation};
 use serde_json::{json, Value};
@@ -11,6 +13,7 @@ use std::process::ExitCode;
 const USAGE: &str = "usage: knx devconf check <module.devconf.json> [--json]\n\
      \x20      knx devconf validate <module.devconf.json> <document.json> [--json]\n\
      \x20      knx devconf export <module.devconf.json> <document.json> --export <id> --output <file>\n\
+     \x20      knx devconf export-stored <project.knxdb> --device <id> --module <module.devconf.json> --export <id> --output <file>\n\
      exit status: 0 success, 1 invalid document or refused export, 2 unusable input";
 
 fn unusable(message: impl std::fmt::Display) -> ExitCode {
@@ -32,6 +35,7 @@ pub fn run(args: &[String]) -> ExitCode {
         Some("check") => check(&args[1..]),
         Some("validate") => validate(&args[1..]),
         Some("export") => export(&args[1..]),
+        Some("export-stored") => export_stored(&args[1..]),
         _ => Err(USAGE.to_owned()),
     };
     result.unwrap_or_else(unusable)
@@ -179,10 +183,21 @@ fn export(args: &[String]) -> Result<ExitCode, String> {
     };
     let module = load(module_path)?;
     let document = read(document_path)?;
-    let bytes = match module.export(&document, &export_id) {
+    emit(&module, module_path, &document, &export_id, &output)
+}
+
+/// Exports from the module and document, writing nothing unless the export succeeds.
+fn emit(
+    module: &Module,
+    module_path: &str,
+    document: &[u8],
+    export_id: &str,
+    output: &Path,
+) -> Result<ExitCode, String> {
+    let bytes = match module.export(document, export_id) {
         Ok(bytes) => bytes,
         Err(ExportError::Invalid(validation)) => {
-            report(&module, &validation, false);
+            report(module, &validation, false);
             eprintln!("nothing written: the document is invalid");
             return Ok(ExitCode::FAILURE);
         }
@@ -192,10 +207,119 @@ fn export(args: &[String]) -> Result<ExitCode, String> {
         }
         Err(e) => return Err(format!("{module_path}: {e}")),
     };
-    write_atomically(&output, &bytes)
+    write_atomically(output, &bytes)
         .map_err(|e| format!("cannot write {}: {e}", output.display()))?;
     println!("wrote {} bytes to {}", bytes.len(), output.display());
     Ok(ExitCode::SUCCESS)
+}
+
+/// Exports the configuration document stored in a saved project for one device.
+///
+/// The project is only read (never migrated in place). The stored profile must name exactly the
+/// explicitly given module (id, version and SHA-256); the stored bytes reach the module's own
+/// validation unchanged.
+fn export_stored(args: &[String]) -> Result<ExitCode, String> {
+    let mut project_path = None;
+    let (mut device, mut module_path, mut export_id, mut output) = (None, None, None, None);
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--device" if device.is_none() => {
+                device = Some(crate::take_value(args, i + 1, "--device")?)
+            }
+            "--module" if module_path.is_none() => {
+                module_path = Some(crate::take_value(args, i + 1, "--module")?)
+            }
+            "--export" if export_id.is_none() => {
+                export_id = Some(crate::take_value(args, i + 1, "--export")?)
+            }
+            "--output" if output.is_none() => {
+                output = Some(PathBuf::from(crate::take_value(args, i + 1, "--output")?))
+            }
+            flag if flag.starts_with("--") => return Err(USAGE.to_owned()),
+            path if project_path.is_none() => {
+                project_path = Some(path.to_owned());
+                i += 1;
+                continue;
+            }
+            _ => return Err(USAGE.to_owned()),
+        }
+        i += 2;
+    }
+    let (Some(project_path), Some(device), Some(module_path), Some(export_id), Some(output)) =
+        (project_path, device, module_path, export_id, output)
+    else {
+        return Err(USAGE.to_owned());
+    };
+    let device = device
+        .parse::<u32>()
+        .ok()
+        .filter(|id| *id != 0)
+        .map(knx_core::DeviceId)
+        .ok_or_else(|| format!("--device {device}: not a device id (a positive number)"))?;
+    ensure_output_distinct(
+        &output,
+        &[("project", &project_path), ("module", &module_path)],
+    )?;
+    let module = load(&module_path)?;
+    let conn = knx_store::open_existing_read_only(Path::new(&project_path))
+        .map(|store| store.conn)
+        .map_err(|e| format!("cannot open project {project_path}: {e}"))?;
+    let project = knx_store::load_project(&conn)
+        .map_err(|e| format!("cannot load project {project_path}: {e}"))?;
+    if project.devices.get(device).is_none() {
+        return Err(format!("{project_path}: no device {}", device.0));
+    }
+    let profile = project.devices.config_profile(device).ok_or_else(|| {
+        format!(
+            "{project_path}: device {} has no stored configuration profile",
+            device.0
+        )
+    })?;
+    let stored = (
+        profile.module_id(),
+        profile.module_version(),
+        profile.module_sha256(),
+    );
+    if stored != (module.id(), module.version(), module.sha256()) {
+        eprintln!(
+            "nothing written: the stored profile of device {} is for module {} {} (sha256 {}), not {} {} (sha256 {})",
+            device.0,
+            stored.0,
+            stored.1,
+            stored.2,
+            module.id(),
+            module.version(),
+            module.sha256()
+        );
+        return Ok(ExitCode::FAILURE);
+    }
+    emit(
+        &module,
+        &module_path,
+        &profile.document,
+        &export_id,
+        &output,
+    )
+}
+
+/// Refuses an output that is, or already links to, one of the inputs (symlink or hard link).
+fn ensure_output_distinct(output: &Path, inputs: &[(&str, &str)]) -> Result<(), String> {
+    use std::os::unix::fs::MetadataExt;
+    let Ok(target) = std::fs::metadata(output) else {
+        return Ok(());
+    };
+    for (what, path) in inputs {
+        if let Ok(input) = std::fs::metadata(path) {
+            if (input.dev(), input.ino()) == (target.dev(), target.ino()) {
+                return Err(format!(
+                    "--output {} is the same file as the {what} {path}",
+                    output.display()
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Writes through a temporary file in the target directory so a reader never sees half a file.

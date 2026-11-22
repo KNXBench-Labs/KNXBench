@@ -178,7 +178,18 @@ cannot be nested. The output is refused when longer than `max_bytes`. The same m
 knx devconf check   <module> [--json]              # load and verify a module package
 knx devconf validate <module> <document> [--json]  # structural errors and rule violations
 knx devconf export  <module> <document> --export <id> --output <file>
+knx devconf export-stored <project.knxdb> --device <id> --module <module> --export <id> --output <file>
 ```
+
+`check`, `validate` and `export` are files only. `export-stored` additionally reads one saved
+project **read-only** (an older schema is upgraded in a memory copy, never in place; nothing is
+written to the project) and exports the document stored for the device. The stored profile's module
+id, version and SHA-256 must equal those of the explicitly given module (no fallback to another
+version); the stored bytes reach the module's validation unchanged, so whitespace or member order
+is not an error. A missing device or profile, an unreadable or foreign project and an unknown export
+exit 2; a module identity mismatch, an invalid document or an over-long export exit 1; none of them
+creates or replaces the output. An output that is the same file as the project or module (also via
+symlink or hard link) is refused before anything is read. No bus, device or download is involved.
 
 Exit 0 on success; 1 when the document is invalid or an export is refused; 2 for
 unusable input (unreadable file, malformed or unsupported module). `export`

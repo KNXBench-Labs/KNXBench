@@ -486,18 +486,20 @@ describe("ParameterWorkspace declared grids", () => {
   it("shows a passive label's fill provenance in its matrix tooltip (WP-05m)", async () => {
     saveUiLanguage(settingsStorage, "en"); resetUiLanguageForTests();
     const data = passiveSections();
-    data[0].passiveLabels = [passive("B-ONLY", "Open Attic", "PB-ONLY", null),
-      { ...passive("B-MIX", "Fictional mixed label", "PB-MIX", "Fictional mixed grid"),
-        textFill: { template: "Fictional mixed label", source: "StoredValue" } }];
+    // WP-48.3: only a real substitution carries a fill; a plain (translated) label has none.
+    data[0].passiveLabels = [passive("B-ONLY", "Fictional translated label", "PB-ONLY", null),
+      { ...passive("B-MIX", "Open Attic", "PB-MIX", "Fictional mixed grid"),
+        textFill: { template: "Open {{0}}", source: "StoredValue" } }];
     await mount(data);
     await act(async () => nav("Parameter group 3").click());
     const only = passiveSpan("B-ONLY")!;
     expect(only.title ?? "").not.toContain("{{");
     expect(only.title ?? "").not.toContain("Product text");
+    expect(only.title ?? "").not.toContain("Filled in from this device's value");
     await act(async () => nav("Fictional mixed grid").click());
     const mix = passiveSpan("B-MIX")!;
-    expect(mix.querySelector(".parameter-matrix-passive-text")!.textContent).toBe("Fictional mixed label");
-    expect(mix.title).toContain("Fictional mixed label");
+    expect(mix.querySelector(".parameter-matrix-passive-text")!.textContent).toBe("Open Attic");
+    expect(mix.title).toContain("Open {{0}}");
     expect(mix.title).toContain("Filled in from this device's value of the text parameter.");
   });
 

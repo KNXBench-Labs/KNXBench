@@ -7492,12 +7492,14 @@ fn assemble_parameter_panel_for_project(
                     // `Text` translation for the Button's identity overlays the
                     // literal source text; no translation keeps the literal.
                     _ => {
-                        let translated = caption_fills.translated_text((
-                            None,
+                        // F02: the Button's exact scope key; node numbers restart per tree.
+                        let key = (
+                            button.scope.as_ref().map(|s| s.node_chain()),
                             button.node_id,
-                        ));
+                        );
+                        let translated = caption_fills.translated_text(key.clone());
                         let (text, fill) = caption_fills
-                            .copy((None, button.node_id), Some(translated.as_deref().unwrap_or(&literal.text)))?;
+                            .copy(key, Some(translated.as_deref().unwrap_or(&literal.text)))?;
                         (text.expect("present literal"), fill)
                     }
                 };

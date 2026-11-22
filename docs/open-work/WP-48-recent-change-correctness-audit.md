@@ -353,6 +353,57 @@ modern streaming imports check the digest, and legacy imports rehash the cached 
    a reached supported candidate missing adequate reporting before calling this a bug;
    otherwise cause-specific reporting is an enhancement, not a data-loss correction.
 
+## WP-48.3 result (scoped captions and provenance)
+
+Implemented on `work/wp48-3-scoped-captions-20261122`; pending review/gate.
+
+- **F02 fixed.** A literal Button's caption/translation/fill is looked up with its exact
+  `(scope.node_chain(), node_id)` key. HTTP fixture `passive_labels/module_buttons.rs`: a
+  program Button and two module definitions whose Buttons share node 7 with it, one definition
+  instantiated twice, each with its own translation; each keeps its own text, and an
+  untranslated module Button no longer borrows the program Button's translation (both tests
+  fail on the previous code).
+  This is the scope-collision case (two module instances of one definition, distinct scope
+  chains), not a `Repeat` expansion: `Repeat` is a dynamic container whose content is not
+  expanded into scopes, so the spec's "Repeat expansion" acceptance item stays **remaining**
+  (no Repeat-scoped Button coverage here).
+- **F03 fixed.** Resolved translations are kept in a separate map from the positional fills
+  (`CaptionFills::translations`). A plain translation sends no `textFill`; real
+  stored/default/empty/unresolved substitutions keep their origin, a translated placeholder
+  label's Button consumer now shows the filled text (it showed the unfilled template before).
+  The wire DTO is unchanged, so no bindings regeneration; web consumers already render a fill
+  only when present (tests: `parameterCaption.test.ts`, `ParameterWorkspace.test.tsx`).
+- **Lead 3, rename scope: confirmed defect, fixed.** The overlay keyed accepted renames by
+  `(module_def_id, target node)`, so an instance whose own branch was inactive adopted a sibling
+  instance's replacement text. Now keyed by the rename's module scope chain; test
+  `a_rename_active_in_one_module_instance_does_not_retitle_the_other`. The evaluator's
+  settlement stays per tree (documented in the rename contract): two instances of one definition
+  that both activate a rename for the same target are refused together with a diagnostic. That
+  is a conservative refusal, not a wrong display; left unchanged.
+- **Lead 3, rename fill metadata: confirmed, fixed.** A rename filled from its
+  `@TextParameterRefId` dropped its fill; it now carries the real origin
+  (`StoredValue`/`EmptyValue`/...), asserted in `a_rename_leaf_fills_its_placeholder_from_its_own_text_parameter`.
+- **Lead 3, Button translation vs. text parameter: pre-existing, not changed.** A Button
+  with `@TextParameterRefId` and a placeholder in its source `Text` takes the fill branch
+  (`domain.rs`) and ignores a requested-language translation of that Button. Unchanged in
+  this slice; whether translated templates should apply there is an open decision. (Covered
+  instead: a translated placeholder Button without that branch shows the filled text, test
+  `a_translated_placeholder_button_shows_the_filled_text_and_keeps_its_fill`.)
+- **Lead 3, axis fallback: not changed.** `copy_axis_text` keeps the literal axis text and still
+  reports the unresolved/empty fill so the reason for not using the parameter-driven caption is
+  visible; ADR-0177's pinned tests require exactly this for unresolved references. Still open
+  (owner wording decision): for `EmptyValue`/`TemplateDefault` the tooltip says the product
+  text's default or emptiness applies while the literal is shown.
+- **Lead 4, historical rows: partly confirmed.** Button literal labels still bind from the
+  retained source without re-import. Only the requested-language overlay needs the persisted
+  `element_id` (rows ingested before 19 Nov 2026 lack it): the label stays literal, nothing
+  breaks (test `a_historical_button_row_without_element_id_keeps_its_literal_label`, rows
+  simulated by clearing `element_id`, not an authentic old database). Whether to backfill or
+  show a re-import notice needs an authentic pre-change database; still open.
+- **Lead 6, nested-binding reporting: not a defect.** The generic `unshownContent` issue
+  (`parameter_layout/grid.rs`, `parameter_grid.rs`) is reported for reached candidates;
+  cause-specific reporting stays an enhancement. No change.
+
 ## Bounded corrective packages and actual status
 
 All slices below are **planned; awaiting implementation Go**. The order is recommended,
@@ -363,7 +414,7 @@ session coordinates, reviews source/PR plus gate receipts, then integrates each 
 | --- | --- | --- |
 | WP-48.1 | Old reports cannot clear new programming changes; F16 — implemented on branch `work/wp48-1-report-binding-20261121`, pending review/gate | None |
 | WP-48.2 | Structural module ownership; F01 and the shared-resolver/ADR part of F15 — implemented on branch `work/wp48-2-module-owner-20261121`, pending review/gate | None |
-| WP-48.3 | Correct scoped captions and provenance; F02–F03; verify rename/axis/historical-row and nested-reporting leads | None; coordinate shared ownership code with 48.2 |
+| WP-48.3 | Correct scoped captions and provenance; F02–F03; verify rename/axis/historical-row and nested-reporting leads — implemented on branch `work/wp48-3-scoped-captions-20261122`, pending review/gate | None; coordinate shared ownership code with 48.2 |
 | WP-48.4 | Existing configuration can actually be edited, editor tracks revisions, server enforces document contract; F04–F06 | None; reuse WP-42 storage/preview/history |
 | WP-48.5 | Usable, honest last-download address marks; F07–F08 | None |
 | WP-48.6 | Correct monitor ordering and stationary readable select controls; F09–F10 | None |

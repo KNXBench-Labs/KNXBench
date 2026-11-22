@@ -746,7 +746,7 @@ These checks guard the workshop, not the bus.
 - **Dependency layering:** [layering.rs](../xtask/src/layering.rs)
 - **Source headers and status ledger:** [headers.rs](../xtask/src/headers.rs) · [ledger.rs](../xtask/src/ledger.rs)
 - **Documentation links and heading anchors:** [test_check_documentation.py](../tools/tests/test_check_documentation.py) · [anchors.rs](../xtask/src/anchors.rs)
-- **Nonempty gate and fixture scope:** [fixtureServer.test.ts](../apps/knx-web/src/fixtureServer.test.ts) · [knx-testsupport/src/lib.rs](../crates/knx-testsupport/src/lib.rs) · [gate_scope.rs](../xtask/tests/gate_scope.rs)
+- **Nonempty gate and fixture scope:** [fixtureServer.test.ts](../apps/knx-web/src/fixtureServer.test.ts) · [knx-testsupport/src/lib.rs](../crates/knx-testsupport/src/lib.rs) · [gate_scope.rs](../xtask/tests/it/gate_scope.rs)
 - **AppImage artifact and launcher policy:** [test_appimage_launcher.py](../tools/tests/test_appimage_launcher.py) · [appimage.rs](../xtask/src/appimage.rs)
 - **Docker release workflow contract:** [test_docker_release_workflow.py](../tools/tests/test_docker_release_workflow.py)
 - **Read-only conversion-exception analysis:** [test_analyze_cvexc.py](../tools/tests/test_analyze_cvexc.py)

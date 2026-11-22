@@ -49,7 +49,7 @@ releases, `main` keeps the last released number. Merges do not bump. The
 precise identity of a build stays in ADR-0018's build metadata
 (`<version>+g<short-sha>`).
 
-**A test keeps it that way.** `xtask/tests/workspace_version.rs` fails when a
+**A test keeps it that way.** `xtask/tests/it/workspace_version.rs` fails when a
 member declares its own `version = "..."`, when cargo resolves any member to a
 different version, or when the web package or lock disagrees.
 

@@ -343,7 +343,7 @@ already found lying in the grass.
 - **A new workspace package inherits the version.** Write
   `version.workspace = true`, never its own `version = "..."`; the release
   bump edits only the root `Cargo.toml` and the `knx-web` package pair, and
-  `xtask/tests/workspace_version.rs` fails on any other number (ADR-0190).
+  `xtask/tests/it/workspace_version.rs` fails on any other number (ADR-0190).
 
 ## Handover and Git
 

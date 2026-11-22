@@ -276,8 +276,7 @@ Program/catalogue/hardware/master translations are ingested. Remaining semantics
 ### 68. Repeated-module activation
 
 **Ledger status:** `ACCEPTED_BOUNDARY` ([KL-68](status/LEDGER.md#snapshot-ids)).
-Own instance values are readable without sibling/default substitution. Repeat-driven activation and general repeated-module editing remain unsupported.
-Devices whose module instances carry stored, module-qualified parameter values are refused at image building (fail-closed, download category `ParameterValue`; no per-instance image values yet, WP-48 F14).
+Own instance values are readable without sibling/default substitution. Repeat-driven activation and general repeated-module editing remain unsupported. Devices whose module instances carry stored, module-qualified parameter values are refused at image building (fail-closed; no per-instance image values yet, WP-48 F14).
 [Details and history](limitations/KL-068-repeated-module-activation.md)
 
 <a id="catalogue-kl-069"></a>

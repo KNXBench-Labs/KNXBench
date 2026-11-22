@@ -409,7 +409,7 @@
       "number": 68,
       "title": "Repeated-module activation",
       "topic": "Manufacturer data and parameters",
-      "summary": "Own instance values are readable without sibling/default substitution. Repeat-driven activation and general repeated-module editing remain unsupported.",
+      "summary": "Own instance values are readable without sibling/default substitution. Repeat-driven activation and general repeated-module editing remain unsupported. Devices whose module instances carry stored, module-qualified parameter values are refused at image building (fail-closed; no per-instance image values yet, WP-48 F14).",
       "file": "KL-068-repeated-module-activation.md",
       "ledger_ids": [
         "KL-68"

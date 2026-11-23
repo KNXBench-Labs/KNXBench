@@ -524,7 +524,7 @@ export default function TelegramFlowView({ feed, navigation, onOpenWindow, captu
       <section ref={sectionRef} role={maximized ? "dialog" : undefined} aria-modal={maximized || undefined} className={`telegram-flow${maximized ? " flow-maximized" : ""}`} aria-label={t("flow.title")}>
         <p className="flow-explain">{t("flow.explain")}</p>
         <p className="flow-empty">{t("flow.empty")}</p>
-        <div className="flow-toolbar">
+        <div className="flow-toolbar" role="toolbar" aria-label={t("flow.toolbar")}>
           <button type="button" aria-pressed={maximized} onClick={() => setMaximized(v => !v)}>{t(maximized ? "flow.restore" : "flow.maximize")}</button>
           {onOpenWindow && <button type="button" onClick={onOpenWindow}>{t("flow.openWindow")}</button>}
         </div>

@@ -50,7 +50,7 @@ files (tests excluded) carry 6 `role="dialog"`, 4 `role="menu"`,
 | 49.3 | Fallback, menus: the same checklist for `FileMenu` and the `RenameWorkbench` context menu (dismissal, focus return to the trigger, roving focus, submenus) | Delivered, 23 November 2026, PR #144 (main `790468206`; see below) |
 | 49.4a | Fallback, tabs: the checklist for the tablists in `Inspector` and `BusMonitorPanel` | Delivered, 23 November 2026, PR #145 (main `b15363a25`; see below) |
 | 49.3b | Apply the owner decisions on questions 4-8 (23 November 2026): name the first-level File menu, stop its first-level Escape, turn the other pins into decided rules | Delivered, 23 November 2026, PR #147 (main `f3836adc9`; see below) |
-| 49.4b | Fallback, toolbars: the checklist for `TelegramFlowView` and `features/rtf/InstructionEditor` | Running |
+| 49.4b | Fallback, toolbars: the checklist for `TelegramFlowView` and `features/rtf/InstructionEditor` | Implemented on a branch, 23 November 2026 (review and gate pending; see below) |
 | 49.4c | Fallback, dialogs: the checklist for the `Overlay` shell and its dialog consumers (`NewProjectDialog`, `LoginScreen`, `RenameWorkbench`, the `App` dialogs) | After 49.4b |
 
 ### 49.2 result (comboboxes)
@@ -132,6 +132,40 @@ reattach). Each mounts inside a parent that counts keydowns.
 - Not covered in happy-dom: the browser's real Tab order out of the tablist is checked through the
   roving tabindex and the unprevented Tab, not by moving focus.
 
+### 49.4b result (toolbars)
+
+One shared checklist helper (`src/test/toolbarChecklist.ts`, test-only, reusing `press()` from the
+combobox helper) runs six cases per toolbar against the REAL components:
+`TelegramFlowView.toolbar.test.tsx` (the flow toolbar, plus the empty-state toolbar) and
+`features/rtf/InstructionEditor.toolbar.test.tsx` (the formatting toolbar). Each mounts inside a
+parent that counts keydowns; toggle state is re-checked after every state change.
+
+- Semantics today: both toolbars are `role="toolbar"` with an accessible name and a horizontal
+  orientation (no `aria-orientation`), every control is a named `type="button"`. The flow toolbar's
+  Auto zoom, Maximize/Restore and Freeze are toggles with `aria-pressed`; the formatting buttons
+  (Bold, Italic, Underline, Remove formatting) act on the selection and are correctly not toggles.
+  Disabled controls use the native `disabled` attribute (Rearrange while frozen; all four formatting
+  buttons while busy or in a conflict), so they are skipped by Tab and cannot take focus.
+- Fixed (one gap, found by the checklist before the fix): the flow view's empty-state toolbar (no
+  telegrams observed yet) carried the `flow-toolbar` class but no `role="toolbar"` and no name; it
+  now has both, like the populated one. Regression: the empty-state checklist run fails on the
+  reverted fix (mutant checked).
+- Pinned as the current policy (not changed): neither toolbar uses a roving tabindex; every enabled
+  button is a tab stop. Neither handles arrows, Home or End (modified or not), so they are left to the
+  browser, bubble to ancestors and the window, and never move focus (question 12; modified arrows:
+  question 11 does not apply until a toolbar handles arrows).
+- Pinned parent-owned behaviour: while the flow view is maximized, a document capture listener
+  restores the view on Escape (prevented and stopped, so neither the toolbar nor the window see it)
+  and returns focus to the opener, and it wraps Tab and Shift+Tab between the first and last control
+  of the section; outside the maximized state Escape is untouched. The formatting buttons keep the
+  textarea selection on a pointer press (`mousedown` prevented, mutant checked) and move focus back to
+  the textarea after activation; the editor has no keyboard shortcuts of its own (Ctrl+B/I/U are
+  left to the browser and format nothing).
+- Not covered in happy-dom: the real focus/blur order on a pointer press and the real caret after a
+  format; both are asserted through the recorded selection and the prevented `mousedown`.
+
+Owner question 12 (toolbar tab order) is listed under Open decisions.
+
 ### 49.3b result (owner decisions 4-8)
 
 - Q7 fixed: `FileMenuSummary` and `FileMenuContent` take one required `menuId`; the menu carries that
@@ -191,3 +225,11 @@ Raised by 49.4a (owner, not yet decided; behaviour unchanged meanwhile):
 11. **Modifiers on tab arrows:** both tab keydown handlers (`Inspector.tsx`, `BusMonitorPanel.tsx`)
     ignore modifier keys, so Alt+Left (browser back) and Ctrl+Arrow are `preventDefault`-ed. Skip
     handling when a modifier is held? Behaviour unchanged meanwhile.
+
+
+Raised by 49.4b (owner, not yet decided; behaviour unchanged meanwhile):
+
+12. **Toolbar tab order:** both toolbars (flow view, instruction editor) leave every button a tab stop,
+    with no arrow keys. The APG toolbar pattern prefers one tab stop with arrow navigation, but
+    converting changes the Tab order for every user. Keep, or convert to a roving tabindex with
+    ArrowLeft/ArrowRight and Home/End? See the 49.4b result.

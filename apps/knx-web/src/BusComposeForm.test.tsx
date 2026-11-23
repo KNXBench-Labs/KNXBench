@@ -26,6 +26,7 @@ vi.mock("./api", async importOriginal => ({
 }));
 
 import BusComposeForm, { type ComposeResolution } from "./BusComposeForm";
+import { describeComboboxChecklist } from "./test/comboboxChecklist";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -568,3 +569,47 @@ describe("issue #51 destination combobox", () => {
     } finally { await act(async () => root.unmount()); }
   });
 });
+
+// WP-49.2: the shared combobox checklist for the destination field. Semantics recorded here:
+// `aria-selected` marks the highlighted option; the list is `hidden` and empty when closed.
+// The field is also free text, so Enter with no open list is left to the page.
+{
+  const addresses = [
+    { id: 1, name: "Living room light", address: "1/1/1", range: null, dpts: ["DPST-1-1"], links: [] },
+    { id: 2, name: "Kitchen shutter", address: "2/3/4", range: null, dpts: [], links: [] },
+    { id: 3, name: "Hallway", address: "3/0/1", range: null, dpts: [], links: [] },
+  ] as unknown as import("./bindings/GroupAddressNode").GroupAddressNode[];
+  let checklistHost: HTMLDivElement; let checklistRoot: import("react-dom/client").Root;
+  const input = () => checklistHost.querySelector<HTMLInputElement>(".bus-compose-destination")!;
+  describeComboboxChecklist({
+    name: "BusComposeForm destination",
+    async mount(parentKeyDown) {
+      checklistHost = document.createElement("div"); document.body.appendChild(checklistHost);
+      checklistRoot = createRoot(checklistHost);
+      await act(async () => checklistRoot.render(
+        <div onKeyDown={parentKeyDown}>
+          <BusComposeForm destination="" resolution={{ kind: "unknown" }} projectOpen sessionClosed={false}
+            contextStale={false} groupAddresses={addresses}
+            session={{ kind: "ip", identity: { sessionId: 1, serverIncarnation: "compose-test" } }} />
+        </div>));
+    },
+    async unmount() { await act(async () => checklistRoot.unmount()); checklistHost.remove(); },
+    input,
+    listbox: () => checklistHost.querySelector<HTMLElement>("[role=listbox]")!,
+    async open() { await act(async () => input().focus()); },
+    async noOptions() {
+      await act(async () => input().focus());
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input(), "9/9/9");
+        input().dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    },
+    // The chosen address lands in the field itself.
+    chosen: () => [input().value],
+    expectedChoice: index => addresses[index].address,
+    escape: "list",
+    dialogClosed: () => false,
+    tab: "closes-list",
+    expandedWhenEmpty: "true",
+  });
+}

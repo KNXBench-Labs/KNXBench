@@ -106,6 +106,8 @@ export default function Search(props: {
                     role="option"
                     aria-selected={position === highlight}
                     className={position === highlight ? "search-result selected" : "search-result"}
+                    // Keep focus in the input: a press must not blur it before the choice lands.
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => pick(entry)}
                   >
                     {describeEntry(entry, formatGa)}

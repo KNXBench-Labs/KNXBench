@@ -7,6 +7,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import type { GroupAddressNode } from "./bindings/GroupAddressNode";
 import GroupAddressPicker from "./GroupAddressPicker";
 import { PICKER_WINDOW } from "./groupAddressPicker";
+import { describeComboboxChecklist, setNativeValue } from "./test/comboboxChecklist";
 
 const ga = (id: number, address: string, name: string, dpts: string[] = []): GroupAddressNode =>
   ({ id, address, name, range: null, dpts, links: [] });
@@ -142,4 +143,37 @@ it("renders a bounded window and says how many it shows", async () => {
   expect(host.textContent).toContain(`Showing ${PICKER_WINDOW} of ${PICKER_WINDOW + 25}`);
   await type("Address 124");
   expect(optionIds()).toEqual([125]);
+});
+
+// WP-49.2: the shared combobox checklist. Semantics recorded here: `aria-selected` marks the
+// highlighted option (no separate "chosen" mark); the list is `hidden` and empty when closed.
+let checklistHost: HTMLDivElement; let checklistRoot: Root; let checklistChosen: string[];
+function ChecklistHarness({ onParentKeyDown }: { onParentKeyDown: () => void }) {
+  const [value, setValue] = useState<number | null>(null);
+  return <div onKeyDown={onParentKeyDown}>
+    <GroupAddressPicker addresses={LIST} objectDpt={null} value={value}
+      onChange={id => { checklistChosen.push(String(id)); setValue(id); }} />
+  </div>;
+}
+describeComboboxChecklist({
+  name: "GroupAddressPicker",
+  async mount(parentKeyDown) {
+    checklistHost = document.createElement("div"); document.body.appendChild(checklistHost);
+    checklistRoot = createRoot(checklistHost); checklistChosen = [];
+    await act(async () => checklistRoot.render(<ChecklistHarness onParentKeyDown={parentKeyDown} />));
+  },
+  async unmount() { await act(async () => checklistRoot.unmount()); checklistHost.remove(); },
+  input: () => checklistHost.querySelector<HTMLInputElement>("input[role=combobox]")!,
+  listbox: () => checklistHost.querySelector<HTMLElement>("[role=listbox]")!,
+  async open() { await act(async () => checklistHost.querySelector<HTMLInputElement>("input")!.focus()); },
+  async noOptions() {
+    await act(async () => checklistHost.querySelector<HTMLInputElement>("input")!.focus());
+    await act(async () => setNativeValue(checklistHost.querySelector<HTMLInputElement>("input")!, "no such address"));
+  },
+  chosen: () => checklistChosen,
+  expectedChoice: index => String(LIST[index].id),
+  escape: "list",
+  dialogClosed: () => false,
+  tab: "closes-list",
+  expandedWhenEmpty: "true",
 });

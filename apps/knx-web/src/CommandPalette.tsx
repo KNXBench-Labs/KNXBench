@@ -124,6 +124,8 @@ export default function CommandPalette(props: { ctx: CommandContext; onClose: ()
               aria-selected={i === highlight}
               className={classes.join(" ")}
               aria-disabled={!enabled}
+              // Keep focus in the input: a press (also on a disabled row) must not blur it.
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => enabled && runCommand(cmd)}
             >
               <span>{cmd.label}</span>

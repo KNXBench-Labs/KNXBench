@@ -46,9 +46,29 @@ files (tests excluded) carry 6 `role="dialog"`, 4 `role="menu"`,
 | Package | Outcome | Status |
 | --- | --- | --- |
 | 49.1 | Evaluation spike in a throwaway branch: install the exact beta version, measure bundle-size delta, check React 19 / TypeScript 7 / Vite 8 / happy-dom compatibility, offline and Tauri operation (no runtime fetch), coexistence of its optional `@layer` CSS with the theme tokens and presentations; write an ADR draft with the measured results | Delivered, 23 November 2026; ADR-0191 accepted with the fallback: +48.6 kB gzip for one combobox (+59 kB with a menu), no peer or transitive packages, no network code, 29/29 `tsc` configs clean; the first Escape propagates and the library CSS fails ADR-0022, so the ADR recommends the fallback (spike evidence outside the repo, never merged) |
-| 49.2 | Fallback, comboboxes: apply the ADR-0191 behaviour and testing checklist (focus stays in the input, `aria-activedescendant` follows the highlight, arrows stop at the ends, Enter chooses, first Escape closes and stops, second Escape belongs to the page, Tab closes, pointer press does not blur; `aria-haspopup`/`aria-expanded`/`aria-controls`) to `GroupAddressPicker`, `CommandPalette`, `Search` and `BusComposeForm` without a dependency; fix only gaps the tests expose | Next; owner Go 23 November 2026 |
+| 49.2 | Fallback, comboboxes: apply the ADR-0191 behaviour and testing checklist (focus stays in the input, `aria-activedescendant` follows the highlight, arrows stop at the ends, Enter chooses, first Escape closes and stops, second Escape belongs to the page, Tab closes, pointer press does not blur; `aria-haspopup`/`aria-expanded`/`aria-controls`) to `GroupAddressPicker`, `CommandPalette`, `Search` and `BusComposeForm` without a dependency; fix only gaps the tests expose | Delivered, 23 November 2026 (see below) |
 | 49.3 | Fallback, menus: the same checklist for `FileMenu` and the `RenameWorkbench` context menu (dismissal, focus return to the trigger, roving focus, submenus) | After 49.2 |
 | 49.4 | Fallback, tabs, toolbars and dialogs: the checklist for the remaining widget families (one package each) | After 49.3 |
+
+### 49.2 result (comboboxes)
+
+One shared checklist helper (`src/test/comboboxChecklist.ts`, test-only, no production
+abstraction) runs nine cases per widget in `GroupAddressPicker`, `CommandPalette`,
+`Search` and `BusComposeForm` (destination field): focus stays in the input, `aria-activedescendant`
+follows the highlight and is absent without one, arrows stop at the ends, Enter chooses,
+Escape, Tab, pointer press, and `aria-haspopup`/`aria-expanded`/`aria-controls`.
+
+- Semantics today, all four: `aria-selected` marks the *highlighted* option (no separate
+  "chosen" mark); the picker lists are `hidden` and empty when closed; palette and search lists are
+  always rendered inside the `Overlay` dialog. Nothing wraps; palette arrows skip disabled rows.
+- Fixed (two gaps): a pointer press on a `Search` or `CommandPalette` row moved focus to the dialog
+  panel and blurred the input (the pickers already prevented it). Both rows now prevent the
+  default of `mousedown`; a press on a disabled palette row no longer blurs either.
+- Pinned as the current policy (not changed): in `Search` and `CommandPalette` the first Escape
+  closes the whole overlay (the `Overlay` shell stops it; there is no list to close first), and
+  Tab does not close the always-visible list (the `Overlay` focus trap keeps focus inside).
+- Not covered in happy-dom: real focus/blur order on a pointer press is checked through the
+  `mousedown` default being prevented, not through a browser.
 
 ## Boundaries
 
@@ -71,3 +91,11 @@ Answered by the owner on 23 November 2026 ([OWN-01](OWN-01-owner-decisions.md)):
    and testing rules to the existing hand-written widgets, without the dependency.
 
 3. **ADR-0191 accepted?** Yes, with the fallback (no dependency), 23 November 2026.
+
+Raised by 49.2 (owner, not yet decided; behaviour unchanged meanwhile):
+
+4. **Escape and Tab in `Search` and `CommandPalette`:** keep "first Escape closes the
+   overlay, Tab stays in the dialog" (current), or give these always-visible lists the picker
+   semantics (first Escape clears/collapses, second closes)?
+5. **`aria-selected` meaning:** ADR-0191 suggests `aria-selected` for the chosen option plus a
+   separate highlight attribute; all four widgets mark the highlighted option today. Change it?

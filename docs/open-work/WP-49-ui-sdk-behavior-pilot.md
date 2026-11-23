@@ -48,7 +48,7 @@ files (tests excluded) carry 6 `role="dialog"`, 4 `role="menu"`,
 | 49.1 | Evaluation spike in a throwaway branch: install the exact beta version, measure bundle-size delta, check React 19 / TypeScript 7 / Vite 8 / happy-dom compatibility, offline and Tauri operation (no runtime fetch), coexistence of its optional `@layer` CSS with the theme tokens and presentations; write an ADR draft with the measured results | Delivered, 23 November 2026; ADR-0191 accepted with the fallback: +48.6 kB gzip for one combobox (+59 kB with a menu), no peer or transitive packages, no network code, 29/29 `tsc` configs clean; the first Escape propagates and the library CSS fails ADR-0022, so the ADR recommends the fallback (spike evidence outside the repo, never merged) |
 | 49.2 | Fallback, comboboxes: apply the ADR-0191 behaviour and testing checklist (focus stays in the input, `aria-activedescendant` follows the highlight, arrows stop at the ends, Enter chooses, first Escape closes and stops, second Escape belongs to the page, Tab closes, pointer press does not blur; `aria-haspopup`/`aria-expanded`/`aria-controls`) to `GroupAddressPicker`, `CommandPalette`, `Search` and `BusComposeForm` without a dependency; fix only gaps the tests expose | Delivered, 23 November 2026, PR #143 (main `bcf205b72`; see below) |
 | 49.3 | Fallback, menus: the same checklist for `FileMenu` and the `RenameWorkbench` context menu (dismissal, focus return to the trigger, roving focus, submenus) | Delivered, 23 November 2026, PR #144 (main `790468206`; see below) |
-| 49.4a | Fallback, tabs: the checklist for the tablists in `Inspector` and `BusMonitorPanel` | Running |
+| 49.4a | Fallback, tabs: the checklist for the tablists in `Inspector` and `BusMonitorPanel` | Done, awaiting review |
 | 49.4b | Fallback, toolbars: the checklist for `TelegramFlowView` and `features/rtf/InstructionEditor` | After 49.4a |
 | 49.4c | Fallback, dialogs: the checklist for the `Overlay` shell and its dialog consumers (`NewProjectDialog`, `LoginScreen`, `RenameWorkbench`, the `App` dialogs) | After 49.4b |
 
@@ -104,6 +104,31 @@ against the real component, including the unstopped first-level Escape) and `Ren
 - Not covered in happy-dom: real focus/blur order on a pointer press and the native Enter/Space to
   click conversion; they are asserted through native `<button type="button">` entries.
 
+### 49.4a result (tabs)
+
+One shared checklist helper (`src/test/tabsChecklist.ts`, test-only, reusing `press()` from the
+combobox helper) runs nine cases per tablist against the REAL components:
+`DeviceWorkspace.tabs.test.tsx` (the Inspector device tabs, seven tabs) and
+`BusMonitorPanel.tabs.test.tsx` (the Table/Flow view tabs, mounted through the panel's own session
+reattach). Each mounts inside a parent that counts keydowns.
+
+- Semantics today: both tablists are named (device name; the view caption) and carry `tab` roles
+  with exactly one `aria-selected="true"`; roving tabindex (selected 0, others -1); ArrowRight/
+  ArrowLeft **wrap** and **activate at once** (automatic activation) and move focus; the arrows are
+  prevented (no page scroll); Tab is not handled and leaves the tablist; no tab is ever disabled. The
+  Inspector also handles Home/End and puts every panel in the tab order (`tabIndex` 0, hidden ones
+  are not focusable); every Inspector tab has `aria-controls` and its panel `aria-labelledby`.
+- Fixed (one gap, found by the checklist before the fix): the Inspector's last (configuration) tab
+  pointed `aria-controls` at `device-panel-<id>-<last>` while its panel had the id
+  `device-panel-<id>-config`, an orphan reference. The panel id now follows the tab index like the
+  other six (nothing referenced the old id).
+- Pinned as the current policy (not changed): `BusMonitorPanel` ignores Home/End (two tabs); only its
+  selected tab carries `aria-controls`, because the Table panel is not mounted while Flow is shown
+  (the Flow panel stays mounted, hidden); its panels are not tab stops; handled arrows bubble to
+  ancestors and the window (`multiSelection.ts` only acts on Escape, so there is no side effect today).
+- Not covered in happy-dom: the browser's real Tab order out of the tablist is checked through the
+  roving tabindex and the unprevented Tab, not by moving focus.
+
 ## Boundaries
 
 - Web UI only; no domain, server, storage or bus changes.
@@ -142,3 +167,10 @@ Raised by 49.3 (owner, not yet decided; behaviour unchanged meanwhile):
    an `id` shared between `FileMenuSummary` and `FileMenuContent` (an `App` call-site change).
 8. **First-level Escape in the File menu** is not stopped (submenu Escape is): stop it, so it cannot
    reach other page-level Escape handlers?
+
+Raised by 49.4a (owner, not yet decided; behaviour unchanged meanwhile):
+
+9. **Tabs policy:** keep automatic activation with wrap-around in both tablists (the APG allows
+   both), and add Home/End to the two-tab bus monitor view switch (the APG lists them as optional)?
+10. **`aria-controls` on unselected bus monitor view tabs:** keep omitting it (the Table panel is
+    not mounted then), or always mount both panels?

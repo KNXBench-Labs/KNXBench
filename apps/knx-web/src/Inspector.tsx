@@ -1146,7 +1146,7 @@ export function DeviceWorkspace(props: {
       {(instructionsOpened || tab === instructionsTab) && <DeviceInstructionsPanel deviceId={detail.id} tree={tree}
         onApplied={onApplied} onDirtyChange={props.onInstructionDraftChange} />}
     </div>
-    <div role="tabpanel" id={`device-panel-${detail.id}-config`} aria-labelledby={`device-tab-${detail.id}-${tabs.length - 1}`} hidden={tab !== tabs.length - 1} tabIndex={0}>
+    <div role="tabpanel" id={`device-panel-${detail.id}-${tabs.length - 1}`} aria-labelledby={`device-tab-${detail.id}-${tabs.length - 1}`} hidden={tab !== tabs.length - 1} tabIndex={0}>
       {tab === tabs.length - 1 && <DeviceConfigPanel deviceId={detail.id} tree={tree} onApplied={onApplied} />}
     </div>
   </section>;

@@ -112,6 +112,21 @@ Quoted or closely paraphrased from the fetched pages; not independently verified
 - Our own open point, not a Tauri statement and not a legal conclusion: `cargo-xwin` downloads the Windows SDK, which carries its own licence terms; whether and by whom they are accepted is a pending owner decision.
 - No signing cost or certificate choice is assumed.
 
+## Slice 2 status (23 November 2026; implemented on a work branch, not yet reviewed or published)
+
+Owner selected an isolated cross-build and explicitly authorised the Microsoft SDK
+download after the licence terms were inspected. Details, versions, quoted terms and
+the open licence-scope point: `docs/research/2026-11-23-windows-cross-build.md`.
+cargo-xwin 0.24.1 / xwin 0.10.0 with host clang-cl give a `cargo check` cross toolchain
+(CRT 14.44.17.14, SDK 10.0.26100, task-local, never committed). `ring` and
+`libsqlite3-sys` C build scripts now pass. `icons/icon.ico` was generated from the
+project's own 128 and 256 px PNGs (`tools/make_windows_icon.py`, no resampling) and
+`tauri-build` passes. Result: 13/20 packages exit 0 (knx-edit and knx-store newly
+reached), workspace and 7 packages exit 101 with Rust source errors only: knx-productdb
+(43, Unix `std::os::unix`/`rustix::fs` in `managed_catalogue`, `catalogue_copy/destination`
+and `managed_apply`) and xtask (2, AppImage). knx-app/cli/desktop/mcp/server are blocked
+behind knx-productdb. Still not done: link, run, resource tool, native acceptance.
+
 ## Acceptance (measurable)
 
 1. `cargo check --workspace --target x86_64-pc-windows-msvc --locked` exits 0 in a documented environment.
@@ -122,7 +137,7 @@ Quoted or closely paraphrased from the fetched pages; not independently verified
 
 ## Remaining decisions
 
-- Toolchain for slice 2: native Windows 11 machine or CI runner, or isolated SDK download (licence acceptance) — owner.
+- Toolchain for slice 2: decided, isolated SDK download (owner, 23 November 2026); open: whether a release build may link the downloaded CRT, and native Windows for acceptance.
 - Windows equivalents for descriptor-pinned directory writes, owner-only ACLs and locks (ADR needed).
 - WebView2 failure watcher design; installer format; signing (cost and certificate undecided).
 - Whether `ring`/`libsqlite3-sys` stay as they are (expected, not verified, to build with MSVC `cl`).

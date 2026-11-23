@@ -1,4 +1,4 @@
-← Previous: [Web and Docker deployment](11-web-and-docker.md) · [Manual index](../README.md)
+← Previous: [Windows Docker Desktop guide](windows-docker-desktop.md) · [Manual index](../README.md)
 
 # AI agents over MCP
 
@@ -217,4 +217,4 @@ The design and its limits are recorded in
 [ADR-0090](../../adr/0090-read-only-mcp-adapter.md) and
 [known limitation §165](../../KNOWN_LIMITATIONS.md#165-the-mcp-adapter-reads-saved-files-only-and-its-visibility-ignores-access).
 
-[Manual index](../README.md) · Next: [Keyboard shortcuts](../reference/01-keyboard-shortcuts.md) →
+← Previous: [Windows Docker Desktop guide](windows-docker-desktop.md) · [Manual index](../README.md) · Next: [Keyboard shortcuts](../reference/01-keyboard-shortcuts.md) →

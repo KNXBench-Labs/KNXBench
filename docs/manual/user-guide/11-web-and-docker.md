@@ -1,4 +1,4 @@
-← Previous: [The command line](10-command-line.md) · [Manual index](../README.md)
+← Previous: [The command line](10-command-line.md) · [Manual index](../README.md) · Next: [Windows Docker Desktop guide](windows-docker-desktop.md) →
 
 # Web and Docker deployment
 
@@ -91,7 +91,10 @@ Every release tag builds that same Dockerfile for `linux/amd64` and
 `linux/arm64` (a Raspberry Pi 4/5 with a 64-bit OS, for example), smoke-tests
 it and publishes it as
 [`knxbench/knxbench-server`](https://hub.docker.com/r/knxbench/knxbench-server)
-([ADR-0097](../../adr/0097-docker-hub-release-image.md)):
+([ADR-0097](../../adr/0097-docker-hub-release-image.md)). **On Windows**, use
+the [Windows Docker Desktop guide](windows-docker-desktop.md) for a complete
+beginner walkthrough; the Linux commands below remain the canonical
+host-network recipe:
 
 ```bash
 docker pull knxbench/knxbench-server:latest
@@ -612,6 +615,10 @@ argument, because command arguments are visible to every user on the machine:
 knx-server --hash-password <<<'your password'
 ```
 
+In **Windows PowerShell**, pipe the masked input to the published image instead;
+the complete recipe is in the
+[Windows Docker Desktop guide](windows-docker-desktop.md#4-download-the-image-and-choose-your-login-password).
+
 It prints a single line beginning `$pbkdf2-sha256$i=600000$`. Put that in
 `KNX_AUTH_PASSWORD_HASH`. With the container:
 
@@ -794,4 +801,4 @@ checks it and does a save-and-reopen cycle:
 apps/knx-server/scripts/smoke-test.sh
 ```
 
-[Manual index](../README.md) · Next: [AI agents over MCP](12-ai-agents.md) →
+[Manual index](../README.md) · Next: [Windows Docker Desktop guide](windows-docker-desktop.md) →

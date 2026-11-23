@@ -33,11 +33,11 @@ export interface MenuAdapter {
   pressOutside(): Promise<void>;
   /** `menu-button`: the trigger announces the popup and its state. `none`: a context menu has no persistent trigger. */
   popupTrigger: "menu-button" | "none";
-  /** `named`: the menu carries an accessible name. `unnamed`: it does not (current policy, owner question). */
-  menuName: "named" | "unnamed";
-  /** `propagates`: the first-level Escape is not stopped. `stops`: it is stopped and prevented. */
-  escape: "propagates" | "stops";
-  /** `continues`: Tab closes the menu and is left to the browser. `swallows`: Tab closes it and is prevented. */
+  /**
+   * `continues`: Tab closes the menu and is left to the browser (menu button). `swallows`: Tab closes it
+   * and is prevented, focus returning to the opener (a context menu has no persistent trigger). Both are
+   * decided rules, not an inconsistency (owner, 23 November 2026, question 6).
+   */
   tab: "continues" | "swallows";
   submenu?: SubmenuAdapter;
 }
@@ -86,7 +86,7 @@ export function describeMenuChecklist(adapter: MenuAdapter) {
       await press(focused() as HTMLElement, "End");
       expect(focused()).toBe(live[live.length - 1]);
       if (live.length >= 2) {
-        // Current policy (owner question): the arrows wrap around, the APG menu pattern allows both.
+        // Decided rule (owner, 23 November 2026, question 6): the arrows wrap around, the APG menu pattern allows both.
         await press(focused() as HTMLElement, "ArrowDown");
         expect(focused()).toBe(live[0]);
         await press(focused() as HTMLElement, "ArrowUp");
@@ -127,24 +127,20 @@ export function describeMenuChecklist(adapter: MenuAdapter) {
       }
     });
 
-    it("closes on Escape, returns focus to the trigger, and follows the first-level propagation policy", async () => {
+    it("closes on Escape, returns focus to the trigger, and stops the key so one Escape closes one level", async () => {
       await adapter.open();
       parentKeys = 0; windowKeys = 0;
       const event = await press(document.activeElement as HTMLElement, "Escape");
       expect(adapter.menu()).toBeNull();
       expect(document.activeElement).toBe(adapter.trigger());
-      if (adapter.escape === "stops") {
-        expect(event.defaultPrevented).toBe(true);
-        expect(parentKeys).toBe(0);
-        expect(windowKeys).toBe(0);
-      } else {
-        // Current policy (owner question): the first-level Escape of the File menu is neither prevented nor stopped.
-        expect(parentKeys).toBe(1);
-        expect(windowKeys).toBe(1);
-      }
+      // Decided rule (owner, 23 November 2026, question 8): the first-level Escape is prevented and
+      // stopped, so no page-level Escape handler (the multi-selection clear, say) sees it.
+      expect(event.defaultPrevented).toBe(true);
+      expect(parentKeys).toBe(0);
+      expect(windowKeys).toBe(0);
     });
 
-    it("closes on Tab with focus on the trigger and leaves the key as the policy says", async () => {
+    it("closes on Tab with focus on the trigger and leaves the key as the menu's decided rule says", async () => {
       await adapter.open();
       const event = await press(document.activeElement as HTMLElement, "Tab");
       expect(adapter.menu()).toBeNull();
@@ -160,7 +156,7 @@ export function describeMenuChecklist(adapter: MenuAdapter) {
       expect(adapter.menu()).toBeNull();
     });
 
-    it("exposes menu and menuitem roles, the trigger's popup state and the menu's name", async () => {
+    it("exposes menu and menuitem roles, the trigger's popup state, the menu's name and its link to the trigger", async () => {
       const trigger = adapter.trigger();
       if (adapter.popupTrigger === "menu-button") {
         expect(trigger.getAttribute("aria-haspopup")).toBe("menu");
@@ -175,11 +171,17 @@ export function describeMenuChecklist(adapter: MenuAdapter) {
       expect(adapter.items().length).toBeGreaterThan(0);
       for (const entry of adapter.items()) expect(entry.getAttribute("role")).toBe("menuitem");
       if (adapter.popupTrigger === "menu-button") expect(trigger.getAttribute("aria-expanded")).toBe("true");
+      // Decided rule (owner, 23 November 2026, question 7): every menu is named, and a menu button
+      // and its menu point at each other (aria-controls / aria-labelledby).
       const labelledBy = menu.getAttribute("aria-labelledby");
       const name = menu.getAttribute("aria-label")
         ?? (labelledBy ? document.getElementById(labelledBy)?.textContent : undefined);
-      if (adapter.menuName === "named") expect(name?.trim()).toBeTruthy();
-      else expect(name).toBeUndefined();
+      expect(name?.trim()).toBeTruthy();
+      if (adapter.popupTrigger === "menu-button") {
+        expect(menu.id).not.toBe("");
+        expect(trigger.getAttribute("aria-controls")).toBe(menu.id);
+        expect(document.getElementById(labelledBy!)).toBe(trigger);
+      }
     });
 
     const sub = adapter.submenu;

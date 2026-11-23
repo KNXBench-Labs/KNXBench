@@ -38,8 +38,8 @@ function ChildOwnedEntry({ onClick }: { onClick: () => void }) {
 function Menu({ h, extra }: { h: Handlers; extra?: ReactNode }) {
   return (
     <details className="file-menu" open onKeyDown={(e) => { if (e.key === "Escape") h.summaryEscape(); }}>
-      <FileMenuSummary>File</FileMenuSummary>
-      <FileMenuContent>
+      <FileMenuSummary menuId="file-menu-test">File</FileMenuSummary>
+      <FileMenuContent menuId="file-menu-test">
         <FileMenuItem onClick={h.newProject}>New project</FileMenuItem>
         <FileMenuItem onClick={h.open} disabled>Open project</FileMenuItem>
         <div role="separator" />

@@ -1981,26 +1981,65 @@ describe("App — the File menu by keyboard alone", () => {
     await act(async () => root.unmount());
   });
 
-  // CURRENT-POLICY pin (WP-49 owner question 8, undecided): a first-level Escape closes the File
-  // menu but is NOT stopped, so window listeners still see it. Change this test with the decision.
-  it("lets a first-level File menu Escape reach window listeners (current policy, owner question 8)", async () => {
+  // Decided rule (owner, 23 November 2026, WP-49 question 8): a first-level Escape closes the File
+  // menu, is prevented and stopped, and focus returns to the File control: one Escape closes exactly
+  // one level, so no window-level Escape handler (the multi-selection clear) sees it.
+  it("stops a first-level File menu Escape before it reaches window listeners (owner decision, question 8)", async () => {
     const root = await renderApp();
     const summary = await openFileMenu();
     const menu = host!.querySelector<HTMLElement>(".file-menu")!;
     const seen: KeyboardEvent[] = [];
     const listener = (e: KeyboardEvent) => seen.push(e);
     window.addEventListener("keydown", listener);
+    const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
     try {
       await act(async () => {
-        menu.querySelector<HTMLElement>("[data-file-menu-item]")!
-          .dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+        menu.querySelector<HTMLElement>("[data-file-menu-item]")!.dispatchEvent(escape);
       });
     } finally {
       window.removeEventListener("keydown", listener);
     }
-    expect(seen.map((e) => e.key)).toEqual(["Escape"]);
+    expect(seen).toEqual([]);
+    expect(escape.defaultPrevented).toBe(true);
     expect(menu.hasAttribute("open")).toBe(false);
     expect(document.activeElement).toBe(summary);
+    await act(async () => root.unmount());
+  });
+
+  // Positive control for the test below: the same Escape, sent where no menu stops it, does clear
+  // the multi-selection through the real `multiSelection.ts` window handler.
+  it.each([
+    { name: "survives a File menu Escape", target: "menu", survives: true },
+    { name: "is cleared by an Escape that no menu stops (positive control)", target: "window", survives: false },
+  ] as const)("a device multi-selection $name", async ({ target, survives }) => {
+    const original = treeWithDragTargets();
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxdb");
+    apiMock.openProject.mockResolvedValue(original);
+    const root = await renderApp();
+    await act(async () => host!.querySelector<HTMLButtonElement>('[aria-labelledby="welcome-native-title"]')!.click());
+    await act(async () => findButton("Devices").click());
+    await act(async () => host!.querySelector<HTMLInputElement>(".devices-table tbody input")!.click());
+    expect(host!.querySelector(".bulk-action-toolbar"), "the selection exists before Escape").not.toBeNull();
+    await openFileMenu();
+    const entry = host!.querySelector<HTMLElement>(".file-menu [data-file-menu-item]")!;
+    const source: EventTarget = target === "menu" ? entry : window;
+    await act(async () => { source.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })); });
+    expect(host!.querySelector(".bulk-action-toolbar") !== null).toBe(survives);
+    await act(async () => root.unmount());
+  });
+
+  // Decided rule (owner, 23 November 2026, WP-49 question 7): the first-level menu is named by the
+  // File control and the control announces the menu it controls, as the submenus already do.
+  it("names the first-level File menu by the File control and links the control to it (owner decision, question 7)", async () => {
+    const root = await renderApp();
+    const summary = await openFileMenu();
+    const menu = host!.querySelector<HTMLElement>(".file-menu-content")!;
+    expect(menu.id).not.toBe("");
+    expect(summary.getAttribute("aria-controls")).toBe(menu.id);
+    expect(menu.getAttribute("aria-labelledby")).toBe(summary.id);
+    expect(summary.id).not.toBe("");
+    expect(document.getElementById(summary.id)).toBe(summary);
+    expect(summary.textContent?.trim()).toMatch(/^File/);
     await act(async () => root.unmount());
   });
 

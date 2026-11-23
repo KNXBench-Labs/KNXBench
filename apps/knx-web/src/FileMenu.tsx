@@ -81,11 +81,14 @@ export function FileMenuItem(props: ButtonHTMLAttributes<HTMLButtonElement>) {
   return <button {...useFileMenuItemProps()} type="button" {...props} />;
 }
 
+/** The id of the File control; the first-level menu names itself by it (owner decision, 23 November 2026). */
+const fileMenuControlId = (menuId: string) => `${menuId}-control`;
+
 /**
  * The File control of the menu button: a `<summary>` that announces its popup and whether it is
  * open, and that opens the menu onto its first (ArrowDown, Enter, Space) or last (ArrowUp) entry.
  */
-export function FileMenuSummary({ children }: { readonly children: ReactNode }) {
+export function FileMenuSummary({ menuId, children }: { readonly menuId: string; readonly children: ReactNode }) {
   const ref = useRef<HTMLElement | null>(null);
   const [expanded, setExpanded] = useState(false);
   const pending = useRef<"first" | "last" | null>(null);
@@ -128,19 +131,21 @@ export function FileMenuSummary({ children }: { readonly children: ReactNode }) 
   }
 
   return (
-    <summary ref={ref} aria-haspopup="menu" aria-expanded={expanded} onKeyDown={handleKeyDown} onClick={handleClick}>
+    <summary ref={ref} id={fileMenuControlId(menuId)} aria-haspopup="menu" aria-expanded={expanded} aria-controls={menuId} onKeyDown={handleKeyDown} onClick={handleClick}>
       {children}
     </summary>
   );
 }
 
 interface FileMenuContentProps {
+  /** The id shared with `FileMenuSummary`: the menu's own id, which the File control controls. */
+  readonly menuId: string;
   readonly children: ReactNode;
   readonly onClick?: (e: MouseEvent<HTMLDivElement>) => void;
 }
 
 /** The File menu's list: owns which submenu is open, the keyboard paths and the hover intent. */
-export function FileMenuContent({ children, onClick }: FileMenuContentProps) {
+export function FileMenuContent({ menuId, children, onClick }: FileMenuContentProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState<OpenSubmenu | null>(null);
   const openRef = useRef(open);
@@ -355,8 +360,10 @@ export function FileMenuContent({ children, onClick }: FileMenuContentProps) {
     <FileMenuContext.Provider value={state}>
       <div
         ref={ref}
+        id={menuId}
         className="file-menu-content"
         role="menu"
+        aria-labelledby={fileMenuControlId(menuId)}
         onClick={onClick}
         onKeyDown={handleKeyDown}
         onPointerDownCapture={press}

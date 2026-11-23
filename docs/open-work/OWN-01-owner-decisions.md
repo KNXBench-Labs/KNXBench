@@ -2,6 +2,18 @@
 
 **Status:** Decisions recorded; remaining evidence and owner review pending. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
+## Decision recorded — 23 November 2026 (WP-49 open questions 4-8)
+
+Grilling round on the WebUI behaviour pins raised by WP-49.2 and 49.3 (questions 9-11, raised by 49.4a, stay open).
+
+- **Q4 Search and CommandPalette:** keep "the first Escape closes the overlay, Tab stays in the dialog" (APG dialog pattern); their always-visible lists get no collapse step.
+- **Q5 `aria-selected`:** keep marking the highlighted option (APG single-select combobox semantics). ADR-0191's Fallback section is amended: for single-select comboboxes the APG semantics apply, not ui-sdk's chosen-plus-highlight split.
+- **Q6 File menu and context menu:** arrow wrap-around stays (APG allows it). The rename context menu keeps swallowing Tab and returning focus to its opener (it has no persistent trigger); the File menu leaves Tab to the browser. Intended, not an inconsistency.
+- **Q7 name the first-level File menu:** fix. One id is shared by `FileMenuSummary` and `FileMenuContent`; the menu is `aria-labelledby` the File control and the control carries `aria-controls`.
+- **Q8 first-level File menu Escape:** fix. It is prevented and stopped, so one Escape closes exactly one level and the window Escape handler of `multiSelection.ts` no longer clears the multi-selection. The fix sits at the File menu only; `multiSelection.ts`, `Overlay` and `ModalForeground` are unchanged.
+- **Placement:** these land as their own package WP-49.3b, after 49.4a and before 49.4b.
+- Not authority for releases or bus or device writes.
+
 ## Decision recorded — 23 November 2026 (WP-49 ADR-0191 accepted)
 
 - **ADR-0191 accepted with the fallback.** ui-sdk is **not** added as a

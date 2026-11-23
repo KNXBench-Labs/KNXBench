@@ -77,7 +77,7 @@ export function useFileMenuItemProps(): Readonly<Record<string, string>> {
 
 /** A button the File block owns, declared as a menu entry. */
 export function FileMenuItem(props: ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button {...useFileMenuItemProps()} {...props} />;
+  return <button type="button" {...useFileMenuItemProps()} {...props} />;
 }
 
 /**

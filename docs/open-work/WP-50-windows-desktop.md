@@ -40,13 +40,20 @@ These are mechanisms to port, not permission to weaken them.
 
 ## Slices (sequential)
 
-1. **Feasibility probe and documentation (this slice: probe done, pending review/gate and publication).**
+1. **Feasibility probe and documentation: published via PR #146, main `bce9f16f7`; independent review findings fixed, selected documentation gate accepted.**
 2. Build environment: obtain a Windows-capable C toolchain/SDK in an isolated, authorised way, or a native Windows 11 x64 machine/CI runner; get `cargo check --workspace --target x86_64-pc-windows-msvc` past the C build scripts; add `icon.ico`.
 3. Source portability: fix whatever rustc reports for the Unix-only crates, mechanism by mechanism, each with its own tests and a design note for the Windows security equivalent.
 4. Desktop: WebView2 process-failure handling, `msi`/`nsis` bundle targets, paths policy.
 5. Native acceptance on Windows 11 x64.
 
-## Slice 1 status (23 November 2026; probe done, pending final gate and publication)
+## Slice 1 status (23 November 2026; probe and dossier published)
+
+PR #146 merged as `bce9f16f7`. The selected documentation gate passed all ten
+stages on `b58f06daf`; its receipt was carried to the tree-identical main-first
+merge after confirming the unchanged comparison base. Frozen inputs and checked
+untouched user data were verified. No Rust, web or corpus test stage was selected
+for this documentation-only package. Slice 2 is blocked pending selection of the
+Windows build environment or explicit permission for isolated SDK/toolchain setup.
 
 Probe: base `b15363a25`, rustc/cargo 1.98.0 (pinned), target
 `x86_64-pc-windows-msvc` installed via `rustup target add`, host Linux.
@@ -54,9 +61,10 @@ Probe: base `b15363a25`, rustc/cargo 1.98.0 (pinned), target
 Scope of every check: `cargo check` on the **default targets** of each package
 (lib and bin) with the Windows `cfg` only. No `--all-targets`, no tests, no
 build/link, no native or emulated execution. A pass therefore means only that
-the Windows-cfg code type-checks; Linux-only code stays compiled under its own
-`cfg` (knx-net passed with 14 `tpuart.rs`-related warnings, for example). It is
-not a Windows build.
+the Windows-cfg code type-checks; Linux-only implementations excluded by `cfg`
+are not checked for Windows. The knx-net check reported 14 dead-code warnings
+related to TP-UART; that is not evidence of Windows serial support. It is not a
+linked Windows build.
 
 ### Evidence and exit codes
 

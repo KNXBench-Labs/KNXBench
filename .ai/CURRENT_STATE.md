@@ -1,8 +1,8 @@
 # Restart snapshot — Windows spike and parallel tracks (observed 2026-11-23)
-## WP-50 Windows desktop feasibility (RUNNING; owner WebUI Windows coordinator; observed 2026-11-23)
-- Owner Go: document and start the Windows 11 x64 desktop spike, KNXnet/IP first, no USB/serial. Branch `work/windows-spike-20261123` starts at origin/main `b15363a25`; root checkout and other tracks remain untouched.
-- First slice: document scope and acceptance, attempt a real Windows-target build and record reproducible blockers. No Windows support/release claim until a native project open/edit/save/reopen run is verified. No bus, hardware, existing analysis VM or deployment access.
-- Implementation proceeds through sequential subagents; coordinator owns review, gate, merge and publication. No acceptance or Windows binary yet.
+## WP-50 Windows desktop feasibility (BLOCKED; owner WebUI Windows coordinator; observed 2026-11-23)
+- Owner Go: Windows 11 x64 local Tauri desktop spike, KNXnet/IP first, no USB/serial. Slice 1 probe/dossier published through PR #146, main `bce9f16f7`; independent review findings fixed and selected documentation gate 10/10 green on `b58f06daf`, carried to its tree-identical main-first merge.
+- Actual MSVC-target default checks: 11/20 Cargo packages exit 0; 9/20 and workspace exit 101 on missing C toolchain; keep-going also exposes missing `icon.ico`. Raw subprocess exits and logs retained under `<profile-scratch>/windows-spike-20261123/`. No binary, link or native Windows acceptance.
+- NEXT needs owner selection of a native Windows build environment or explicit isolated Windows SDK/toolchain setup permission. See `docs/open-work/WP-50-windows-desktop.md`. No bus, hardware, existing analysis VM or deployment access; root and foreign tracks preserved.
 ## WP-49 ui-sdk (RUNNING 49.4a tabs; owner WebUI; observed 2026-11-23)
 - ADR-0191 accepted with the fallback (no dependency). 49.2 comboboxes PR #143 (main `bcf205b72`), 49.3 menus PR #144 (main `790468206`), each with independent review, mutant proof and a green change-scoped package gate.
 - 49.4 runs as sequential subagent slices per family: 4a tabs (Inspector, BusMonitorPanel), 4b toolbars (TelegramFlowView, InstructionEditor), 4c dialogs (Overlay shell and its consumers). Owner questions 4-8 in WP-49 stay open; behaviour unchanged.

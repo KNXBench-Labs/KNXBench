@@ -50,8 +50,8 @@ files (tests excluded) carry 6 `role="dialog"`, 4 `role="menu"`,
 | 49.3 | Fallback, menus: the same checklist for `FileMenu` and the `RenameWorkbench` context menu (dismissal, focus return to the trigger, roving focus, submenus) | Delivered, 23 November 2026, PR #144 (main `790468206`; see below) |
 | 49.4a | Fallback, tabs: the checklist for the tablists in `Inspector` and `BusMonitorPanel` | Delivered, 23 November 2026, PR #145 (main `b15363a25`; see below) |
 | 49.3b | Apply the owner decisions on questions 4-8 (23 November 2026): name the first-level File menu, stop its first-level Escape, turn the other pins into decided rules | Delivered, 23 November 2026, PR #147 (main `f3836adc9`; see below) |
-| 49.4b | Fallback, toolbars: the checklist for `TelegramFlowView` and `features/rtf/InstructionEditor` | Implemented on a branch, 23 November 2026 (review and gate pending; see below) |
-| 49.4c | Fallback, dialogs: the checklist for the `Overlay` shell and its dialog consumers (`NewProjectDialog`, `LoginScreen`, `RenameWorkbench`, the `App` dialogs) | After 49.4b |
+| 49.4b | Fallback, toolbars: the checklist for `TelegramFlowView` and `features/rtf/InstructionEditor` | Delivered, 23 November 2026, PR #148 (main `78b08f298`; see below) |
+| 49.4c | Fallback, dialogs: the checklist for the `Overlay` shell and its dialog consumers (`NewProjectDialog`, `LoginScreen`, `RenameWorkbench`, the `App` dialogs) | Delivered pending review, 23 November 2026 (review and gate pending; see below) |
 
 ### 49.2 result (comboboxes)
 
@@ -166,6 +166,62 @@ parent that counts keydowns; toggle state is re-checked after every state change
 
 Owner question 12 (toolbar tab order) is listed under Open decisions.
 
+### 49.4c result (dialogs)
+
+One shared checklist helper (`src/test/dialogChecklist.ts`, test-only, reusing `press()`) runs against
+the REAL components: `Overlay.dialog.test.tsx` (the shared `Overlay` shell through a small consumer, in
+two variants: `aria-labelledby` with first-focusable initial focus and a nested dialog, and `aria-label`
+with `initialFocusRef` and `restoreFocusRef`), `RenameWorkbench.dialog.test.tsx` and
+`LoginScreen.dialog.test.tsx` (initial, expired and signed-out reasons). `TelegramFlowView`'s maximized
+section stays pinned in 49.4b. Each mounts inside a parent that counts keydowns.
+
+- Semantics today: every dialog is `role="dialog"` with `aria-modal="true"` and exactly one name source
+  (`aria-labelledby` to a visible title, or `aria-label`). `aria-describedby` is wired only on the login
+  screen (its notice, for the expired and signed-out reasons); no `Overlay` consumer wires one (recorded,
+  not added). The props type allows an `Overlay` with neither name prop, so `overlayNames.test.ts` scans
+  the source instead: all 43 production `<Overlay>` tags carry exactly one of `label` (7: Search,
+  CommandPalette, FsPicker, LogEntryDetails, RenameWorkbench, two in ThemePackManager) or `labelledBy`
+  (36; 31 literal ids, each existing in the same file, 5 dynamic: DocumentationDialog,
+  FlowImageExportDialog, NoteDispositionDialog, ProjectDiffPanel, UnsavedChangesDialog).
+- Initial focus (pinned per shell): the `initialFocusRef` target if given (22 tags), else the first
+  tabbable control, else the panel itself (`tabIndex=-1`, not a tab stop). Rename focuses its name field,
+  the login screen its password field (own effect).
+- Trap: `Overlay` wraps Tab on the last stop and Shift+Tab on the first (prevented), leaves mid-list Tab
+  to the browser and pulls focus back in when it has left the dialog. A nested `Overlay` keeps Tab inside
+  the top dialog. The login screen has no trap of its own.
+- Escape: `Overlay` stops it and closes, but does NOT call `preventDefault` (owner question 14). The
+  rename name field handles Escape itself (prevented and stopped). Dialogs that refuse to close while
+  busy (`onClose` ignored): RenameWorkbench (`pending`, pinned), ProjectHistoryDialog, LogExportDialog,
+  NameRecipeDialog, DeviceComparisonDialog (`adopting`; static grep only, not mounted here). The key is
+  still stopped while busy. The login screen handles no Escape: it stays, the key propagates.
+- Background: while an `Overlay` is open everything outside its branch is `inert` and `aria-hidden`,
+  restored on close (nested dialogs: only the top is active). The login screen isolates nothing itself;
+  `AuthGate` makes the app `inert` (pinned in `AuthGate.test.tsx`). No scroll lock exists in either
+  (pinned: body and root `overflow` untouched; owner question 16).
+- Stacking: Escape closes only the top dialog and focus returns to the control that opened it inside the
+  lower one; the next Escape closes the lower one (nested-in-tree layout).
+- Fixed (one gap, found by the RenameWorkbench checklist run): focus did not return to the opener of a
+  dialog whose child focuses itself on mount (`autoFocus` in `RenameNameField`, or a mount effect). The
+  shell read the opener in its effect, after that child had already taken focus, so it "restored" to the
+  vanished child. The shell now reads the opener during its first render. Regression tests: the
+  RenameWorkbench checklist case and two `Overlay` cases (autoFocus, mount effect), with the existing
+  variants as positive controls; mutant (revert the fix) fails five tests. Behaviour change: after
+  closing such a dialog, focus now lands on its opener instead of the page body, or on `restoreFocusRef`
+  where the opener is gone.
+- Opener gone: `restoreFocusRef` (used by LogEntryDetails and ThemePackManager) takes focus; without it
+  focus falls to the page.
+- Not covered in happy-dom: real focus order on pointer press and real Tab traversal; Tab wrapping is
+  asserted through the prevented event and the focus call.
+- Review follow-ups (closed): the focus-pull-in case now really starts outside the dialog for both Tab and
+  Shift+Tab; an `Overlay` with no focusable item prevents Tab and keeps focus on the panel; `overlayNames.test.ts`
+  pins the exact scan size (40 files, 43 tags; update both when adding or removing a dialog); the login
+  password field's `aria-describedby="login-error"` is pinned while an error shows and absent otherwise. Each
+  has a mutant that now fails by name. The `RenameWorkbench` context-menu path is pinned as current policy
+  (owner question 17).
+- Review evidence: the Playwright comparison of candidate against base was identical. Default lane 184/184
+  passing on both sides with the same 12 environmental `theme-manager` 403 failures (symlinked `node_modules`
+  fonts outside the Vite fs allow-list in archive copies); devices 88/88, catalogue 24/24, dialogs 22/22.
+
 ### 49.3b result (owner decisions 4-8)
 
 - Q7 fixed: `FileMenuSummary` and `FileMenuContent` take one required `menuId`; the menu carries that
@@ -235,3 +291,16 @@ Raised by 49.4b (owner, not yet decided; behaviour unchanged meanwhile):
 13. **Instruction editor toolbar name:** the formatting toolbar is named `copy.rendered` ("Rendered
     preview"), the same text as the preview heading (`InstructionEditor.tsx` lines 119 and 121).
     Give the toolbar its own name (e.g. "Formatting")? Behaviour unchanged meanwhile.
+
+Raised by 49.4c (owner, not yet decided; behaviour unchanged meanwhile):
+
+14. **Escape default:** `Overlay` stops Escape but does not `preventDefault` it (only the rename field does).
+    Prevent it in the shell so the browser's own Escape action (e.g. leaving fullscreen) does not also fire?
+15. **Required dialog name:** `Overlay`'s props allow neither `label` nor `labelledBy`; only the source scan
+    in `overlayNames.test.ts` enforces a name. Make the props a union type so a missing name fails to compile?
+16. **Scroll lock:** neither `Overlay` nor the login screen locks page scroll behind the dialog. Add one, or keep
+    relying on the inert background?
+17. **Focus after the rename dialog from the context menu:** opening it from the context-menu item (pointer or
+    menu path) ends with focus on `<body>` after close, on base and on this change alike, because the menu item
+    unmounts and `RenameWorkbench` passes no `restoreFocusRef`. Pass the tree row as `restoreFocusRef`? Pinned
+    as current policy in `RenameWorkbench.dialog.test.tsx`; behaviour unchanged meanwhile.

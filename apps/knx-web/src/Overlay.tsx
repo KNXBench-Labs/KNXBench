@@ -82,11 +82,14 @@ export default function Overlay(props: {
   const foreground = useModalForeground();
   const leaseRef = useRef<ReturnType<typeof isolateModalBackground> | null>(null);
   const lastFocusRef = useRef<HTMLElement | null>(null);
+  // The opener is read during render: a child's `autoFocus` or mount effect moves focus into the
+  // dialog during the commit, before this component's own effect runs.
+  const [opener] = useState(() => (typeof document === "undefined" ? null : document.activeElement as HTMLElement | null));
 
   // Keep the original opener and stack position for the whole retained lifetime.
   // Foreground changes suspend isolation, not the dialog or its draft/operation.
   useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
+    const previous = opener;
     const panel = panelRef.current;
     const focus = () => {
       if (!panel) return;

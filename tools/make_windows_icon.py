@@ -41,6 +41,9 @@ def ico_frames(ico):
 
 
 def main(argv):
+    if any(arg != "--check" for arg in argv):
+        sys.stderr.write("usage: make_windows_icon.py [--check]\n")
+        return 2
     images = [(ICON_DIR / name).read_bytes() for name in SOURCES]
     target = ICON_DIR / "icon.ico"
     ico = build_ico(images)

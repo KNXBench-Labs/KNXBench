@@ -6,37 +6,57 @@ WP-50 slice 2. Date of source inspection: 2026-11-23. Host Linux x86_64, Rust
 
 ## Sources and terms
 
-- cargo-xwin 0.24.1 (<https://github.com/rust-cross/cargo-xwin>, MIT): its README
-  states that using it means accepting the licence at
-  <https://go.microsoft.com/fwlink/?LinkId=2086102>; prerequisite is clang, optionally
-  llvm-tools.
-- xwin 0.10.0 (<https://github.com/Jake-Shadle/xwin>, MIT/Apache-2.0): downloads
-  the MSVC CRT and Windows SDK from Microsoft's Visual Studio channel manifest
-  (default manifest version 17) and prompts for the same licence (`--accept-license`
-  / `XWIN_ACCEPT_LICENSE=1` skips the prompt).
-- The fwlink redirects to <https://visualstudio.microsoft.com/license-terms/mlt031519/>,
-  "Microsoft Visual Studio 2019 Remote Debugger, Stand-alone Profiler, Intellitrace,
-  Snapshot Debugger, other Debuggers and Build Tools". Its document
-  `VS_2019_DiagnosticBuildTools_ENU.1033.docx` (sha256
-  `03c90f7595dd03827e3944af29c5647598a8ce3ef0c97d3e1f99342f73a786b1`) was read in full.
-  Relevant text, quoted:
-  - "You may install and use any number of copies of the software to use solely with
-    Visual Studio Community, Visual Studio Professional, and Visual Studio Enterprise,
-    to develop and test your applications."
-  - "You may copy and install files from the software onto your build devices ...
-    You and others in your organization may use these files on your Build Devices
-    solely to compile, build, and verify applications developed by using the software ..."
-  - Not permitted: "share, publish, rent, or lease the software; or provide the software
-    as a stand-alone offering or combine it with any of your applications for others to
-    use, or transfer the software or this agreement to any third party."
-- **Open point, not a legal conclusion.** The terms linked by the tools are the
-  VS 2019 Build Tools terms, while xwin fetches the VS 2022 (17.x) channel content.
-  Whether using the downloaded CRT/SDK without an installed Visual Studio edition
-  falls under "solely with Visual Studio ..." / "Build Devices" is not settled by the
-  text; the owner authorised the isolated local setup knowing this. Consequences kept:
-  the SDK/CRT stays in a task-local cache, is never committed, bundled or published,
-  and no artifact built here is offered as a redistributable SDK component. Linking
-  the CRT into a release binary is a separate question for any release slice.
+Not legal advice and no judgement on what is prohibited. Whether and how the terms
+apply to this use is **unresolved**.
+
+- cargo-xwin 0.24.1 (crates.io source, upstream commit
+  `6d4ebf45c9eb3a749dc097f702efcc5454b61c40` from the crate's `.cargo_vcs_info.json`;
+  repository <https://github.com/rust-cross/cargo-xwin>, MIT): its README says using it
+  means accepting the licence at <https://go.microsoft.com/fwlink/?LinkId=2086102>;
+  prerequisite is clang, optionally llvm-tools.
+- xwin 0.10.0 (crates.io source, upstream commit
+  `251c324d7e662c384100c1adf9bd2c3364348966`; repository
+  <https://github.com/Jake-Shadle/xwin>, MIT/Apache-2.0): downloads the MSVC CRT and
+  Windows SDK from Microsoft's Visual Studio channel manifest (default manifest version
+  17) and prompts for a licence (`--accept-license` / `XWIN_ACCEPT_LICENSE=1` skips it).
+- The open-source licences of these two tools are separate from the proprietary
+  Microsoft components (CRT, SDK) they fetch.
+- The fwlink in the cargo-xwin README redirects to
+  <https://visualstudio.microsoft.com/license-terms/mlt031519/> (Visual Studio 2019
+  Remote Debugger, ... and Build Tools; document
+  `VS_2019_DiagnosticBuildTools_ENU.1033.docx`, sha256
+  `03c90f7595dd03827e3944af29c5647598a8ce3ef0c97d3e1f99342f73a786b1`). Its
+  use grant is tied to Visual Studio Community, Professional or Enterprise.
+- The manifest that xwin fetched lists `Microsoft.VisualStudio.Product.BuildTools` with
+  licence link `LinkId=2179911`, which redirects to
+  <https://visualstudio.microsoft.com/license-terms/vs2022-ga-diagnosticbuildtools/>
+  and its document `Visual-Studio-2022-Diagnostic-Build-Tools-Agent-License_Update-March-2024_EN.docx`
+  (sha256 `2f66b86a00e8d9833789897ce23d05a4a2dbea370cf39c8c1098dbc17d0e7bdc`, hash
+  recomputed from the saved local copy). Short excerpts:
+  - "licensed as a supplement to Visual Studio Community, Visual Studio Professional,
+    and Visual Studio Enterprise ... Use of the software requires a valid license to one
+    of the Visual Studio Products."
+  - Build Devices: use "solely to (a) compile, build, and verify (i) applications
+    developed by using Visual Studio Products ..."; a separate paragraph covers
+    open-source C++ dependencies without a Visual Studio licence, limited to minor
+    modifications.
+  - Paraphrase: no sharing, publishing or renting the software, and no stand-alone
+    offering or bundling with applications for others.
+- So the matching 2022 terms do not close the question: it is not settled by the text
+  whether using the downloaded CRT/SDK without an installed Visual Studio edition fits
+  these terms.
+- The manifest also lists a separate "Windows SDK EULA" package for the SDK
+  (10.0.26100). Its terms were **not read** (reading needs a download) and are not
+  covered by the Build Tools paragraphs above.
+- Consent chronology: the owner first approved a general isolated SDK download. The
+  worker only afterwards found the VS2019/VS2022 mismatch and the "solely with Visual
+  Studio" wording and continued instead of stopping; the coordinator then paused all SDK
+  use. The owner has not consented with knowledge of these caveats, and no applicability
+  is presumed authorised. No vendor was contacted.
+- Kept consequences: the SDK/CRT stays in a task-local cache, is never committed,
+  bundled or published; linking the CRT into a release binary is a separate question.
+  Further SDK use (download, cache, check, build, link) is paused until the terms
+  applicability and a suitable environment are decided.
 
 ## Installed tools (task-local, no system or global config change)
 
@@ -87,6 +107,9 @@ return code (not a shell wrapper). Scope: default targets (lib/bin), `cargo chec
 - Toolchain errors remaining: none observed after the setup.
 
 Evidence (task scratch, not tracked): logs and a JSON receipt with argv/return codes.
+The receipt has 22 entries: 2 workspace runs plus 20 per-package checks. The tool
+installation and the xwin cache setup (both exit 0) exist only as logs with an `exit=0`
+trailer, not as receipt entries; no setup was rerun to create them.
 
 ## Not done
 

@@ -143,6 +143,12 @@ page, Tab closes, focus returns to the trigger, pointer press does not blur);
 `aria-haspopup`/`aria-expanded`/`aria-controls` set on every combobox. No new
 package, no bundle change.
 
+*Amendment, 23 November 2026 (owner decision, WP-49 question 5; status stays
+Accepted):* for single-select comboboxes the APG semantics apply, not ui-sdk's
+chosen-plus-highlight split. `aria-selected` marks the highlighted option, as in
+all four hand-written comboboxes today; the "`aria-selected` meaning chosen"
+rule above does not apply to them.
+
 ## Alternatives considered
 
 - **Adopt the dependency for pilots 49.2/49.3** — acceptable under the policy

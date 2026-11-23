@@ -145,7 +145,7 @@ it("renders a bounded window and says how many it shows", async () => {
   expect(optionIds()).toEqual([125]);
 });
 
-// WP-49.2: the shared combobox checklist. Semantics recorded here: `aria-selected` marks the
+// WP-49.2: the shared combobox checklist. Decided semantics (owner, 23 November 2026, question 5): `aria-selected` marks the
 // highlighted option (no separate "chosen" mark); the list is `hidden` and empty when closed.
 let checklistHost: HTMLDivElement; let checklistRoot: Root; let checklistChosen: string[];
 function ChecklistHarness({ onParentKeyDown }: { onParentKeyDown: () => void }) {

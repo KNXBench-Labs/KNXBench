@@ -1,5 +1,5 @@
 /** Root component wiring project state, panels, and toolbars into the KNX Web UI shell. */
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { version as packageVersion } from "../package.json";
 import brandMark from "./assets/knxbench-mark.png";
 import { isTauri, pickOpenPath, pickSavePath } from "./filePicker";
@@ -421,6 +421,8 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   // summary), so closing it means writing that attribute, exactly as the
   // `Escape` handler on the element already does.
   const fileMenuRef = useRef<HTMLDetailsElement | null>(null);
+  // The first-level File menu is named by and controlled from the File control through this id.
+  const fileMenuId = useId();
   // F3. `null` means "whatever the content needs", which is the height
   // these two blocks have always had; a number means the user has moved
   // the separator. `PaneSplitter` measures the element to report an honest
@@ -1661,9 +1663,9 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
         <CatalogueJobsRootNotice openRequest={catalogueActivityOpen} />
         {catalogueRefreshFailed && <span role="alert">{t("catalogJob.refreshDirty")} <button type="button" onClick={() => setCatalogueReadAttempt(n => n + 1)}>{t("catalogJob.retryRefresh")}</button></span>}
         <a className="workbench-brand" href="#" onClick={(e) => { e.preventDefault(); setSettingsOpen(false); setView("overview"); setLogOpen(false); setMonitorOpen(false); }}><img className="workbench-logo" src={brandMark} width="44" height="34" alt="" draggable={false} /><strong>KNXBench</strong></a>
-        <details ref={fileMenuRef} className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
-          <FileMenuSummary>{t("workbench.file")} <span aria-hidden="true">⌄</span></FileMenuSummary>
-          <FileMenuContent onClick={handleFileMenuActivation}>
+        <details ref={fileMenuRef} className="file-menu" onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
+          <FileMenuSummary menuId={fileMenuId}>{t("workbench.file")} <span aria-hidden="true">⌄</span></FileMenuSummary>
+          <FileMenuContent menuId={fileMenuId} onClick={handleFileMenuActivation}>
       {/* UI-03: frequent project actions stay on the first level; the three groups that used to
           be headed sections fold into submenus. Items are the same buttons with the same handlers. */}
       <FileMenuItem onClick={startNewProject}>{t("toolbar.newProject")}</FileMenuItem>

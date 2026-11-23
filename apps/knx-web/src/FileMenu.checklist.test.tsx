@@ -14,7 +14,7 @@ let runs = 0;
 const ran = () => { runs += 1; };
 
 /**
- * The File control as `App` wires it: a closed `<details>` whose Escape closes it and returns focus
+ * The File control as `App` wires it: a closed `<details>` whose Escape closes it, is stopped and returns focus
  * to the summary, and a document `pointerdown` outside it that closes it (App.tsx, F1). Those two
  * handlers live in `App`; `App.test.tsx` pins them against the real component.
  */
@@ -33,9 +33,9 @@ function AppFileMenu({ onParentKey }: { onParentKey: () => void }) {
   return (
     <div onKeyDown={onParentKey}>
       <details ref={ref} className="file-menu"
-        onKeyDown={(e) => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
-        <FileMenuSummary>File</FileMenuSummary>
-        <FileMenuContent>
+        onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}>
+        <FileMenuSummary menuId="app-file-menu">File</FileMenuSummary>
+        <FileMenuContent menuId="app-file-menu">
           <FileMenuItem disabled onClick={ran}>Disabled first</FileMenuItem>
           <FileMenuItem onClick={ran}>New project</FileMenuItem>
           <FileMenuItem onClick={ran}>Open project</FileMenuItem>
@@ -85,8 +85,6 @@ const adapter: MenuAdapter = {
   pressInside: () => pointerDown(summary()),
   pressOutside: () => pointerDown(document.body),
   popupTrigger: "menu-button",
-  menuName: "unnamed",
-  escape: "propagates",
   tab: "continues",
   submenu: {
     trigger: () => host!.querySelector<HTMLElement>('[data-file-submenu-trigger="exchange"]')!,
@@ -97,7 +95,7 @@ const adapter: MenuAdapter = {
 
 describeMenuChecklist(adapter);
 
-describe("FileMenu: current menu policy pins", () => {
+describe("FileMenu: decided menu rules", () => {
   it("opens from Enter or Space on the summary onto the first enabled entry, and ArrowUp onto the last", async () => {
     await adapter.mount(() => {});
     try {

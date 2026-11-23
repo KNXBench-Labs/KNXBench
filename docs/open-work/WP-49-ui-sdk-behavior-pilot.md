@@ -48,7 +48,8 @@ files (tests excluded) carry 6 `role="dialog"`, 4 `role="menu"`,
 | 49.1 | Evaluation spike in a throwaway branch: install the exact beta version, measure bundle-size delta, check React 19 / TypeScript 7 / Vite 8 / happy-dom compatibility, offline and Tauri operation (no runtime fetch), coexistence of its optional `@layer` CSS with the theme tokens and presentations; write an ADR draft with the measured results | Delivered, 23 November 2026; ADR-0191 accepted with the fallback: +48.6 kB gzip for one combobox (+59 kB with a menu), no peer or transitive packages, no network code, 29/29 `tsc` configs clean; the first Escape propagates and the library CSS fails ADR-0022, so the ADR recommends the fallback (spike evidence outside the repo, never merged) |
 | 49.2 | Fallback, comboboxes: apply the ADR-0191 behaviour and testing checklist (focus stays in the input, `aria-activedescendant` follows the highlight, arrows stop at the ends, Enter chooses, first Escape closes and stops, second Escape belongs to the page, Tab closes, pointer press does not blur; `aria-haspopup`/`aria-expanded`/`aria-controls`) to `GroupAddressPicker`, `CommandPalette`, `Search` and `BusComposeForm` without a dependency; fix only gaps the tests expose | Delivered, 23 November 2026, PR #143 (main `bcf205b72`; see below) |
 | 49.3 | Fallback, menus: the same checklist for `FileMenu` and the `RenameWorkbench` context menu (dismissal, focus return to the trigger, roving focus, submenus) | Delivered, 23 November 2026, PR #144 (main `790468206`; see below) |
-| 49.4a | Fallback, tabs: the checklist for the tablists in `Inspector` and `BusMonitorPanel` | Done, awaiting review |
+| 49.4a | Fallback, tabs: the checklist for the tablists in `Inspector` and `BusMonitorPanel` | Delivered, 23 November 2026, PR #145 (main `b15363a25`; see below) |
+| 49.3b | Apply the owner decisions on questions 4-8 (23 November 2026): name the first-level File menu, stop its first-level Escape, turn the other pins into decided rules | Done, awaiting review (see below) |
 | 49.4b | Fallback, toolbars: the checklist for `TelegramFlowView` and `features/rtf/InstructionEditor` | After 49.4a |
 | 49.4c | Fallback, dialogs: the checklist for the `Overlay` shell and its dialog consumers (`NewProjectDialog`, `LoginScreen`, `RenameWorkbench`, the `App` dialogs) | After 49.4b |
 
@@ -131,6 +132,23 @@ reattach). Each mounts inside a parent that counts keydowns.
 - Not covered in happy-dom: the browser's real Tab order out of the tablist is checked through the
   roving tabindex and the unprevented Tab, not by moving focus.
 
+### 49.3b result (owner decisions 4-8)
+
+- Q7 fixed: `FileMenuSummary` and `FileMenuContent` take one required `menuId`; the menu carries that
+  `id` and `aria-labelledby` the File control, the control carries `aria-controls` (`App` passes
+  `useId()`). The menu checklist now asserts a name and the two-way link for every menu button, and
+  `App.test.tsx` asserts both against the real `App`.
+- Q8 fixed: the File control's Escape in `App` also calls `preventDefault` and `stopPropagation`.
+  Regression tests against the real `App`: a window `keydown` listener does not see the Escape, the
+  key is prevented, focus returns to File, and a device multi-selection survives it (positive
+  control: the same Escape sent to the window clears it). The checklist harness copy and
+  `menuChecklist.ts` no longer have a propagating mode.
+- Q4/Q5/Q6 are decided rules, no behaviour change: the combobox and menu checklist tests, adapter
+  fields and comments cite the decision (the `escape`/`menuName` adapter fields are gone; `tab`
+  stays and documents both decided Tab rules). The tabs pins (questions 9-11) are untouched.
+- Open risk: a non-`Overlay` portal child of the File menu (a picker) would now have its Escape stopped
+  at the File control too; the control already closed the menu and took focus for it.
+
 ## Boundaries
 
 - Web UI only; no domain, server, storage or bus changes.
@@ -153,22 +171,16 @@ Answered by the owner on 23 November 2026 ([OWN-01](OWN-01-owner-decisions.md)):
 
 3. **ADR-0191 accepted?** Yes, with the fallback (no dependency), 23 November 2026.
 
-Raised by 49.2 (owner, not yet decided; behaviour unchanged meanwhile):
+Raised by 49.2 and 49.3, answered by the owner on 23 November 2026 ([OWN-01](OWN-01-owner-decisions.md)); applied in 49.3b:
 
-4. **Escape and Tab in `Search` and `CommandPalette`:** keep "first Escape closes the
-   overlay, Tab stays in the dialog" (current), or give these always-visible lists the picker
-   semantics (first Escape clears/collapses, second closes)?
-5. **`aria-selected` meaning:** ADR-0191 suggests `aria-selected` for the chosen option plus a
-   separate highlight attribute; all four widgets mark the highlighted option today. Change it?
-
-Raised by 49.3 (owner, not yet decided; behaviour unchanged meanwhile):
-
-6. **Wrapping and Tab:** keep arrow wrap-around in the File menu (the APG allows both), and keep the
-   inconsistency that Tab is swallowed by the context menu but left to the browser by the File menu?
-7. **Name the first-level File menu?** Today only its submenus are named and linked; naming it needs
-   an `id` shared between `FileMenuSummary` and `FileMenuContent` (an `App` call-site change).
-8. **First-level Escape in the File menu** is not stopped (submenu Escape is): stop it, so it cannot
-   reach other page-level Escape handlers?
+4. **Escape and Tab in `Search` and `CommandPalette`:** keep "first Escape closes the overlay, Tab stays in
+   the dialog" (APG dialog pattern).
+5. **`aria-selected` meaning:** keep marking the highlighted option (APG single-select combobox semantics);
+   ADR-0191's Fallback section is amended.
+6. **Wrapping and Tab:** keep arrow wrap-around in the File menu; the context menu keeps swallowing Tab and
+   returning focus to the opener, the File menu leaves Tab to the browser. Intended.
+7. **Name the first-level File menu:** done (shared id, `aria-labelledby`, `aria-controls`).
+8. **First-level Escape in the File menu:** stopped, so one Escape closes one level.
 
 Raised by 49.4a (owner, not yet decided; behaviour unchanged meanwhile):
 

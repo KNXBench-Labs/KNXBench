@@ -126,7 +126,7 @@ describe("Search", () => {
   });
 });
 
-// WP-49.2: the shared combobox checklist. Semantics recorded here: `aria-selected` marks the
+// WP-49.2: the shared combobox checklist. Decided semantics (owner, 23 November 2026, question 5): `aria-selected` marks the
 // highlighted option; the listbox is always rendered inside the Overlay dialog.
 let checklistHost: HTMLDivElement; let checklistRoot: import("react-dom/client").Root;
 let checklistChosen: string[]; let checklistClosed: boolean;

@@ -50,8 +50,6 @@ const adapter: MenuAdapter = {
   pressInside: () => pointerDown(menu()!.querySelector("button")!),
   pressOutside: () => pointerDown(document.body),
   popupTrigger: "none",
-  menuName: "named",
-  escape: "stops",
   tab: "swallows",
 };
 

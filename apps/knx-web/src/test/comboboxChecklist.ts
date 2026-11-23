@@ -21,7 +21,8 @@ export interface ComboboxAdapter {
   expectedChoice(index: number): string;
   /**
    * `list`: Escape closes the popup and the widget stays. `dialog`: the popup is always shown and
-   * Escape belongs to the surrounding overlay, which closes (current policy, not the APG pattern).
+   * Escape belongs to the surrounding overlay, which closes: the APG dialog pattern, decided by
+   * the owner on 23 November 2026 (question 4).
    */
   escape: "list" | "dialog";
   /** `dialog` widgets only: whether the surrounding overlay has been asked to close. */
@@ -44,6 +45,8 @@ export function setNativeValue(input: HTMLInputElement, text: string) {
 }
 
 const optionsOf = (a: ComboboxAdapter) => [...a.listbox().querySelectorAll<HTMLElement>("[role=option]")];
+// Decided rule (owner, 23 November 2026, question 5): `aria-selected` marks the highlighted option, the
+// APG single-select combobox semantics; there is no separate "chosen" mark, unlike ui-sdk's split.
 const highlighted = (a: ComboboxAdapter) => optionsOf(a).filter(o => o.getAttribute("aria-selected") === "true");
 const activeId = (a: ComboboxAdapter) => a.input().getAttribute("aria-activedescendant");
 
@@ -134,9 +137,10 @@ export function describeComboboxChecklist(adapter: ComboboxAdapter) {
         expect(windowKeys).toBe(1);
       });
     } else {
-      // Current-policy pin (owner question): the list is never closable on its own, so the
-      // first Escape dismisses the whole overlay. The overlay stops it, so the page does not see it.
-      it("current policy: the first Escape closes the surrounding overlay and stops there", async () => {
+      // Decided rule (owner, 23 November 2026, question 4): the list is never closable on its own, so
+      // the first Escape dismisses the whole overlay (APG dialog pattern). The overlay stops it, so the
+      // page does not see it.
+      it("decided rule: the first Escape closes the surrounding overlay and stops there", async () => {
         await adapter.open();
         expect(adapter.dialogClosed()).toBe(false);
         await press(adapter.input(), "Escape");
@@ -155,9 +159,9 @@ export function describeComboboxChecklist(adapter: ComboboxAdapter) {
         expect(optionsOf(adapter)).toEqual([]);
       });
     } else {
-      // Current-policy pin (owner question): the list is always shown, so Tab has nothing to close;
-      // the overlay's focus trap keeps focus inside the dialog.
-      it("current policy: Tab leaves the always-visible list as it is", async () => {
+      // Decided rule (owner, 23 November 2026, question 4): the list is always shown, so Tab has
+      // nothing to close; the overlay's focus trap keeps focus inside the dialog.
+      it("decided rule: Tab leaves the always-visible list as it is", async () => {
         await adapter.open();
         const before = optionsOf(adapter).length;
         await press(adapter.input(), "Tab");

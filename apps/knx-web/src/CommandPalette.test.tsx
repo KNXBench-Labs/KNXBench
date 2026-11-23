@@ -231,7 +231,7 @@ describe("CommandPalette pointer press on a disabled row (WP-49.2)", () => {
   });
 });
 
-// WP-49.2: the shared combobox checklist. Semantics recorded here: `aria-selected` marks the
+// WP-49.2: the shared combobox checklist. Decided semantics (owner, 23 November 2026, question 5): `aria-selected` marks the
 // highlighted option; disabled rows stay listed but never take the highlight; the listbox is
 // always rendered inside the Overlay dialog. With no project, the first three commands are enabled.
 let checklistHost: HTMLDivElement; let checklistRoot: import("react-dom/client").Root;

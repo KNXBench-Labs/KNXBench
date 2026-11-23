@@ -570,8 +570,8 @@ describe("issue #51 destination combobox", () => {
   });
 });
 
-// WP-49.2: the shared combobox checklist for the destination field. Semantics recorded here:
-// `aria-selected` marks the highlighted option; the list is `hidden` and empty when closed.
+// WP-49.2: the shared combobox checklist for the destination field. Decided semantics (owner, 23 November
+// 2026, question 5): `aria-selected` marks the highlighted option; the list is `hidden` and empty when closed.
 // The field is also free text, so Enter with no open list is left to the page.
 {
   const addresses = [

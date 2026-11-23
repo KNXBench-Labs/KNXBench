@@ -43,7 +43,9 @@ thank you.
 ## Quick start: pull, run, open
 
 The image includes the web frontend. No Git checkout, Rust installation or
-compilation coffee break required. The commands below use Bash on Linux:
+compilation coffee break required. The commands below use Bash on Linux. **On Windows**, follow the complete
+[Windows Docker Desktop quick start](https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/manual/user-guide/windows-docker-desktop.md)
+(PowerShell, WSL 2, loopback-only publishing and backups) instead.
 
 ```bash
 docker pull knxbench/knxbench-server:latest
@@ -99,7 +101,11 @@ Ready-made images start at **0.1.0-alpha.6**. Docker selects the architecture
 for your host. Both platforms are built and smoke-tested in CI; that is not a
 claim that every Raspberry Pi, host OS or gateway has been hand-tested.
 Linux is the tested deployment path. Docker Desktop on Windows/macOS is untested,
-particularly for live-bus networking.
+particularly for live-bus networking. **Windows users:** the
+[Windows Docker Desktop guide](https://github.com/KNXBench-Labs/KNXBench/blob/main/docs/manual/user-guide/windows-docker-desktop.md)
+covers download, WSL 2 and a local loopback-only container; that Windows route is
+documented but not runtime-verified, and it does not establish working live-bus
+networking.
 
 ## Configuration and persistence
 

@@ -22,6 +22,7 @@ jump straight in — every chapter also links back here.
 | Configure a small job | [Complete configuration workflow](user-guide/06-configuration-workflow.md) | A device, group link and saved working file; no hardware writes |
 | Diagnose bus traffic | [Bus and interfaces](user-guide/07-bus-and-interfaces.md) | A separate, safety-aware guide to actual KNXnet/IP operations |
 | Run a server | [Docker Hub image](user-guide/11-web-and-docker.md#ready-made-image-from-docker-hub), then [Web and Docker](user-guide/11-web-and-docker.md) | A ready-made download, storage, authentication, HTTPS and networking configuration |
+| Run the server on Windows | [Windows Docker Desktop guide](user-guide/windows-docker-desktop.md) | Docker download, WSL 2, container configuration, backups and updates |
 | Fix a problem | [Troubleshooting](reference/03-troubleshooting.md) or [FAQ](reference/04-faq.md) | Checks to run before opening an issue |
 | Contribute code or docs | [Contributing](development/01-contributing.md) | Build instructions, quality gates and project conventions |
 
@@ -88,7 +89,8 @@ including a table of families, example masks and historical dates.
 20. [Settings, themes and languages](user-guide/09-settings-and-appearance.md)
 21. [The command line](user-guide/10-command-line.md)
 22. [Web and Docker deployment](user-guide/11-web-and-docker.md)
-23. [AI agents over MCP](user-guide/12-ai-agents.md)
+23. [Windows Docker Desktop guide](user-guide/windows-docker-desktop.md)
+24. [AI agents over MCP](user-guide/12-ai-agents.md)
 
 For support gaps: [step-by-step contribution guide (English)](../contribution-intake/README.md)
 / [Deutsch](../contribution-intake/DEUTSCH.md). No Git/XML/schema expertise is required;

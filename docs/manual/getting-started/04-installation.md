@@ -8,7 +8,7 @@ not an achievement.
 
 | Route | Best for | You need |
 | --- | --- | --- |
-| [Docker / browser](#b-docker--web) | Trying the workbench, or a Linux server on your LAN | Docker and a browser; no checkout required |
+| [Docker / browser](#b-docker--web) | Trying the workbench, or a Linux server on your LAN; on Windows, start with the [Windows Docker Desktop guide](../user-guide/windows-docker-desktop.md) | Docker and a browser; no checkout required |
 | [Linux AppImage](#a-linux-appimage) | A native Linux window without a source build | An x86-64 Linux host; see [Linux setup](05-linux-setup.md) |
 | [From source](#c-from-source) | Development or source changes newer than the pre-release | Rust, Node.js; native host libraries for the desktop shell |
 
@@ -160,6 +160,11 @@ replacing an AppImage or Docker image. Alpha.10 is the first release with this
 check; Alpha.9 and older do not announce updates. [Detailed scope and privacy](../../contracts/RELEASE_NOTIFICATIONS.md).
 
 ## b) Docker / web
+
+**Windows PC?** Use the beginner-friendly
+[Windows Docker Desktop guide](../user-guide/windows-docker-desktop.md) (download,
+WSL 2, container configuration, backups and updates). The commands below are the
+Linux host example.
 
 **Reko online catalogue (Alpha 23):** optional. If you use it, persist `/config` with an explicit named volume/bind as well as `/data`,
 reattach the same config storage on container replacement and back it up

@@ -32,14 +32,13 @@ apply to this use is **unresolved**.
   <https://visualstudio.microsoft.com/license-terms/vs2022-ga-diagnosticbuildtools/>
   and its document `Visual-Studio-2022-Diagnostic-Build-Tools-Agent-License_Update-March-2024_EN.docx`
   (sha256 `2f66b86a00e8d9833789897ce23d05a4a2dbea370cf39c8c1098dbc17d0e7bdc`, hash
-  recomputed from the saved local copy). Short excerpts:
-  - "licensed as a supplement to Visual Studio Community, Visual Studio Professional,
-    and Visual Studio Enterprise ... Use of the software requires a valid license to one
-    of the Visual Studio Products."
-  - Build Devices: use "solely to (a) compile, build, and verify (i) applications
-    developed by using Visual Studio Products ..."; a separate paragraph covers
-    open-source C++ dependencies without a Visual Studio licence, limited to minor
-    modifications.
+  recomputed from the saved local copy). The following is a summary, not legal advice:
+  - The tools supplement the named Visual Studio editions. The use grant requires
+    "a valid license to one of the Visual Studio Products".
+  - The Build Devices provision ties compilation, building and verification to
+    applications developed using Visual Studio Products. A separate provision
+    addresses open-source C++ dependencies without a Visual Studio licence and
+    limits modifications to those dependencies.
   - Paraphrase: no sharing, publishing or renting the software, and no stand-alone
     offering or bundling with applications for others.
 - So the matching 2022 terms do not close the question: it is not settled by the text

@@ -112,7 +112,15 @@ Quoted or closely paraphrased from the fetched pages; not independently verified
 - Our own open point, not a Tauri statement and not a legal conclusion: `cargo-xwin` downloads the Windows SDK, which carries its own licence terms; whether and by whom they are accepted is a pending owner decision.
 - No signing cost or certificate choice is assumed.
 
-## Slice 2 status (23 November 2026; implemented on a work branch, not yet reviewed or published)
+## Slice 2 status (23 November 2026; bounded icon and cross-check record, SDK use paused)
+
+PR #149 records the icon and cross-check frontier. Independent review findings
+were corrected in `fccb8c354`; the Linux branch gate passed all 14 selected stages
+with frozen inputs and checked untouched user data. The corpus selection was
+empty. The earlier run using an unapproved system temp directory was rejected as
+acceptance; the accepted run used private profile scratch. Positive icon tests
+passed 6/6; targeted mutants prove rejection of bad PNG magic and unknown CLI
+arguments. No further SDK commands were run during review fixes or Linux gates.
 
 The owner chose an isolated cross-build and a general isolated SDK download first. The
 worker afterwards found a terms caveat (VS2019 link vs VS2022 content, "solely with

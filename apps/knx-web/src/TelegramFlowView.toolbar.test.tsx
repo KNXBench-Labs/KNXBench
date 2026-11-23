@@ -29,12 +29,12 @@ function model(): FlowModel {
   return m;
 }
 
-async function mount(m: FlowModel | null, parentKeyDown: () => void) {
+async function mount(m: FlowModel | null, parentKeyDown: () => void, onOpenWindow?: () => void) {
   const feed: FlowFeed = { model: m, version: 1, source: undefined, admit: () => {}, reset: () => {} };
   host = document.createElement("div");
   document.body.appendChild(host);
   root = createRoot(host);
-  await act(async () => root!.render(<div onKeyDown={parentKeyDown}><TelegramFlowView feed={feed} /></div>));
+  await act(async () => root!.render(<div onKeyDown={parentKeyDown}><TelegramFlowView feed={feed} onOpenWindow={onOpenWindow} /></div>));
 }
 async function unmount() {
   if (root) await act(async () => root!.unmount());
@@ -46,9 +46,9 @@ const controls = () => [...toolbar().querySelectorAll<HTMLElement>("button")];
 const byText = (text: string) => controls().find(b => b.textContent === text)!;
 const click = (text: string) => act(async () => byText(text).click());
 
-const flowAdapter = (name: string, m: () => FlowModel | null, pressedNames: string[]): ToolbarAdapter => ({
+const flowAdapter = (name: string, m: () => FlowModel | null, pressedNames: string[], onOpenWindow?: () => void): ToolbarAdapter => ({
   name,
-  mount: parentKeyDown => mount(m(), parentKeyDown),
+  mount: parentKeyDown => mount(m(), parentKeyDown, onOpenWindow),
   unmount,
   toolbar,
   controls,
@@ -63,10 +63,44 @@ describeToolbarChecklist({
   ...flowAdapter("TelegramFlowView (empty state)", () => null, ["Maximize view", "Restore view"]),
   disable: undefined,
 });
+// The Open window button renders only when the host passes onOpenWindow (both states); run the checklist with it too.
+describeToolbarChecklist(flowAdapter("TelegramFlowView (with Open window)", model, ["Auto zoom", "Maximize view", "Restore view", "Freeze layout"], () => {}));
+describeToolbarChecklist({
+  ...flowAdapter("TelegramFlowView (empty state, with Open window)", () => null, ["Maximize view", "Restore view"], () => {}),
+  disable: undefined,
+});
 
 afterEach(unmount);
 
 describe("TelegramFlowView toolbar: parent-owned behaviour", () => {
+  it("empty state: Maximize starts aria-pressed=false and reads true once maximized", async () => {
+    await mount(null, () => {});
+    expect(byText("Maximize view").getAttribute("aria-pressed")).toBe("false");
+    await click("Maximize view");
+    expect(byText("Restore view").getAttribute("aria-pressed")).toBe("true");
+  });
+
+  for (const [state, m] of [["populated", model], ["empty", () => null]] as const) {
+    it(`${state} state: Open in new window is a named, plain, tab-stop button that calls the host`, async () => {
+      let opened = 0;
+      await mount(m(), () => {}, () => { opened += 1; });
+      const open = byText("Open in new window");
+      expect(open, "Open in new window renders when the host provides onOpenWindow").toBeDefined();
+      expect(open.tagName).toBe("BUTTON");
+      expect((open as HTMLButtonElement).type).toBe("button");
+      expect(open.tabIndex).toBe(0);
+      expect(open.hasAttribute("tabindex")).toBe(false);
+      expect(open.hasAttribute("aria-pressed")).toBe(false);
+      await click("Open in new window");
+      expect(opened).toBe(1);
+    });
+  }
+
+  it("Open in new window is absent when the host passes no onOpenWindow", async () => {
+    await mount(model(), () => {});
+    expect(controls().some(b => b.textContent === "Open in new window")).toBe(false);
+  });
+
   it("names every toggle's pressed state in the initial state: auto zoom on, others off", async () => {
     await mount(model(), () => {});
     const pressed = Object.fromEntries(controls().filter(b => b.hasAttribute("aria-pressed")).map(b => [b.textContent, b.getAttribute("aria-pressed")]));

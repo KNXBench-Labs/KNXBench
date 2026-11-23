@@ -226,10 +226,12 @@ Raised by 49.4a (owner, not yet decided; behaviour unchanged meanwhile):
     ignore modifier keys, so Alt+Left (browser back) and Ctrl+Arrow are `preventDefault`-ed. Skip
     handling when a modifier is held? Behaviour unchanged meanwhile.
 
-
 Raised by 49.4b (owner, not yet decided; behaviour unchanged meanwhile):
 
 12. **Toolbar tab order:** both toolbars (flow view, instruction editor) leave every button a tab stop,
     with no arrow keys. The APG toolbar pattern prefers one tab stop with arrow navigation, but
     converting changes the Tab order for every user. Keep, or convert to a roving tabindex with
     ArrowLeft/ArrowRight and Home/End? See the 49.4b result.
+13. **Instruction editor toolbar name:** the formatting toolbar is named `copy.rendered` ("Rendered
+    preview"), the same text as the preview heading (`InstructionEditor.tsx` lines 119 and 121).
+    Give the toolbar its own name (e.g. "Formatting")? Behaviour unchanged meanwhile.

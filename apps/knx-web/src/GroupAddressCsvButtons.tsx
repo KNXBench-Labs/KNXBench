@@ -218,7 +218,7 @@ export default function GroupAddressCsvButtons(props: {
           ))}
         </select>
       )}
-      <button {...entry} onClick={exportCsv} disabled={!tree}>
+      <button {...entry} type="button" onClick={exportCsv} disabled={!tree}>
         {t("groupAddressCsv.exportButton")}
       </button>
       <select aria-label={t("groupAddressCsv.encoding")} value={encoding} disabled={!tree}
@@ -237,7 +237,7 @@ export default function GroupAddressCsvButtons(props: {
           {t("groupAddressCsv.clearBlankDescriptions")}
         </button>
       )}
-      <button {...entry} onClick={importCsv} disabled={!tree}>
+      <button {...entry} type="button" onClick={importCsv} disabled={!tree}>
         {t("groupAddressCsv.importButton")}
       </button>
     </>

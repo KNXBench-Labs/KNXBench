@@ -76,7 +76,7 @@ One shared checklist helper (`src/test/menuChecklist.ts`, test-only, reusing `pr
 combobox helper) runs eight cases per menu, plus five submenu cases for the File menu:
 `FileMenu.checklist.test.tsx` (real `FileMenuSummary`/`FileMenuContent`/`FileSubmenu` inside a
 harness that copies `App`'s Escape and outside-`pointerdown` wiring; `App.test.tsx` pins that wiring
-against the real component) and `RenameWorkbench.checklist.test.tsx` (the context menu).
+against the real component, including the unstopped first-level Escape) and `RenameWorkbench.checklist.test.tsx` (the context menu).
 
 - Semantics today: opening focuses the first *enabled* entry and leaves it the only tab stop;
   ArrowDown/ArrowUp **wrap**, Home/End exist (File menu); disabled entries are real `disabled`
@@ -88,11 +88,15 @@ against the real component) and `RenameWorkbench.checklist.test.tsx` (the contex
   trigger (focus returns to the element it was opened from), Escape and Tab close it and are
   swallowed.
 - Fixed (three small gaps, each found by the checklist before the fix): `FileMenuItem` rendered a
-  type-less button (a `submit` button inside any form); the context menu had no accessible name
+  type-less button (a `submit` button inside any form). Fixed class-wide: `type: "button"` is now part of
+  the shared item props (`useFileMenuItemProps`), the two CSV buttons that can render outside a menu
+  carry it explicitly, and `App.test.tsx` asserts every rendered `[data-file-menu-item]` is
+  `type=button` (seven contributed entries were type-less before; no live submit risk was found); the context menu had no accessible name
   (now `aria-label` = the existing "Rename" caption); its arrow keys, Home and End were not
   prevented, so the page behind the menu could scroll.
 - Pinned as the current policy (not changed): arrow wrap-around; the first-level Escape of the File
-  menu is neither prevented nor stopped (it bubbles to the page); Tab in the context menu is
+  menu is neither prevented nor stopped (it bubbles to the page; pinned on the real `App` as a
+  current-policy test, owner question 8); Tab in the context menu is
   swallowed while the File menu leaves it to the browser; the first-level File menu (`role="menu"`)
   has no accessible name and no `aria-controls` link from the File control (submenus have both).
 - Not covered in happy-dom: real focus/blur order on a pointer press and the native Enter/Space to

@@ -42,7 +42,8 @@ const MENU = '[role="menu"]';
 // marker is not an entry: no role, no arrow-key stop. The menu holds entries only; anything
 // interactive (the project comparison's result, say) opens in a dialog instead.
 const ITEM = "[data-file-menu-item]";
-const ITEM_PROPS = Object.freeze({ role: "menuitem", "data-file-menu-item": "" });
+// `type: "button"` is part of the entry contract: an entry never submits a form it sits inside.
+const ITEM_PROPS = Object.freeze({ type: "button", role: "menuitem", "data-file-menu-item": "" });
 const NO_PROPS = Object.freeze({});
 
 const isDisabled = (el: HTMLElement) => el instanceof HTMLButtonElement && el.disabled;
@@ -77,7 +78,7 @@ export function useFileMenuItemProps(): Readonly<Record<string, string>> {
 
 /** A button the File block owns, declared as a menu entry. */
 export function FileMenuItem(props: ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button type="button" {...useFileMenuItemProps()} {...props} />;
+  return <button {...useFileMenuItemProps()} type="button" {...props} />;
 }
 
 /**
@@ -654,7 +655,6 @@ export function FileSubmenu({ id, label, children }: FileSubmenuProps) {
     <div ref={wrapper} className="file-submenu" data-file-submenu={id} data-open={isOpen ? "true" : undefined}>
       <button
         id={triggerId}
-        type="button"
         {...ITEM_PROPS}
         className="file-submenu-trigger"
         data-file-submenu-trigger={id}

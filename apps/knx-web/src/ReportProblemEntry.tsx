@@ -63,6 +63,6 @@ export function ReportProblemButton({ request, from, label, disabled = false }: 
   const entry = useFileMenuItemProps();
   const open = useReportProblem();
   if (!open) return null;
-  return <button type="button" {...entry} data-report-problem-open={from} disabled={disabled}
+  return <button {...entry} type="button" data-report-problem-open={from} disabled={disabled}
     onClick={() => open(request)}>{label ?? t("reportProblem.button")}</button>;
 }

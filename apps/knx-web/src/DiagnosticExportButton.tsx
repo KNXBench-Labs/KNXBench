@@ -19,7 +19,7 @@ import "./diagnosticExport.css";
 const only=(transport:api.DiagnosticTransport):[]|["tcp"]=>transport==="tcp"?["tcp"]:[];
 export default function DiagnosticExportButton({project,deviceId=null}:{project:ProjectTree|null;deviceId?:number|null}){
  const t=useTranslate();const entry=useFileMenuItemProps();const [open,setOpen]=useState(false);
- return <><button type="button" {...entry} data-diagnostics-open disabled={!project} onClick={()=>setOpen(true)}>{t("diagnostics.title")}</button>{open&&createPortal(<DiagnosticExportDialog project={project!} initialDevice={deviceId} close={()=>setOpen(false)}/>,document.body)}</>;
+ return <><button {...entry} type="button" data-diagnostics-open disabled={!project} onClick={()=>setOpen(true)}>{t("diagnostics.title")}</button>{open&&createPortal(<DiagnosticExportDialog project={project!} initialDevice={deviceId} close={()=>setOpen(false)}/>,document.body)}</>;
 }
 /** The reviewed read dialog itself; the Diagnostics tab opens it for its device too.
  * The profile choice sits before Preview; changing it, the device or the gateway drops the review.

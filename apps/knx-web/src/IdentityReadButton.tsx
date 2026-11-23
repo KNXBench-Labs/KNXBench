@@ -20,7 +20,7 @@ export default function IdentityReadButton({ project }: { project: ProjectTree |
   const [openedAt, setOpenedAt] = useState<string | null>(null);
   useLayoutEffect(() => { if (openedAt !== null && openedAt !== binding) setOpenedAt(null); }, [binding, openedAt]);
   return <>
-    <button type="button" {...entry} data-identity-read-open onClick={() => setOpenedAt(binding)}>{t("identityRead.title")}</button>
+    <button {...entry} type="button" data-identity-read-open onClick={() => setOpenedAt(binding)}>{t("identityRead.title")}</button>
     {openedAt === binding && createPortal(<IdentityReadDialog project={project} close={() => setOpenedAt(null)} />, document.body)}
   </>;
 }

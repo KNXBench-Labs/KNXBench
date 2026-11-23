@@ -1222,15 +1222,32 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
               role="tab"
               id={`monitorview-tab-${view}`}
               aria-selected={monitorView === view}
+              // Decided contract (owner Q10, 23 Nov 2026, WP-49.5): aria-controls
+              // stays on the ACTIVE tab only, because only the active panel is
+              // mounted — the inactive panel is never mounted just to give the
+              // other tab a target.
               aria-controls={monitorView === view ? `monitorview-panel-${view}` : undefined}
               tabIndex={monitorView === view ? 0 : -1}
               onClick={() => setMonitorView(view)}
               onKeyDown={(event) => {
-                if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+                // Decided 23 Nov 2026 (owner Q11, WP-49.5): Alt/Ctrl/Meta-modified
+                // navigation keys are NOT handled or prevented, so browser
+                // shortcuts (Alt+Left = back, Ctrl+Arrow, Cmd+Arrow) keep working.
+                // Plain and Shift-modified keys stay handled.
+                if (event.altKey || event.ctrlKey || event.metaKey) return;
+                if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
                 event.preventDefault();
-                const next = view === "table" ? "flow" : "table";
-                setMonitorView(next);
-                document.getElementById(`monitorview-tab-${next}`)?.focus();
+                // Decided 23 Nov 2026 (owner Q9, WP-49.5): wraparound and automatic
+                // activation stay, and Home/End join the arrows (as in the
+                // Inspector's tablist).
+                const views = ["table", "flow"] as const;
+                const current = views.indexOf(monitorView);
+                const next = event.key === "Home" ? 0
+                  : event.key === "End" ? views.length - 1
+                  : event.key === "ArrowRight" ? (current + 1) % views.length
+                  : (current - 1 + views.length) % views.length;
+                setMonitorView(views[next]);
+                document.getElementById(`monitorview-tab-${views[next]}`)?.focus();
               }}
             >
               {t(view === "table" ? "busMonitor.view.table" : "busMonitor.view.flow")}

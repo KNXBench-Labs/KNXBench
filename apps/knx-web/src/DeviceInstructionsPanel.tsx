@@ -13,7 +13,6 @@ import { InstructionEditor } from "./features/rtf/InstructionEditor";
 import { useTranslate } from "./i18n";
 import { snapshotContextFromTree } from "./snapshotIdentity";
 import { useUiLanguage } from "./uiLanguage";
-
 export interface DeviceInstructionsPanelProps {
   deviceId: number;
   tree: ProjectTree;
@@ -51,6 +50,7 @@ export default function DeviceInstructionsPanel({ deviceId, tree, onApplied, onD
     <div className="device-instructions">
       {refreshError !== null && <p className="device-instructions-refresh" role="alert">{t("deviceInstructions.refreshFailed", { reason: refreshError })}</p>}
       <InstructionEditor deviceId={deviceId} context={context} language={uiLanguage === "de" ? "de" : "en"}
+        toolbarName={t("deviceInstructions.toolbar")}
         client={client} onApplied={() => void refresh()} onDirtyChange={(dirty) => dirtyReport.current?.(dirty)} />
     </div>
   );

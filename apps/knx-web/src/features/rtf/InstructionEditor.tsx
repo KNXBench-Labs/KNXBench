@@ -7,7 +7,7 @@ import { usePreviewFocus } from "../usePreviewFocus";
 import styles from "./editor.module.css";
 import { projectSavingMessage } from "../../projectSaving";
 /** `context: null` (no complete project identity) mounts a read-only view: it reads, never writes. */
-export type InstructionEditorProps = Readonly<{ deviceId: number; context: Context | null; language?: "en" | "de"; client?: InstructionClient; onApplied?: (outcome: InstructionApplied) => void; onDirtyChange?: (dirty: boolean) => void }>;
+export type InstructionEditorProps = Readonly<{ deviceId: number; context: Context | null; language?: "en" | "de"; client?: InstructionClient; onApplied?: (outcome: InstructionApplied) => void; onDirtyChange?: (dirty: boolean) => void; /** Accessible name of the formatting toolbar (owner Q13, 23 Nov 2026): the preview heading keeps its own `copy.rendered`. */ toolbarName?: string }>;
 const defaultClient = createInstructionClient();
 function equalDocument(a: Document, b: Document): boolean { return a.runs.length === b.runs.length && a.runs.every((run, i) => { const other = b.runs[i]; return run.text === other.text && run.style.bold === other.style.bold && run.style.italic === other.style.italic && run.style.underline === other.style.underline; }); }
 /** Same instruction content (source and override), ignoring identity and persistence mode. */
@@ -18,7 +18,7 @@ function sameInstructionContent(a: InstructionView, b: InstructionView): boolean
 function Rendered({ document }: { document: Document }) {
   return <div className={styles.preview}>{document.runs.map((run, i) => <span key={i} style={{ fontWeight: run.style.bold ? 700 : 400, fontStyle: run.style.italic ? "italic" : "normal", textDecoration: run.style.underline ? "underline" : "none" }}>{run.text}</span>)}</div>;
 }
-export function InstructionEditor({ deviceId, context, language = "en", client = defaultClient, onApplied, onDirtyChange }: InstructionEditorProps) {
+export function InstructionEditor({ deviceId, context, language = "en", client = defaultClient, onApplied, onDirtyChange, toolbarName }: InstructionEditorProps) {
   const copy = editorCopy[language]; const id = useId(); const readOnly = context === null;
   const previewFocus = usePreviewFocus(JSON.stringify([deviceId, context?.serverIncarnation, context?.projectIncarnation, context?.snapshotRevision]), client);
   const [view, setView] = useState<InstructionView | null>(null);
@@ -116,7 +116,10 @@ export function InstructionEditor({ deviceId, context, language = "en", client =
     {error && <div role="alert" className={styles.error}>{error}</div>}
     {(view || conflict) && <>
       <label htmlFor={`${id}-text`}>{copy.text}</label>
-      {!readOnly && <div className={styles.toolbar} role="toolbar" aria-label={copy.rendered}>{(["bold", "italic", "underline", "clear"] as const).map(flag => <button key={flag} type="button" disabled={busy || conflict} onMouseDown={event => event.preventDefault()} onClick={() => format(flag)}>{copy[flag]}</button>)}</div>}
+      {/* Decided (owner Q13, 23 Nov 2026, WP-49.5): the toolbar has its OWN accessible
+          name (`toolbarName`, e.g. "Formatting"/"Formatierung"), not `copy.rendered`,
+          which remains the preview heading's name below. */}
+      {!readOnly && <div className={styles.toolbar} role="toolbar" aria-label={toolbarName ?? copy.rendered}>{(["bold", "italic", "underline", "clear"] as const).map(flag => <button key={flag} type="button" disabled={busy || conflict} onMouseDown={event => event.preventDefault()} onClick={() => format(flag)}>{copy[flag]}</button>)}</div>}
       <textarea id={`${id}-text`} ref={textarea} className={styles.input} value={displayText(draft)} readOnly={readOnly} disabled={busy || conflict} onChange={() => undefined} onSelect={event => { selection.current = [event.currentTarget.selectionStart, event.currentTarget.selectionEnd]; }} onInput={event => { try { change(replaceText(draftRef.current, event.currentTarget.value)); } catch { setError(copy.invalid); } }}/>
       <h4>{copy.rendered}</h4><Rendered document={draft}/>
       {!readOnly && <div className={styles.actions}><button type="button" disabled={busy || rebasing || conflict || !dirty.current} onClick={event => void makePreview(draft, event.currentTarget)}>{copy.preview}</button><button type="button" disabled={busy || rebasing || conflict || view?.overrideDocument === null} onClick={event => void makePreview(null, event.currentTarget)}>{nothingToReturnTo ? copy.remove : copy.reset}</button></div>}

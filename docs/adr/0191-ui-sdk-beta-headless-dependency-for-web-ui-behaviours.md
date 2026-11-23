@@ -149,6 +149,18 @@ chosen-plus-highlight split. `aria-selected` marks the highlighted option, as in
 all four hand-written comboboxes today; the "`aria-selected` meaning chosen"
 rule above does not apply to them.
 
+*Amendment, 23 November 2026 (owner decisions Q12 and Q14, WP-49.5; status stays
+Accepted):* two decided rules for the hand-written widgets deviate from or extend
+the APG patterns deliberately. (Q12) Both toolbars (`TelegramFlowView`,
+`InstructionEditor`) keep **every enabled button a tab stop** with no roving
+tabindex and no arrow navigation — a conscious deviation from the APG toolbar
+pattern, because converting would change the Tab order for every user. (Q14)
+`Overlay` calls `preventDefault()` on the Escape it handles, in addition to
+`stopPropagation()` and `onClose`, so the browser's own Escape action (e.g.
+leaving fullscreen) does not also fire; this marks the event for later
+observers only and does not retroactively inform capture listeners that already
+ran.
+
 ## Alternatives considered
 
 - **Adopt the dependency for pilots 49.2/49.3** — acceptable under the policy

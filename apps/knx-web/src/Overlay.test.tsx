@@ -27,7 +27,7 @@ async function mount(children: ReactNode) {
 
 describe("Overlay", () => {
   it("skips descendants of hidden, inert and aria-hidden ancestors for initial focus and Tab wrap", async () => {
-    const root = await mount(<Overlay onClose={vi.fn()}>
+    const root = await mount(<Overlay label="Test dialog" onClose={vi.fn()}>
       <div hidden><button>Hidden</button></div>
       <div inert><button>Inert</button></div>
       <div aria-hidden="true"><button>Excluded</button></div>
@@ -44,7 +44,7 @@ describe("Overlay", () => {
   });
 
   it("excludes asynchronously added background content and restores it after close", async () => {
-    const root = await mount(<Overlay onClose={vi.fn()}><button>Dialog</button></Overlay>);
+    const root = await mount(<Overlay label="Test dialog" onClose={vi.fn()}><button>Dialog</button></Overlay>);
     const added = document.createElement("button");
     added.textContent = "Late background";
     try {
@@ -95,7 +95,7 @@ describe("Overlay", () => {
     outside.setAttribute("inert", "preexisting");
     outside.setAttribute("aria-hidden", "false");
     document.body.appendChild(outside);
-    const root = await mount(<><main data-background="true"><button>Background</button></main><Overlay onClose={vi.fn()}><button>Dialog</button></Overlay></>);
+    const root = await mount(<><main data-background="true"><button>Background</button></main><Overlay label="Test dialog" onClose={vi.fn()}><button>Dialog</button></Overlay></>);
     try {
       const background = host!.querySelector("main")!;
       const panel = host!.querySelector<HTMLElement>('[role="dialog"]')!;
@@ -117,7 +117,7 @@ describe("Overlay", () => {
 
   it("renders .search-overlay > .search-panel, a dialog, with children inside", async () => {
     const root = await mount(
-      <Overlay onClose={vi.fn()}>
+      <Overlay label="Test dialog" onClose={vi.fn()}>
         <p>payload</p>
       </Overlay>,
     );
@@ -164,7 +164,7 @@ describe("Overlay", () => {
   it("calls onClose on a backdrop click but not on a click inside the panel", async () => {
     const onClose = vi.fn();
     const root = await mount(
-      <Overlay onClose={onClose}>
+      <Overlay label="Test dialog" onClose={onClose}>
         <button type="button">inside</button>
       </Overlay>,
     );
@@ -187,7 +187,7 @@ describe("Overlay", () => {
   it("does not dismiss a resizable dialog when a pointer drag starts inside and ends on the backdrop", async () => {
     const onClose = vi.fn();
     const root = await mount(
-      <Overlay onClose={onClose} resizable={{ width: 800, height: 640 }}>
+      <Overlay label="Test dialog" onClose={onClose} resizable={{ width: 800, height: 640 }}>
         <p>Resize grip</p>
       </Overlay>,
     );
@@ -208,19 +208,21 @@ describe("Overlay", () => {
     root.unmount();
   });
 
-  it("calls onClose on Escape fired from an element inside the panel", async () => {
+  it("calls onClose on Escape fired from an element inside the panel, and prevents the default (decided, owner Q14, 23 Nov 2026)", async () => {
     const onClose = vi.fn();
     const root = await mount(
-      <Overlay onClose={onClose}>
+      <Overlay label="Escape" onClose={onClose}>
         <input aria-label="field" />
       </Overlay>,
     );
 
     const input = host!.querySelector("input")!;
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
     await act(async () => {
-      input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      input.dispatchEvent(event);
     });
     expect(onClose).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented, "the shell's handled Escape is prevented so the browser default (e.g. exit fullscreen) does not also fire").toBe(true);
 
     root.unmount();
   });
@@ -229,7 +231,7 @@ describe("Overlay", () => {
     function Harness() {
       const secondRef = useRef<HTMLInputElement | null>(null);
       return (
-        <Overlay onClose={vi.fn()} initialFocusRef={secondRef}>
+        <Overlay label="Test dialog" onClose={vi.fn()} initialFocusRef={secondRef}>
           <input aria-label="first" />
           <input aria-label="second" ref={secondRef} />
         </Overlay>
@@ -245,7 +247,7 @@ describe("Overlay", () => {
 
   it("focuses the first focusable element when no initialFocusRef is given", async () => {
     const root = await mount(
-      <Overlay onClose={vi.fn()}>
+      <Overlay label="Test dialog" onClose={vi.fn()}>
         <input aria-label="first" />
         <input aria-label="second" />
       </Overlay>,
@@ -259,7 +261,7 @@ describe("Overlay", () => {
 
   it("traps focus: Tab on the last focusable wraps to the first, Shift+Tab on the first wraps to the last", async () => {
     const root = await mount(
-      <Overlay onClose={vi.fn()}>
+      <Overlay label="Test dialog" onClose={vi.fn()}>
         <button type="button">first</button>
         <button type="button">middle</button>
         <button type="button">last</button>
@@ -296,7 +298,7 @@ describe("Overlay", () => {
   }
 
   it("counts a disclosure summary as a tab stop and keeps the contents of a closed disclosure out", async () => {
-    const root = await mount(<Overlay onClose={vi.fn()}>
+    const root = await mount(<Overlay label="Test dialog" onClose={vi.fn()}>
       <button type="button" data-id="first">first</button>
       <details>
         <summary data-id="summary">report</summary>
@@ -316,7 +318,7 @@ describe("Overlay", () => {
   });
 
   it("reaches the controls of a disclosure once it is open", async () => {
-    const root = await mount(<Overlay onClose={vi.fn()}>
+    const root = await mount(<Overlay label="Test dialog" onClose={vi.fn()}>
       <button type="button" data-id="first">first</button>
       <details open>
         <summary data-id="summary">report</summary>
@@ -333,7 +335,7 @@ describe("Overlay", () => {
   });
 
   it("does not count a summary that is not the first summary of its details, nor one outside details", async () => {
-    const root = await mount(<Overlay onClose={vi.fn()}>
+    const root = await mount(<Overlay label="Test dialog" onClose={vi.fn()}>
       <button type="button" data-id="first">first</button>
       <summary data-id="loose">loose</summary>
       <details open>
@@ -349,7 +351,7 @@ describe("Overlay", () => {
   });
 
   it("skips display:none and visibility:hidden elements", async () => {
-    const root = await mount(<Overlay onClose={vi.fn()}>
+    const root = await mount(<Overlay label="Test dialog" onClose={vi.fn()}>
       <button type="button" data-id="first">first</button>
       <button type="button" data-id="last">last</button>
       <div style={{ display: "none" }}><button type="button" data-id="gone">gone</button></div>
@@ -363,7 +365,7 @@ describe("Overlay", () => {
   });
 
   it("counts contenteditable regions and media with controls, but not contenteditable=false", async () => {
-    const root = await mount(<Overlay onClose={vi.fn()}>
+    const root = await mount(<Overlay label="Test dialog" onClose={vi.fn()}>
       <button type="button" data-id="first">first</button>
       <div contentEditable={false} suppressContentEditableWarning data-id="locked">locked</div>
       <div contentEditable="true" suppressContentEditableWarning data-id="editable">editable</div>
@@ -388,7 +390,7 @@ describe("Overlay", () => {
     expect(document.activeElement).toBe(outside);
 
     const root = await mount(
-      <Overlay onClose={vi.fn()}>
+      <Overlay label="Test dialog" onClose={vi.fn()}>
         <button type="button">inside</button>
       </Overlay>,
     );
@@ -441,7 +443,7 @@ describe("Overlay", () => {
     const previous = document.documentElement.style.getPropertyValue("--app-ui-scale");
     document.documentElement.style.setProperty("--app-ui-scale", "1.5");
     const root = await mount(
-      <Overlay onClose={vi.fn()} resizable={{ width: 900, height: 620 }}>
+      <Overlay label="Test dialog" onClose={vi.fn()} resizable={{ width: 900, height: 620 }}>
         <p>zoomed dialog</p>
       </Overlay>,
     );
@@ -490,7 +492,7 @@ describe("Overlay", () => {
   it("does not call onClose for Escape fired after unmount", async () => {
     const onClose = vi.fn();
     const root = await mount(
-      <Overlay onClose={onClose}>
+      <Overlay label="Test dialog" onClose={onClose}>
         <button type="button">inside</button>
       </Overlay>,
     );
@@ -511,7 +513,7 @@ describe("retained modal foreground", () => {
   it("falls back when a remembered control becomes disabled while suspended", async () => {
     function Retained({ active, disabled }: { active: boolean; disabled: boolean }) {
       return <><main><button>Page</button></main><ModalForeground active={active}><div hidden={!active}>
-        <Overlay onClose={vi.fn()}><button disabled={disabled}>Remembered</button><button>Available</button></Overlay>
+        <Overlay label="Test dialog" onClose={vi.fn()}><button disabled={disabled}>Remembered</button><button>Available</button></Overlay>
       </div></ModalForeground></>;
     }
     const root = await mount(<Retained active disabled={false} />);
@@ -581,7 +583,7 @@ describe("retained modal foreground", () => {
   it("keeps nested scopes inactive until both owners foreground them", async () => {
     function Scopes({ outer, inner }: { outer: boolean; inner: boolean }) {
       return <><main><button>Page</button></main><ModalForeground active={outer}>
-        <ModalForeground active={inner}><Overlay onClose={vi.fn()}><button>Dialog</button></Overlay></ModalForeground>
+        <ModalForeground active={inner}><Overlay label="Test dialog" onClose={vi.fn()}><button>Dialog</button></Overlay></ModalForeground>
       </ModalForeground></>;
     }
     const root = await mount(<Scopes outer={false} inner />);

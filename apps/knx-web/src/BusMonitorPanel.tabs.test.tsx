@@ -72,9 +72,12 @@ const adapter: TabsAdapter = {
   tablist: () => host!.querySelector<HTMLElement>('[role="tablist"]')!,
   tabs: () => [...host!.querySelectorAll<HTMLElement>('[role="tab"]')],
   panels: () => [...host!.querySelectorAll<HTMLElement>('[role="tabpanel"]')],
-  // Only the selected tab names a panel: the Table panel is not mounted while Flow is shown.
+  // Decided contract (owner Q10, 23 Nov 2026, WP-49.5): only the selected tab
+  // names a panel — the Table panel is not mounted while Flow is shown, and it
+  // is never mounted just to give the other tab an aria-controls target.
   controls: "selected-only",
-  homeEnd: "absent",
+  // Decided (owner Q9, 23 Nov 2026): Home/End select the first/last tab, like the Inspector.
+  homeEnd: "present",
   panelStop: "none",
 };
 

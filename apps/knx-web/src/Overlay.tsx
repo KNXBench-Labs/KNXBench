@@ -25,6 +25,11 @@ export interface OverlayResize {
  * state, arrow-key traversal and `Enter` activation genuinely differ
  * between the Search, Command Palette and Catalog Browser dialogs and
  * stay with them.
+ *
+ * Decided policy (owner Q16, 23 Nov 2026, WP-49.5): NO page/body scroll lock —
+ * the inert/`aria-hidden` background isolation stays as the only mechanism, and
+ * the absence of an additional scroll lock is deliberate policy, not an
+ * unrestricted modal-pattern claim.
  */
 export const FOCUSABLE_SELECTOR = [
   "a[href]",
@@ -61,9 +66,19 @@ function focusableIn(panel: HTMLElement): HTMLElement[] {
   return Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((el) => isTabbable(el, panel));
 }
 
-export default function Overlay(props: {
-  labelledBy?: string;
-  label?: string;
+/**
+ * The dialog's accessible name comes from EXACTLY ONE source (decided contract,
+ * owner Q15, 23 Nov 2026, WP-49.5): either a visible `labelledBy` id or a direct
+ * `label`. The exclusive union makes an Overlay with neither (or both) a compile
+ * error, so the source scan for that case is gone from `overlayNames.test.ts`;
+ * that test keeps the runtime dangling-`labelledBy`-id check, which types cannot
+ * prove.
+ */
+export type OverlayName =
+  | { label: string; labelledBy?: never }
+  | { labelledBy: string; label?: never };
+
+export default function Overlay(props: OverlayName & {
   className?: string;
   initialFocusRef?: RefObject<HTMLElement | null>;
   /** Used only when the opening trigger disappeared with the dismissed draft. */
@@ -141,6 +156,11 @@ export default function Overlay(props: {
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key === "Escape") {
+      // Decided 23 Nov 2026 (owner Q14, WP-49.5): preventDefault in addition to
+      // stopPropagation/onClose, so the browser's own Escape action (e.g. leaving
+      // fullscreen) does not also fire. This marks the event for LATER observers
+      // only — it does not retroactively inform capture listeners that already ran.
+      e.preventDefault();
       e.stopPropagation();
       onClose();
       return;

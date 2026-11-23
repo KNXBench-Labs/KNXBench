@@ -109,7 +109,7 @@ export function describeToolbarChecklist(adapter: ToolbarAdapter) {
       expect(windowKeys).toBe(2);
     });
 
-    it.skipIf(!adapter.disable)("disables controls natively: no aria-disabled stand-in, and a disabled control cannot take focus", async () => {
+    if (adapter.disable) it("disables controls natively: no aria-disabled stand-in, and a disabled control cannot take focus", async () => {
       const disabled = await adapter.disable!();
       expect(disabled.length).toBeGreaterThanOrEqual(1);
       for (const c of adapter.controls()) {

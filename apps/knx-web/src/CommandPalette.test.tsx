@@ -13,6 +13,7 @@ import type { CommandContext } from "./commandRegistry";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { resetUiLanguageForTests, saveUiLanguage } from "./uiLanguage";
 import { resetSettingsForTests, settingsStorage } from "./settingsStore";
+import { describeComboboxChecklist, setNativeValue } from "./test/comboboxChecklist";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -215,4 +216,50 @@ describe("CommandPalette", () => {
 
     root.unmount();
   });
+});
+
+describe("CommandPalette pointer press on a disabled row (WP-49.2)", () => {
+  it("keeps focus in the input and runs nothing", async () => {
+    const { root, onClose } = await renderPalette(noopCtx());
+    const disabled = host!.querySelector<HTMLElement>("[role=option][aria-disabled=true]")!;
+    const down = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+    await act(async () => { disabled.dispatchEvent(down); disabled.click(); });
+    expect(down.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(host!.querySelector("input"));
+    expect(onClose).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
+  });
+});
+
+// WP-49.2: the shared combobox checklist. Semantics recorded here: `aria-selected` marks the
+// highlighted option; disabled rows stay listed but never take the highlight; the listbox is
+// always rendered inside the Overlay dialog. With no project, the first three commands are enabled.
+let checklistHost: HTMLDivElement; let checklistRoot: import("react-dom/client").Root;
+let checklistChosen: string[]; let checklistClosed: boolean;
+describeComboboxChecklist({
+  name: "CommandPalette",
+  async mount(parentKeyDown) {
+    checklistHost = document.createElement("div"); document.body.appendChild(checklistHost);
+    checklistRoot = createRoot(checklistHost); checklistChosen = []; checklistClosed = false;
+    const ctx = noopCtx({
+      newProject: () => checklistChosen.push("newProject"),
+      pickProject: () => checklistChosen.push("pickProject"),
+      openNativeProject: () => checklistChosen.push("openNativeProject"),
+    });
+    await act(async () => checklistRoot.render(
+      <div onKeyDown={parentKeyDown}>
+        <CommandPalette ctx={ctx} onClose={() => { checklistClosed = true; }} />
+      </div>));
+  },
+  async unmount() { await act(async () => checklistRoot.unmount()); checklistHost.remove(); resetSettingsForTests(); resetUiLanguageForTests(); },
+  input: () => checklistHost.querySelector<HTMLInputElement>("input[role=combobox]")!,
+  listbox: () => checklistHost.querySelector<HTMLElement>("[role=listbox]")!,
+  async open() { /* the list is always open */ },
+  async noOptions() { await act(async () => setNativeValue(checklistHost.querySelector("input")!, "zzz no command")); },
+  chosen: () => checklistChosen,
+  expectedChoice: () => "pickProject",
+  escape: "dialog",
+  dialogClosed: () => checklistClosed,
+  tab: "stays-open",
+  expandedWhenEmpty: "false",
 });

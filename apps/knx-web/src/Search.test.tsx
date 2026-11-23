@@ -10,6 +10,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import type { SearchEntry } from "./treeUtils";
+import { describeComboboxChecklist, setNativeValue } from "./test/comboboxChecklist";
 
 const INDEX: SearchEntry[] = [
   { kind: "device", id: 1, label: "Dimmer hallway", address: "1.1.2" },
@@ -123,4 +124,33 @@ describe("Search", () => {
 
     root.unmount();
   });
+});
+
+// WP-49.2: the shared combobox checklist. Semantics recorded here: `aria-selected` marks the
+// highlighted option; the listbox is always rendered inside the Overlay dialog.
+let checklistHost: HTMLDivElement; let checklistRoot: import("react-dom/client").Root;
+let checklistChosen: string[]; let checklistClosed: boolean;
+describeComboboxChecklist({
+  name: "Search",
+  async mount(parentKeyDown) {
+    checklistHost = document.createElement("div"); document.body.appendChild(checklistHost);
+    checklistRoot = createRoot(checklistHost); checklistChosen = []; checklistClosed = false;
+    await act(async () => checklistRoot.render(
+      <div onKeyDown={parentKeyDown}>
+        <Search tree={{} as ProjectTree} onClose={() => { checklistClosed = true; }}
+          onSelect={sel => checklistChosen.push(`${sel.kind}:${"id" in sel ? sel.id : ""}`)} />
+      </div>));
+  },
+  async unmount() { await act(async () => checklistRoot.unmount()); checklistHost.remove(); },
+  input: () => checklistHost.querySelector<HTMLInputElement>("input[role=combobox]")!,
+  listbox: () => checklistHost.querySelector<HTMLElement>("[role=listbox]")!,
+  async open() { await act(async () => setNativeValue(checklistHost.querySelector("input")!, "dimmer")); },
+  async noOptions() { await act(async () => setNativeValue(checklistHost.querySelector("input")!, "zzz")); },
+  chosen: () => checklistChosen,
+  // Grouped order: devices by rank/label, so index 1 is the second "dimmer" entry.
+  expectedChoice: () => "device:2",
+  escape: "dialog",
+  dialogClosed: () => checklistClosed,
+  tab: "stays-open",
+  expandedWhenEmpty: "false",
 });

@@ -1208,6 +1208,10 @@ contains no device-specific code; the module says what the document looks like.
   [`knx devconf export-stored`](10-command-line.md#device-configuration-modules-and-stored-exports).
 
 Table columns in the Devices and catalogue views are configurable (since Alpha 23).
+In source after the Alpha 23 cutoff, if saved preferences hide every declared
+column, all declared columns appear for that view. This fallback does not rewrite
+saved preferences. Choosing a column or resetting visibility saves that explicit
+choice; hiding the last visible column is still refused.
 [Contract](../../contracts/device-configuration-modules.md).
 
 ### Address and line

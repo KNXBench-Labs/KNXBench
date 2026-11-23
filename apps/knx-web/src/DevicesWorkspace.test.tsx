@@ -1,6 +1,9 @@
 /** Device table gestures, preserved view state and asynchronous metadata guards. */
 // @vitest-environment happy-dom
 import { tableColumnSmoke } from "./tableColumnSmoke.fixture";
+import { messages as en } from "./messages/en";
+import { DEVICE_TABLE_COLUMNS } from "./tableColumns";
+import { COLUMN_VISIBILITY_KEY } from "./useTableColumnVisibility";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -394,4 +397,18 @@ it("refuses to hide the last sortable column in the chooser", async () => {
   await act(async () => { last.click(); });
   expect(last.checked).toBe(true);
   expect(host.querySelectorAll(".devices-table thead th")).toHaveLength(3); // select + last + comparison
+});
+
+it.each(["empty", "subset"])("renders real device data columns from %s preferences without rewriting storage", async mode => {
+  const ids = DEVICE_TABLE_COLUMNS.map(column => column.id);
+  const raw = JSON.stringify(Object.fromEntries(ids.map(id => [id, mode === "subset" && id === "name"])));
+  const key = COLUMN_VISIBILITY_KEY + "devices";
+  window.localStorage.setItem(key, raw);
+  await render(); await render();
+  const headers = [...host.querySelectorAll("thead th button")].map(button => button.getAttribute("aria-label"));
+  expect(headers).toEqual(DEVICE_TABLE_COLUMNS.filter(column => mode === "empty" || column.id === "name").map(column => en[column.label]));
+  expect(host.querySelectorAll("thead th")).toHaveLength(headers.length + 2);
+  expect(host.querySelector("tbody")!.textContent).toContain("Device 2");
+  if (mode === "empty") expect(host.querySelector("tbody")!.textContent).toContain("1.1.2");
+  expect(window.localStorage.getItem(key)).toBe(raw);
 });

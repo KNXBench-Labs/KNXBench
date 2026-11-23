@@ -454,11 +454,14 @@ summarised; the disposition is what holds now.
    OWN-01.
 5. **Other review leads — open, not confirmed defects.** Moved to their owners so they
    survive this closure: per-definition axis-query budget reuse → WP-05; last-download
-   request fan-out → [WP-37](WP-37-pending-changes-across-ui.md); all-hidden table
-   preferences and hidden selection controls → [OWN-01](OWN-01-owner-decisions.md)
-   (no active UI owner exists; lift condition: a targeted consumer/keyboard check in a
-   future UI package). The catalogue's search-field keyboard navigation stands; no claim of
-   complete keyboard inaccessibility.
+   request fan-out → [WP-37](WP-37-pending-changes-across-ui.md). Empty-column
+   preferences → [OWN-01](OWN-01-owner-decisions.md): owner approved all declared
+   columns as an in-memory fallback, without automatic storage writes, on 23 November
+   2026; the [separate package](../status/2026-11-23-empty-column-preferences.md)
+   awaits parent final acceptance. Hidden selection controls remain a separate,
+   unconfirmed UX lead in OWN-01 without an active owner (lift: a targeted
+   consumer/keyboard check). The catalogue's search-field keyboard navigation stands;
+   no claim of complete keyboard inaccessibility or its correction.
 6. **Nested-binding refusal causes — not a defect** (WP-48.3); cause-specific reporting is
    an enhancement.
 

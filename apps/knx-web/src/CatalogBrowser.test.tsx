@@ -1,5 +1,7 @@
 /** Tests for CatalogBrowser's install/refresh, diagnostic translation, and keyboard navigation. */
 // @vitest-environment happy-dom
+import { CATALOG_TABLE_COLUMNS } from "./tableColumns";
+import { COLUMN_VISIBILITY_KEY } from "./useTableColumnVisibility";
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -1259,4 +1261,20 @@ describe("CatalogBrowser installation target", () => {
     expect(german.options[0].textContent).toBe(deMessages["catalog.installationPlaceholder"]);
     await act(async () => root.unmount());
   });
+});
+
+it.each(["empty", "subset"])("renders real catalogue data columns from %s preferences without rewriting storage", async mode => {
+  const ids = CATALOG_TABLE_COLUMNS.map(column => column.id);
+  const raw = JSON.stringify(Object.fromEntries(ids.map(id => [id, mode === "subset" && id === "product"])));
+  const key = COLUMN_VISIBILITY_KEY + "catalog-results";
+  window.localStorage.setItem(key, raw);
+  apiMock.catalogItems.mockResolvedValue([item]);
+  const { root } = await renderBrowser();
+  try {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 250)); });
+    expect([...host!.querySelectorAll('.catalog-table thead th')].map(th => th.getAttribute("data-column")))
+      .toEqual(mode === "empty" ? ids : ["product"]);
+    expect(host!.querySelector("tbody")!.textContent).toContain("Actuator");
+    expect(window.localStorage.getItem(key)).toBe(raw);
+  } finally { await act(async () => root.unmount()); window.localStorage.removeItem(key); }
 });

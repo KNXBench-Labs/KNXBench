@@ -13,16 +13,18 @@ function read(tableId: string): Visibility {
   } catch { return {}; }
 }
 
-/** Unknown ids drop out; every declared id gets an explicit boolean. */
+/** Drop unknown ids and recover an empty visible set in memory, without storage writes. */
 function validated(raw: Visibility, columns: readonly string[]): Visibility {
-  return Object.fromEntries(columns.map(id => [id, raw[id] !== false]));
+  const showAll = !columns.some(id => raw[id] !== false);
+  return Object.fromEntries(columns.map(id => [id, showAll || raw[id] !== false]));
 }
 
 /**
  * The columns a table shows, persisted per table id in localStorage. All
  * declared columns are visible until the user hides one, so a new column
  * added by a later release appears by default. At least one column stays
- * visible: hiding the last one is refused and keeps the previous set.
+ * visible: empty preferences show all columns in memory without rewriting
+ * storage; hiding the last one is refused and keeps the previous set.
  */
 export function useTableColumnVisibility(tableId: string, columns: readonly string[]) {
   const [stored, setStored] = useState(() => ({ tableId, raw: read(tableId) }));

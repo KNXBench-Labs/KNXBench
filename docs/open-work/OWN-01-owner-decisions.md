@@ -248,10 +248,13 @@ delivered work, and none is decided here.
   `@TextParameterRefId` (WP-05)?
 - Historical Button rows: backfill or a re-import notice? Needs an authentic pre-change
   database first (WP-05).
-- UI review leads without an active owner: a table-column preference that hides every
-  column, and hidden selection controls (not confirmed defects; no claim of complete
-  keyboard inaccessibility). Lift: a targeted consumer/keyboard check in a future UI
-  package.
+- Empty-column preferences: owner approved an in-memory fallback to all declared
+  columns for a nonempty schema on 23 November 2026, without automatic storage
+  writes. Implementation and focused proof are awaiting parent final acceptance;
+  see the [scoped dossier](../status/2026-11-23-empty-column-preferences.md).
+- Hidden selection controls remain an unconfirmed UX lead without an active owner.
+  No selection redesign or keyboard/selection-inaccessibility fix is claimed.
+  Lift: a targeted consumer/keyboard check in a future UI package.
 
 ## Deferred by recorded decision (reopen only on a new decision)
 

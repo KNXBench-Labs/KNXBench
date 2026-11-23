@@ -1,9 +1,12 @@
 # Restart snapshot — empty column preferences (WebUI coordinator; observed 2026-11-23)
+## WP-49 ui-sdk (WAITING on owner ADR acceptance; owner WebUI; observed 2026-11-23)
+- Owner Go 2026-11-23 for 49.1 only (recorded in OWN-01). Spike done in a local throwaway branch (never pushed); ADR-0191 draft `Proposed` recommends the no-dependency fallback (+48.6 kB gzip for one combobox, first Escape propagates, library CSS fails ADR-0022). Docs package gate 10/10 green.
+- Next: owner accepts ADR-0191 (fallback or dependency under the exact-pin policy). Pilots 49.2/49.3 start only after acceptance; no dependency on main.
 ## Next-task queue (STANDING; owner WebUI next-task queue; observed 2026-11-22 23:10)
 - Docs hash audit published as PR #140, main `6e3b4e35b`: 381 dated notes map hashes cited as on main but absent from current main (alpha-22 history or neither line) to verified current-main counterparts (338 whole-tree identical, 13 same patch, 29 same parents/paths, 1 trees identical/subject differs); historical hashes kept. Owner-parked PRG-01 (12 alpha-22 hashes) and REL-01 (`fbaaca115`) files left unnoted. Independent review approve-with-fixes, findings fixed; docs-scoped gate 13/13 green. The queue's three packages are delivered; nothing further queued.
 - WP-31 published as PR #139, main `51b7bc19b`: file-transaction edits and catalogue device creation answer a running save at once with retryable 409 `projectSaving` (no auto-retry); the UI keeps drafts, previews and confirmations. Independent review approve-with-fixes, both IMPORTANT findings fixed after review; change-scoped package gate 15/15 green, frozen inputs, user data untouched. Hardware-fact settlement still waits by design.
 - WP-06/WP-42 docs closeout published as PR #138, main `965188a5d`; retrospective source review and owner decision to keep rejecting JSON `-0`. Root checkout stays untouched.
-- REL-01/beta remains PAUSED until explicit owner release. WP-49, stored-profile consumer and PRG-01 stay parked; no bus, hardware, VM, release or deployment authority.
+- REL-01/beta remains PAUSED until explicit owner release. Stored-profile consumer and PRG-01 stay parked; no bus, hardware, VM, release or deployment authority.
 
 Release freeze: released by claude-release-alpha23 (`v0.1.0-alpha.23` at `81c6bcc62`, observed 2026-11-22); `main` is open for code again. Work merged from now on ships with the next alpha.
 ## Alpha 23 publication verification (RUNNING; owner claude-release-alpha23; observed 2026-11-22)

@@ -65,29 +65,44 @@ export function describeTabsChecklist(adapter: TabsAdapter) {
       expect(selectedOf(tabs)).toHaveLength(1);
     });
 
-    it("links every tab and panel both ways through aria-controls and aria-labelledby", () => {
+    /** Both-way tab/panel links for the CURRENT selection; run again after every selection change. */
+    const checkLinks = (label: string) => {
       const tabs = adapter.tabs();
       const selected = selectedOf(tabs)[0];
       for (const t of tabs) {
         const controls = t.getAttribute("aria-controls");
         if (adapter.controls === "selected-only" && t !== selected) {
-          expect(controls, "an unselected tab must not point at a missing panel").toBeNull();
+          expect(controls, `${label}: an unselected tab must not point at a missing panel`).toBeNull();
           continue;
         }
-        expect(controls, t.id).toBeTruthy();
+        expect(controls, `${label}: ${t.id}`).toBeTruthy();
         const panel = document.getElementById(controls!);
-        expect(panel, controls!).not.toBeNull();
-        expect(panel!.getAttribute("role")).toBe("tabpanel");
-        expect(panel!.getAttribute("aria-labelledby")).toBe(t.id);
-        expect(document.getElementById(t.id)).toBe(t);
+        expect(panel, `${label}: ${controls}`).not.toBeNull();
+        expect(panel!.getAttribute("role"), label).toBe("tabpanel");
+        expect(panel!.getAttribute("aria-labelledby"), `${label}: panel of ${t.id}`).toBe(t.id);
+        expect(document.getElementById(t.id), label).toBe(t);
       }
       // Every panel is named by a tab of this list, and ids are unique.
       for (const panel of adapter.panels()) {
         const owner = document.getElementById(panel.getAttribute("aria-labelledby")!);
-        expect(tabs, panel.id).toContain(owner);
+        expect(tabs, `${label}: ${panel.id}`).toContain(owner);
       }
       const ids = [...tabs, ...adapter.panels()].map(el => el.id);
-      expect(new Set(ids).size).toBe(ids.length);
+      expect(new Set(ids).size, label).toBe(ids.length);
+    };
+
+    it("links every tab and panel both ways through aria-controls and aria-labelledby", () => {
+      checkLinks("initial");
+    });
+
+    it("keeps the tab/panel links correct after selecting each tab in turn", async () => {
+      const count = adapter.tabs().length;
+      for (let i = 0; i < count; i++) {
+        const target = adapter.tabs()[i];
+        await act(async () => { target.click(); });
+        expect(activeIndex()).toBe(i);
+        checkLinks(`tab ${i} selected`);
+      }
     });
 
     it("shows only the selected tab's panel", () => {
@@ -168,13 +183,14 @@ export function describeTabsChecklist(adapter: TabsAdapter) {
       }
     });
 
-    it("leaves Tab alone and lets the arrow keys bubble to ancestors and the window (no listener acts on them)", async () => {
+    it("leaves Tab alone and lets the arrow keys bubble to ancestors and the window (no ARIA-relevant listener acts on them)", async () => {
       focusActive();
       const tab = await press(focused(), "Tab");
       expect(tab.defaultPrevented, "Tab must continue to the browser, leaving the tablist").toBe(false);
       parentKeys = 0; windowKeys = 0;
       // Current policy (owner question): handled arrows are prevented but not stopped; multiSelection.ts
-      // only acts on Escape, so the leak has no side effect today.
+      // only acts on Escape and the achievements Konami matcher (konami.ts) observes
+      // the arrows harmlessly, so the leak has no side effect today.
       await press(focused(), "ArrowRight");
       expect(parentKeys).toBe(1);
       expect(windowKeys).toBe(1);

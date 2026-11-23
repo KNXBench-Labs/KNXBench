@@ -125,7 +125,9 @@ reattach). Each mounts inside a parent that counts keydowns.
 - Pinned as the current policy (not changed): `BusMonitorPanel` ignores Home/End (two tabs); only its
   selected tab carries `aria-controls`, because the Table panel is not mounted while Flow is shown
   (the Flow panel stays mounted, hidden); its panels are not tab stops; handled arrows bubble to
-  ancestors and the window (`multiSelection.ts` only acts on Escape, so there is no side effect today).
+  ancestors and the window (no ARIA-relevant listener acts on them: `multiSelection.ts` only acts on
+  Escape, and the achievements Konami matcher, `konami.ts` via `useAchievements.ts`, observes the
+  arrows harmlessly; no side effect today).
 - Not covered in happy-dom: the browser's real Tab order out of the tablist is checked through the
   roving tabindex and the unprevented Tab, not by moving focus.
 
@@ -174,3 +176,6 @@ Raised by 49.4a (owner, not yet decided; behaviour unchanged meanwhile):
    both), and add Home/End to the two-tab bus monitor view switch (the APG lists them as optional)?
 10. **`aria-controls` on unselected bus monitor view tabs:** keep omitting it (the Table panel is
     not mounted then), or always mount both panels?
+11. **Modifiers on tab arrows:** both tab keydown handlers (`Inspector.tsx`, `BusMonitorPanel.tsx`)
+    ignore modifier keys, so Alt+Left (browser back) and Ctrl+Arrow are `preventDefault`-ed. Skip
+    handling when a modifier is held? Behaviour unchanged meanwhile.

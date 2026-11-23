@@ -52,8 +52,8 @@ PR #146 merged as `bce9f16f7`. The selected documentation gate passed all ten
 stages on `b58f06daf`; its receipt was carried to the tree-identical main-first
 merge after confirming the unchanged comparison base. Frozen inputs and checked
 untouched user data were verified. No Rust, web or corpus test stage was selected
-for this documentation-only package. Slice 2 is blocked pending selection of the
-Windows build environment or explicit permission for isolated SDK/toolchain setup.
+for this documentation-only package. (State at that date; slice 2 has since started,
+see its status above.)
 
 Probe: base `b15363a25`, rustc/cargo 1.98.0 (pinned), target
 `x86_64-pc-windows-msvc` installed via `rustup target add`, host Linux.
@@ -112,6 +112,24 @@ Quoted or closely paraphrased from the fetched pages; not independently verified
 - Our own open point, not a Tauri statement and not a legal conclusion: `cargo-xwin` downloads the Windows SDK, which carries its own licence terms; whether and by whom they are accepted is a pending owner decision.
 - No signing cost or certificate choice is assumed.
 
+## Slice 2 status (23 November 2026; implemented on a work branch, not yet reviewed or published)
+
+The owner chose an isolated cross-build and a general isolated SDK download first. The
+worker afterwards found a terms caveat (VS2019 link vs VS2022 content, "solely with
+Visual Studio" wording) and continued; the coordinator then paused all SDK use. No
+consent for the caveat exists and applicability is unresolved (not legal advice).
+Details, versions, excerpts, unread SDK EULA:
+`docs/research/2026-11-23-windows-cross-build.md`.
+cargo-xwin 0.24.1 / xwin 0.10.0 with host clang-cl give a `cargo check` cross toolchain
+(CRT 14.44.17.14, SDK 10.0.26100, task-local, never committed). `ring` and
+`libsqlite3-sys` C build scripts now pass. `icons/icon.ico` was generated from the
+project's own 128 and 256 px PNGs (`tools/make_windows_icon.py`, no resampling) and
+`tauri-build` passes. Result: 13/20 packages exit 0 (knx-edit and knx-store newly
+reached), workspace and 7 packages exit 101 with Rust source errors only: knx-productdb
+(43, Unix `std::os::unix`/`rustix::fs` in `managed_catalogue`, `catalogue_copy/destination`
+and `managed_apply`) and xtask (2, AppImage). knx-app/cli/desktop/mcp/server are blocked
+behind knx-productdb. The C checks ran with clang-cl; MSVC `cl` was not run. Still not done: link, run, resource tool, native acceptance. SDK use is paused; this is a cross code check only, no support or release claim.
+
 ## Acceptance (measurable)
 
 1. `cargo check --workspace --target x86_64-pc-windows-msvc --locked` exits 0 in a documented environment.
@@ -122,7 +140,7 @@ Quoted or closely paraphrased from the fetched pages; not independently verified
 
 ## Remaining decisions
 
-- Toolchain for slice 2: native Windows 11 machine or CI runner, or isolated SDK download (licence acceptance) — owner.
+- Toolchain for slice 2: open: whether the SDK/CRT terms apply to this use and which environment is suitable (SDK use paused), whether a release build may link the CRT, and native Windows for acceptance.
 - Windows equivalents for descriptor-pinned directory writes, owner-only ACLs and locks (ADR needed).
 - WebView2 failure watcher design; installer format; signing (cost and certificate undecided).
-- Whether `ring`/`libsqlite3-sys` stay as they are (expected, not verified, to build with MSVC `cl`).
+- Whether `ring`/`libsqlite3-sys` stay as they are (checked with clang-cl only; MSVC `cl` untested).

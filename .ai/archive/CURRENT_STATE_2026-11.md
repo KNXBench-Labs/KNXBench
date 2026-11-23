@@ -46,3 +46,8 @@ Alpha 19 prerequisite delivered: DIAG-03
 <!-- archived 2026-11-22 from .ai/CURRENT_STATE.md -->
 ## One workspace version, ADR-0190 (DONE; owner WebUI; observed 2026-11-22)
 - Merged to main after the Alpha 23 tag: every Cargo package uses `version.workspace = true` (root `[workspace.package] version` = `0.1.0-alpha.23`); guard `xtask/tests/it/workspace_version.rs`; ADR-0190 supersedes ADR-0018 decision 1. Acceptance: full change-scoped gate (16/16, Rust 9396 passed) on branch head `ee5e0bcd5`; after the post-tag merge (version 22 -> 23, Alpha 23 release commits) an owner-approved targeted check: cargo metadata/check --workspace --all-targets, version tests (workspace_version, cli_version, bin_version, http_version_route), snapshot/local-info/header/anchor/diff checks.
+
+<!-- archived 2026-11-23 from .ai/CURRENT_STATE.md -->
+## Empty column preferences (PUBLISHED; owner WebUI next-package; observed 2026-11-23 07:45)
+- Owner approved: all declared columns as an in-memory fallback for an empty visible set; no automatic storage writes. Published as PR #141, merge `951af9a3b3add957b8f7b5cd57430dfb149ba397`, feature `088581b23d361af6488779a0b40221d74c2bc640`; Spec/Standards reviews APPROVE and change-scoped gate 11/11 green with frozen inputs and untouched user data.
+- Scope: shared visibility hook and catalogue/devices consumers. Hidden selection-control redesign excluded; REL-01/beta, PRG-01, WP-49 and foreign stored-profile consumer remain parked. No bus, hardware, VM, release or deployment authority.

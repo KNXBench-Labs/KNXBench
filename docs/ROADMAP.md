@@ -1,14 +1,14 @@
 # Roadmap
 
-## Empty-column preferences (23 November 2026; awaiting final acceptance)
+## Empty-column preferences (23 November 2026; published as PR #141)
 
 The shared browser visibility hook recovers an empty visible set by showing all
 columns declared by a nonempty schema, only in memory. Valid subsets remain;
 reads and refreshes do not repair localStorage. Explicit chooser actions still
-persist. Both Devices and catalogue use the same validation. See the
-[package dossier](status/2026-11-23-empty-column-preferences.md) for proof and
-acceptance limits. Hidden selection controls remain a separate OWN-01 lead;
-this does not close broader WP-48, beta or release scope.
+persist. Both Devices and catalogue use the same validation. Merge commit
+`951af9a3b`; see the [package dossier](status/2026-11-23-empty-column-preferences.md)
+for proof and acceptance limits. Hidden selection controls remain a separate
+OWN-01 lead; this does not close broader WP-48, beta or release scope.
 
 
 ## Alpha 23 pre-release (source cutoff 22 November 2026)

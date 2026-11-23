@@ -1,11 +1,10 @@
 # Empty-column preferences — 23 November 2026
 
-Status: implementation prepared; awaiting parent final review and package-gate acceptance.
-
-Owner approved all declared columns as an in-memory fallback when preferences
-hide every column of a nonempty schema. Empty schemas stay empty. The shared
-`useTableColumnVisibility` validator owns the correction; catalogue results,
-Devices and their choosers use it without consumer-specific workarounds.
+Status: published as PR #141, merge `951af9a3b3add957b8f7b5cd57430dfb149ba397`
+(2026-11-23). Owner approved all declared columns as an in-memory fallback when
+preferences hide every column of a nonempty schema. Empty schemas stay empty.
+The shared `useTableColumnVisibility` validator owns the correction; catalogue
+results, Devices and their choosers use it without consumer-specific workarounds.
 
 Reads, initial load, rerender, schema/table-ID changes, cross-tab storage events
 (including removal/clear) and same-table local refresh do not write storage.
@@ -19,8 +18,9 @@ Focused evidence covers hook transitions and real production catalogue/Devices
 consumers. Browser regressions seed all-false preferences before mount, check
 named data columns and exact stored values through reload, and pair each with a
 valid-subset control. A per-tab seed marker prevents reload from repairing a
-value that the application changed or removed. Execution results and any setup
-limitations are recorded below before handoff; no package-gate result is claimed.
+value that the application changed or removed. Execution results are recorded
+below; the published package has accepted independent review and a complete
+package gate.
 
 OWN-01's empty-preference lead is split from hidden selection controls. The
 latter remains open and unconfirmed as a UX defect; no claim of keyboard or
@@ -57,9 +57,14 @@ broader WP-48, WP-49, stored-profile, beta/REL-01 or hardware scope.
   remain forbidden. Catalogue records API request events before fixture setup;
   bus discovery stays an exact POST exception, and project creation remains
   allowed only in Devices setup.
-- Independent review and final package-gate acceptance remain with the parent.
-  No browser baseline-reversion result, package gate, publication or release is
-  claimed by this focused proof.
+- Independent Spec and Standards reviews on `088581b23d361af6488779a0b40221d74c2bc640`
+  both returned APPROVE with no findings. Change-scoped package gate:
+  11/11 stages green, complete plan, frozen inputs, no touched or unchecked
+  user data. Web gate: 6,038/6,038 Vitest, 1,358 fixture-browser executions,
+  production catalogue 40/40, production table-columns 245 functional plus
+  4 exclusive (249 total). PR #141 merged as `951af9a3b`.
+- Evidence limits stay explicit: no browser baseline-reversion result was run,
+  and no full release gate, real bus, hardware, VM or deployment is claimed.
 
 The external implementation handoff retains commands, exact outputs and the
 byte-restoration digest. No machine-specific evidence paths are tracked here.

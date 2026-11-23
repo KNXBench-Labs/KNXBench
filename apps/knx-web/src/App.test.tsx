@@ -2006,6 +2006,27 @@ describe("App — the File menu by keyboard alone", () => {
     await act(async () => root.unmount());
   });
 
+  // The Escape guard is narrow: every other key from an open File menu still reaches window listeners.
+  it("lets non-Escape keys from an open File menu reach window listeners", async () => {
+    const root = await renderApp();
+    await openFileMenu();
+    const menu = host!.querySelector<HTMLElement>(".file-menu")!;
+    const item = menu.querySelector<HTMLElement>("[data-file-menu-item]")!;
+    const seen: string[] = [];
+    const listener = (e: KeyboardEvent) => seen.push(e.key);
+    window.addEventListener("keydown", listener);
+    try {
+      await act(async () => {
+        item.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true, cancelable: true }));
+        item.dispatchEvent(new KeyboardEvent("keydown", { key: "a", bubbles: true, cancelable: true }));
+      });
+    } finally {
+      window.removeEventListener("keydown", listener);
+    }
+    expect(seen).toEqual(["k", "a"]);
+    await act(async () => root.unmount());
+  });
+
   // Positive control for the test below: the same Escape, sent where no menu stops it, does clear
   // the multi-selection through the real `multiSelection.ts` window handler.
   it.each([

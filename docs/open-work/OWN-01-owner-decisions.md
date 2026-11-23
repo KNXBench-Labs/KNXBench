@@ -2,6 +2,16 @@
 
 **Status:** Decisions recorded; remaining evidence and owner review pending. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
+## Decision recorded — 23 November 2026 (WP-49 ADR-0191 accepted)
+
+- **ADR-0191 accepted with the fallback.** ui-sdk is **not** added as a
+  dependency. Its behaviour and testing rules are applied to the existing
+  hand-written widgets, one widget family per package (WP-49.2 onwards). Reopen
+  only if ui-sdk ships a stable release with a stability promise and the web UI
+  needs markedly more complex widgets; the spike measurements in ADR-0191 are the
+  baseline for that re-evaluation.
+- Not authority for releases or bus or device writes.
+
 ## Decision recorded — 23 November 2026 (WP-49 ui-sdk)
 
 - **Go for the WP-49.1 evaluation spike and the ADR draft now.** The pilots

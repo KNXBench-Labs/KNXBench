@@ -1,13 +1,13 @@
 # ADR 0191: A beta headless dependency (ui-sdk) for web UI behaviours — evaluation and recommendation
 
 Date: 2026-11-23
-Status: Proposed
+Status: Accepted (2026-11-23, fallback)
 Session: WP-49.1 (owner request 2026-11-21, owner Go for the spike 2026-11-23)
 
-Proposed only. Nothing here is accepted until the owner accepts this ADR;
-pilots [WP-49](../open-work/WP-49-ui-sdk-behavior-pilot.md) 49.2 and 49.3 wait for
-that. No dependency, `package.json`, lockfile or source change accompanies this
-ADR.
+Accepted by the owner on 2026-11-23 with the **fallback**: no ui-sdk
+dependency; its behaviour and testing rules are applied to the hand-written
+widgets instead ([OWN-01](../open-work/OWN-01-owner-decisions.md)). No
+dependency, `package.json`, lockfile or source change accompanies this ADR.
 
 ## Context
 
@@ -79,7 +79,7 @@ hand-written one sets it; not asserted by tests).
 
 ## Decision
 
-Proposed for owner acceptance. **Recommendation: take the fallback — apply
+**Accepted 2026-11-23: the fallback.** Recommendation as proposed and accepted: take the fallback — apply
 ui-sdk's behaviour and testing rules to the existing hand-written widgets,
 without the dependency — and do not start pilots 49.2/49.3 as dependency
 pilots.** Reasons, each from the measurements:
@@ -161,5 +161,6 @@ dependency is accepted: +48.6 kB gzip for the first widget family (+59 kB with
 a menu) in the main chunk, a lazy 13.8 kB chunk for the sheet presentation,
 three consumer test files to adapt, an own Escape handler on every library
 widget, a bridge or no library CSS, and a standing update chore at the
-library's release cadence. Either way, nothing is accepted by this document
-until the owner records the decision in `docs/open-work/OWN-01-owner-decisions.md`.
+library's release cadence. The owner accepted the fallback on 2026-11-23 (recorded in
+`docs/open-work/OWN-01-owner-decisions.md`); the dependency consequences above
+do not apply.

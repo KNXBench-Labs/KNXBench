@@ -3,7 +3,9 @@
 Owner request: 21 November 2026 (WebUI session). 23 November 2026: owner Go for
 49.1 only ([OWN-01](OWN-01-owner-decisions.md)); 49.1 is delivered as the
 [ADR-0191](../adr/0191-ui-sdk-beta-headless-dependency-for-web-ui-behaviours.md)
-draft (`Proposed`). No dependency decision yet.
+draft. Later on 23 November 2026 the owner accepted ADR-0191 with the
+**fallback**: no ui-sdk dependency; the library's behaviour and testing rules are
+applied to the hand-written widgets (49.2 onwards).
 
 ## Requested outcome
 
@@ -43,17 +45,15 @@ files (tests excluded) carry 6 `role="dialog"`, 4 `role="menu"`,
 
 | Package | Outcome | Status |
 | --- | --- | --- |
-| 49.1 | Evaluation spike in a throwaway branch: install the exact beta version, measure bundle-size delta, check React 19 / TypeScript 7 / Vite 8 / happy-dom compatibility, offline and Tauri operation (no runtime fetch), coexistence of its optional `@layer` CSS with the theme tokens and presentations; write an ADR draft with the measured results | Delivered as ADR-0191 draft (Proposed), 23 November 2026: +48.6 kB gzip for one combobox (+59 kB with a menu), no peer or transitive packages, no network code, 29/29 `tsc` configs clean; the first Escape propagates and the library CSS fails ADR-0022, so the ADR recommends the fallback (spike evidence outside the repo, never merged) |
-| 49.2 | Pilot 1: `GroupAddressPicker` on the ui-sdk combobox/listbox behaviour, keeping its labels, filtering, Escape semantics ("a second Escape belongs to the page") and existing tests; add keyboard, focus and ARIA tests per the library's testing checklist | Waiting for owner acceptance of ADR-0191 (recommendation: fallback, no dependency pilot) |
-| 49.3 | Pilot 2: `RenameWorkbench` context menu on the ui-sdk menu behaviour (dismissal, focus return, roving focus) | Waiting for owner acceptance of ADR-0191 |
-| 49.4 | Decision: roll out to the other comboboxes/menus/tabs/dialogs (one package per widget family) or revert the pilot; record the result in the ADR | Not started |
+| 49.1 | Evaluation spike in a throwaway branch: install the exact beta version, measure bundle-size delta, check React 19 / TypeScript 7 / Vite 8 / happy-dom compatibility, offline and Tauri operation (no runtime fetch), coexistence of its optional `@layer` CSS with the theme tokens and presentations; write an ADR draft with the measured results | Delivered, 23 November 2026; ADR-0191 accepted with the fallback: +48.6 kB gzip for one combobox (+59 kB with a menu), no peer or transitive packages, no network code, 29/29 `tsc` configs clean; the first Escape propagates and the library CSS fails ADR-0022, so the ADR recommends the fallback (spike evidence outside the repo, never merged) |
+| 49.2 | Fallback, comboboxes: apply the ADR-0191 behaviour and testing checklist (focus stays in the input, `aria-activedescendant` follows the highlight, arrows stop at the ends, Enter chooses, first Escape closes and stops, second Escape belongs to the page, Tab closes, pointer press does not blur; `aria-haspopup`/`aria-expanded`/`aria-controls`) to `GroupAddressPicker`, `CommandPalette`, `Search` and `BusComposeForm` without a dependency; fix only gaps the tests expose | Next; owner Go 23 November 2026 |
+| 49.3 | Fallback, menus: the same checklist for `FileMenu` and the `RenameWorkbench` context menu (dismissal, focus return to the trigger, roving focus, submenus) | After 49.2 |
+| 49.4 | Fallback, tabs, toolbars and dialogs: the checklist for the remaining widget families (one package each) | After 49.3 |
 
 ## Boundaries
 
 - Web UI only; no domain, server, storage or bus changes.
-- No runtime dependency lands on `main` before the owner accepts the 49.1 ADR
-  (`AGENTS.md`: no unnecessary dependencies). Pin the exact version; the
-  packages are beta (`0.1.0-beta.14` on 21 November 2026).
+- No ui-sdk dependency (ADR-0191, fallback accepted 23 November 2026).
 - No visual change beyond what the owner accepts; keep theme tokens,
   presentations, motion levels and dark/light behaviour.
 - Its agent-tool and WebMCP features are out of scope for this pilot.
@@ -70,5 +70,4 @@ Answered by the owner on 23 November 2026 ([OWN-01](OWN-01-owner-decisions.md)):
 2. **Fallback if 49.1 shows a problem?** Yes: apply only the library's behaviour
    and testing rules to the existing hand-written widgets, without the dependency.
 
-Still open: the owner's acceptance of [ADR-0191](../adr/0191-ui-sdk-beta-headless-dependency-for-web-ui-behaviours.md),
-which recommends the fallback.
+3. **ADR-0191 accepted?** Yes, with the fallback (no dependency), 23 November 2026.

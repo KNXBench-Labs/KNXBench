@@ -2,6 +2,21 @@
 
 **Status:** Decisions recorded; remaining evidence and owner review pending. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
+## Decision recorded — 23 November 2026 (WP-49 ui-sdk)
+
+- **Go for the WP-49.1 evaluation spike and the ADR draft now.** The pilots
+  49.2/49.3 start only after the owner **accepts** the ADR; until then it stays
+  `Proposed` ([ADR-0191](../adr/0191-ui-sdk-beta-headless-dependency-for-web-ui-behaviours.md)).
+- **A beta headless dependency is acceptable in principle if the spike
+  convinces**, under: an exact version pin (no `^`/`~`), updates only
+  deliberately in their own PR with tests, and a documented revert path in the ADR.
+- **Fallback if the spike shows problems** (size, compatibility, styling
+  conflicts): apply only the library's behaviour and testing rules to the existing
+  hand-written widgets, without the dependency.
+- This is authority for the WP-49.1 spike and ADR draft only. It is **not** an
+  acceptance of the dependency, a Go for 49.2/49.3 or for any change to
+  `package.json`, and not authority for releases or bus or device writes.
+
 ## Decision recorded — 22 November 2026 (device-configuration `-0`)
 
 - **Device-configuration documents keep refusing the JSON number `-0`.** The strict

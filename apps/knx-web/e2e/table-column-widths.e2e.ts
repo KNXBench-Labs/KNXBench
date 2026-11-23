@@ -1,4 +1,6 @@
-/** Browser proofs for local column resizing, sortable devices and virtualised history diffs. */
+/** Browser proofs for column preferences, sortable devices and virtualised history diffs. */
+import { seedVisibility } from "./column-visibility-preferences";
+import { DEVICE_TABLE_COLUMNS } from "../src/tableColumns";
 import { writeFile } from "node:fs/promises";
 import { intercept, openList, openProject } from "./communication-fixture";
 import { fakeServer, node, openFlow, telegram } from "./telegram-flow-server";
@@ -732,3 +734,31 @@ test("stored uiScale: App's own scale drives inspector stacking, table fit and d
   await pointerTracks(page, table, 0.8);
   expect(server.unexpected).toEqual([]);
 });
+
+for (const mode of ["empty", "subset"] as const) {
+  test(`devices ${mode} visibility preferences survive mount and reload without storage repair`, async ({ page }) => {
+    const unchanged = await seedVisibility(page, "devices", DEVICE_TABLE_COLUMNS, mode === "subset" ? "name" : undefined);
+    const state = await intercept(page, "en");
+    const openPreferenceDevices = async () => {
+      await page.getByRole("button", { name: en["toolbar.commands"], exact: true }).click();
+      await page.getByRole("option", { name: en["workbench.devices"], exact: true }).click();
+      await expect(page.locator(".devices-workspace")).toBeVisible();
+    };
+    await openProject(page, "en"); await openPreferenceDevices();
+    const assertColumns = async () => {
+      const table = page.locator('[data-table-id="devices"]');
+      const expected = DEVICE_TABLE_COLUMNS.filter(column => mode === "empty" || column.id === "name");
+      await expect(table.locator("thead th button")).toHaveCount(expected.length);
+      for (const column of expected) await expect(table.getByRole("columnheader").getByRole("button", { name: en[column.label], exact: true })).toBeVisible();
+      await expect(table.locator("tbody")).toContainText("Actuator 1");
+      if (mode === "empty") await expect(table.locator("tbody")).toContainText("1.1.2");
+      await unchanged();
+    };
+    await assertColumns();
+    await page.reload(); await openPreferenceDevices(); await assertColumns();
+    // The fresh achievements fixture accepts startup/command reporting; this is not a project write.
+    expect(state.requests.filter(request => !request.startsWith("GET ")
+      && !["POST /api/bus/discover", "POST /api/project/new", "POST /api/achievements/record"].includes(request))).toEqual([]);
+    await evidenceScreenshot(page, `devices-${mode}-visibility-reloaded`);
+  });
+}

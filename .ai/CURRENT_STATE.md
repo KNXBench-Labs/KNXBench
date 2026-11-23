@@ -1,4 +1,8 @@
-# Restart snapshot — next-task queue (WebUI coordinator; observed 2026-11-22)
+# Restart snapshot — empty column preferences (WebUI coordinator; observed 2026-11-23)
+## Empty column preferences (ACTIVE; owner WebUI next-package; observed 2026-11-23 07:06)
+- Owner approved: all declared columns as an in-memory fallback for an empty visible set; no automatic storage writes. Implemented on `work/next-ui-analysis-20261123`, based on main `8b4f9a074`: 99 focused unit/consumer tests and 4 production-browser cases passed; consumer baseline reversion failed both intended regressions. Independent review and package acceptance pending.
+- Scope: shared visibility hook and catalogue/devices consumers. Hidden selection-control redesign excluded; REL-01/beta, PRG-01, WP-49 and foreign stored-profile consumer remain parked. No bus, hardware, VM, release or deployment authority.
+
 ## Next-task queue (STANDING; owner WebUI next-task queue; observed 2026-11-22 23:10)
 - Docs hash audit published as PR #140, main `6e3b4e35b`: 381 dated notes map hashes cited as on main but absent from current main (alpha-22 history or neither line) to verified current-main counterparts (338 whole-tree identical, 13 same patch, 29 same parents/paths, 1 trees identical/subject differs); historical hashes kept. Owner-parked PRG-01 (12 alpha-22 hashes) and REL-01 (`fbaaca115`) files left unnoted. Independent review approve-with-fixes, findings fixed; docs-scoped gate 13/13 green. The queue's three packages are delivered; nothing further queued.
 - WP-31 published as PR #139, main `51b7bc19b`: file-transaction edits and catalogue device creation answer a running save at once with retryable 409 `projectSaving` (no auto-retry); the UI keeps drafts, previews and confirmations. Independent review approve-with-fixes, both IMPORTANT findings fixed after review; change-scoped package gate 15/15 green, frozen inputs, user data untouched. Hardware-fact settlement still waits by design.

@@ -1,4 +1,6 @@
-/** Built catalogue view: previewed install, backup, ask-first restore and delete, fixture API. */
+/** Built catalogue: local preferences, install, backup, restore and delete with fixture APIs. */
+import { seedVisibility } from "./column-visibility-preferences";
+import { CATALOG_TABLE_COLUMNS } from "../src/tableColumns";
 import { expect, test, type Page } from "@playwright/test";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
@@ -557,5 +559,38 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
     await capture(page, `${tag}-3-selected`);
     expect(f.unexpected).toEqual([]);
     expect(errors).toEqual([]);
+  });
+}
+
+for (const mode of ["empty", "subset"] as const) {
+  test(`catalogue ${mode} visibility preferences survive mount and reload without storage repair`, async ({ page }) => {
+    const requests: string[] = [];
+    page.on("request", request => {
+      const path = new URL(request.url()).pathname;
+      if (path.startsWith("/api/")) requests.push(`${request.method()} ${path}`);
+    });
+    const unchanged = await seedVisibility(page, "catalog-results", CATALOG_TABLE_COLUMNS, mode === "subset" ? "product" : undefined);
+    const f = await fixture(page, "en", "porcelain", 1440);
+    f.items = TABLE_ITEMS.map(item => ({ ...item })); f.manufacturers = TABLE_MANUFACTURERS;
+    const openPreferenceCatalogue = async () => {
+      await page.getByRole("button", { name: en["toolbar.commands"], exact: true }).click();
+      await page.getByRole("option", { name: new RegExp(`^${en["workbench.catalog"]}`) }).click();
+      await expect(page.getByRole("region", { name: en["catalog.title"] })).toBeVisible();
+    };
+    const assertColumns = async () => {
+      const table = page.locator('[data-table-id="catalog-results"]');
+      const expected = CATALOG_TABLE_COLUMNS.filter(column => mode === "empty" || column.id === "product");
+      await expect(table.locator("thead th")).toHaveCount(expected.length);
+      for (const column of expected) await expect(table.getByRole("columnheader").getByRole("button", { name: en[column.label], exact: true })).toBeVisible();
+      await expect(table.locator("tbody")).toContainText("Fictional dimmer");
+      await unchanged();
+    };
+    await openPreferenceCatalogue(); await assertColumns();
+    await page.reload(); await openPreferenceCatalogue(); await assertColumns();
+    // The fresh achievements fixture accepts startup/command reporting; this is not a project write.
+    expect(requests.filter(request => !request.startsWith("GET ")
+      && !["POST /api/bus/discover", "POST /api/achievements/record"].includes(request))).toEqual([]);
+    expect(f.unexpected).toEqual([]);
+    await page.screenshot({ path: test.info().outputPath(`catalogue-${mode}-visibility-reloaded.png`), fullPage: true });
   });
 }

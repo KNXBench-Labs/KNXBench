@@ -129,11 +129,18 @@ export function describeDialogChecklist(adapter: DialogAdapter) {
         const outside = document.createElement("button");
         document.body.append(outside);
         try {
-          outside.focus();
+          // The shell isolates late body children too, which makes `outside` unfocusable after the first
+          // press; lift that so focus really sits outside each time, and assert it.
+          const focusOutside = () => {
+            outside.removeAttribute("inert"); outside.removeAttribute("aria-hidden");
+            outside.focus();
+            expect(focused(), "precondition: focus sits outside the dialog").toBe(outside);
+          };
+          focusOutside();
           // The dialog's keydown handler only sees events that bubble through it, so aim at the dialog.
           await press(adapter.dialog(), "Tab");
           expect(focused()).toBe(stops[0]);
-          outside.focus();
+          focusOutside();
           await press(adapter.dialog(), "Tab", { shiftKey: true });
           expect(focused()).toBe(stops[stops.length - 1]);
         } finally { outside.remove(); }

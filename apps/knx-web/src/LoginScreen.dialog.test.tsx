@@ -2,7 +2,9 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { vi } from "vitest";
+import { expect, it, vi } from "vitest";
+import * as api from "./api";
+import { setNativeValue } from "./test/comboboxChecklist";
 import { describeDialogChecklist, type DialogAdapter } from "./test/dialogChecklist";
 
 vi.mock("./api", () => ({ login: vi.fn(), errorStatus: vi.fn(), errorMessage: String }));
@@ -47,3 +49,20 @@ const adapter = (reason: LoginReason): DialogAdapter => ({
 });
 
 for (const reason of ["initial", "expired", "signedOut"] satisfies LoginReason[]) describeDialogChecklist(adapter(reason));
+
+it("wires the password field to the error only while an error is shown", async () => {
+  vi.mocked(api.login).mockRejectedValue(new Error("nope"));
+  const a = adapter("initial");
+  await a.mount(() => {});
+  try {
+    const field = host!.querySelector<HTMLInputElement>("#login-password")!;
+    expect(field.hasAttribute("aria-describedby"), "no error yet").toBe(false);
+    expect(field.getAttribute("aria-invalid")).toBe("false");
+    await act(async () => setNativeValue(field, "wrong"));
+    await act(async () => { host!.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+    const error = host!.querySelector("#login-error");
+    expect(error?.getAttribute("role")).toBe("alert");
+    expect(field.getAttribute("aria-describedby")).toBe("login-error");
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+  } finally { await a.unmount(); }
+});

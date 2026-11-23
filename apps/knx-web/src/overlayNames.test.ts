@@ -32,7 +32,11 @@ const files = Object.keys(import.meta.glob("./**/*.tsx"))
 describe("Overlay accessible names (WP-49.4c)", () => {
   it("finds the Overlay consumers (calibration: the scan is not vacuous)", () => {
     const consumers = files.filter(f => overlayTags(readFileSync(join(srcDir, f), "utf-8")).length > 0);
-    expect(consumers.length).toBeGreaterThanOrEqual(35);
+    // Exact on purpose: a consumer dropping out of the scan must fail. Adding or removing a dialog
+    // changes these numbers; update them here in the same change.
+    expect(consumers.length, "Overlay consumer files changed: update this count (and the tag count below)").toBe(40);
+    const tagCount = consumers.reduce((n, f) => n + overlayTags(readFileSync(join(srcDir, f), "utf-8")).length, 0);
+    expect(tagCount, "<Overlay tags changed: update this count (and the file count above)").toBe(43);
     expect(consumers).toContain("RenameWorkbench.tsx");
     expect(overlayTags('<Overlay a={() => 1} b="x">y</Overlay>')).toEqual(['<Overlay a={() => 1} b="x">']);
     expect(overlayTags("<OverlayFoo label=\"x\">")).toEqual([]);

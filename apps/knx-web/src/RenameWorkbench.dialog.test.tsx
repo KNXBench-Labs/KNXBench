@@ -94,3 +94,20 @@ describe("RenameWorkbench dialog beyond the shared checklist", () => {
     expect(document.activeElement).toBe(opener());
   });
 });
+
+// Owner question 17 (WP-49): CURRENT POLICY, pinned and not endorsed. Opened from the context-menu item
+// the menu unmounts as the dialog mounts and no restoreFocusRef is passed, so focus ends on <body>.
+it("ends with focus on the page body after closing a dialog opened from the context-menu item (owner question 17, current policy)", async () => {
+  await adapter.mount(() => {});
+  opener().focus();
+  await act(async () => { opener().dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 10, clientY: 10 })); });
+  const item = host!.querySelector<HTMLElement>('[role="menuitem"]')!;
+  expect(document.activeElement).toBe(item);
+  await act(async () => item.click());
+  expect(dialog()).not.toBeNull();
+  await press(document.activeElement as HTMLElement, "Escape");
+  expect(dialog()).toBeNull();
+  expect(document.activeElement, "owner question 17: the vanished menu item is not replaced by the tree row").toBe(document.body);
+  await adapter.unmount();
+});
+

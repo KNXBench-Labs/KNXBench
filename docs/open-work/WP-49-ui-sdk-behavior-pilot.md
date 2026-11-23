@@ -212,6 +212,15 @@ section stays pinned in 49.4b. Each mounts inside a parent that counts keydowns.
   focus falls to the page.
 - Not covered in happy-dom: real focus order on pointer press and real Tab traversal; Tab wrapping is
   asserted through the prevented event and the focus call.
+- Review follow-ups (closed): the focus-pull-in case now really starts outside the dialog for both Tab and
+  Shift+Tab; an `Overlay` with no focusable item prevents Tab and keeps focus on the panel; `overlayNames.test.ts`
+  pins the exact scan size (40 files, 43 tags; update both when adding or removing a dialog); the login
+  password field's `aria-describedby="login-error"` is pinned while an error shows and absent otherwise. Each
+  has a mutant that now fails by name. The `RenameWorkbench` context-menu path is pinned as current policy
+  (owner question 17).
+- Review evidence: the Playwright comparison of candidate against base was identical. Default lane 184/184
+  passing on both sides with the same 12 environmental `theme-manager` 403 failures (symlinked `node_modules`
+  fonts outside the Vite fs allow-list in archive copies); devices 88/88, catalogue 24/24, dialogs 22/22.
 
 ### 49.3b result (owner decisions 4-8)
 
@@ -291,3 +300,7 @@ Raised by 49.4c (owner, not yet decided; behaviour unchanged meanwhile):
     in `overlayNames.test.ts` enforces a name. Make the props a union type so a missing name fails to compile?
 16. **Scroll lock:** neither `Overlay` nor the login screen locks page scroll behind the dialog. Add one, or keep
     relying on the inert background?
+17. **Focus after the rename dialog from the context menu:** opening it from the context-menu item (pointer or
+    menu path) ends with focus on `<body>` after close, on base and on this change alike, because the menu item
+    unmounts and `RenameWorkbench` passes no `restoreFocusRef`. Pass the tree row as `restoreFocusRef`? Pinned
+    as current policy in `RenameWorkbench.dialog.test.tsx`; behaviour unchanged meanwhile.

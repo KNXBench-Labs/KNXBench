@@ -154,6 +154,20 @@ describe("Overlay beyond the shared checklist", () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps Tab and Shift+Tab inside a dialog with nothing focusable: they are prevented and focus stays on the panel", async () => {
+    host = document.createElement("div"); document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root!.render(<Overlay label="Empty" onClose={vi.fn()}><p>Nothing to focus</p></Overlay>));
+    const panel = host.querySelector<HTMLElement>('[role="dialog"]')!;
+    panel.focus();
+    expect(document.activeElement).toBe(panel);
+    for (const shiftKey of [false, true]) {
+      const tab = await press(panel, "Tab", { shiftKey });
+      expect(tab.defaultPrevented, `Tab (shift ${shiftKey}) is swallowed`).toBe(true);
+      expect(document.activeElement).toBe(panel);
+    }
+  });
+
   it("names a dialog only through its props: neither prop renders an unnamed dialog (pinned gap, see WP-49)", async () => {
     host = document.createElement("div"); document.body.append(host);
     root = createRoot(host);

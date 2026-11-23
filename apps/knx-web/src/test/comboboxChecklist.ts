@@ -174,6 +174,8 @@ export function describeComboboxChecklist(adapter: ComboboxAdapter) {
       await act(async () => { option.dispatchEvent(down); });
       // The default action of mousedown is what moves focus to the nearest focusable ancestor.
       expect(down.defaultPrevented).toBe(true);
+      // happy-dom never moves focus on mousedown, so this only guards handler-side blurs;
+      // the defaultPrevented check above is the real proof of the browser behaviour.
       expect(document.activeElement).toBe(adapter.input());
       expect(adapter.input().getAttribute("aria-expanded")).toBe("true");
       await act(async () => { option.click(); });

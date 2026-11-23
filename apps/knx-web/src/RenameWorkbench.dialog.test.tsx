@@ -110,4 +110,3 @@ it("ends with focus on the page body after closing a dialog opened from the cont
   expect(document.activeElement, "owner question 17: the vanished menu item is not replaced by the tree row").toBe(document.body);
   await adapter.unmount();
 });
-

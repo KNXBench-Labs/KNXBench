@@ -1981,6 +1981,39 @@ describe("App — the File menu by keyboard alone", () => {
     await act(async () => root.unmount());
   });
 
+  // CURRENT-POLICY pin (WP-49 owner question 8, undecided): a first-level Escape closes the File
+  // menu but is NOT stopped, so window listeners still see it. Change this test with the decision.
+  it("lets a first-level File menu Escape reach window listeners (current policy, owner question 8)", async () => {
+    const root = await renderApp();
+    const summary = await openFileMenu();
+    const menu = host!.querySelector<HTMLElement>(".file-menu")!;
+    const seen: KeyboardEvent[] = [];
+    const listener = (e: KeyboardEvent) => seen.push(e);
+    window.addEventListener("keydown", listener);
+    try {
+      await act(async () => {
+        menu.querySelector<HTMLElement>("[data-file-menu-item]")!
+          .dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      });
+    } finally {
+      window.removeEventListener("keydown", listener);
+    }
+    expect(seen.map((e) => e.key)).toEqual(["Escape"]);
+    expect(menu.hasAttribute("open")).toBe(false);
+    expect(document.activeElement).toBe(summary);
+    await act(async () => root.unmount());
+  });
+
+  it("renders every File menu entry as a type=button button", async () => {
+    const root = await renderApp();
+    await openFileMenu();
+    const menu = host!.querySelector<HTMLElement>(".file-menu")!;
+    const entries = [...menu.querySelectorAll<HTMLElement>("[data-file-menu-item]")];
+    expect(entries.length).toBeGreaterThan(10);
+    expect(entries.filter((b) => b.getAttribute("type") !== "button").map((b) => b.textContent)).toEqual([]);
+    await act(async () => root.unmount());
+  });
+
   // ADR-0089: "off means off" — no menu entry while achievements are switched off.
   it("leaves the achievements entry out of the File menu while achievements are switched off", async () => {
     settingsStorage.setItem("achievementsEnabled", "false");

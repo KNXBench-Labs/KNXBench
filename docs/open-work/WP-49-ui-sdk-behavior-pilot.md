@@ -47,7 +47,7 @@ files (tests excluded) carry 6 `role="dialog"`, 4 `role="menu"`,
 | --- | --- | --- |
 | 49.1 | Evaluation spike in a throwaway branch: install the exact beta version, measure bundle-size delta, check React 19 / TypeScript 7 / Vite 8 / happy-dom compatibility, offline and Tauri operation (no runtime fetch), coexistence of its optional `@layer` CSS with the theme tokens and presentations; write an ADR draft with the measured results | Delivered, 23 November 2026; ADR-0191 accepted with the fallback: +48.6 kB gzip for one combobox (+59 kB with a menu), no peer or transitive packages, no network code, 29/29 `tsc` configs clean; the first Escape propagates and the library CSS fails ADR-0022, so the ADR recommends the fallback (spike evidence outside the repo, never merged) |
 | 49.2 | Fallback, comboboxes: apply the ADR-0191 behaviour and testing checklist (focus stays in the input, `aria-activedescendant` follows the highlight, arrows stop at the ends, Enter chooses, first Escape closes and stops, second Escape belongs to the page, Tab closes, pointer press does not blur; `aria-haspopup`/`aria-expanded`/`aria-controls`) to `GroupAddressPicker`, `CommandPalette`, `Search` and `BusComposeForm` without a dependency; fix only gaps the tests expose | Delivered, 23 November 2026, PR #143 (main `bcf205b72`; see below) |
-| 49.3 | Fallback, menus: the same checklist for `FileMenu` and the `RenameWorkbench` context menu (dismissal, focus return to the trigger, roving focus, submenus) | After 49.2 |
+| 49.3 | Fallback, menus: the same checklist for `FileMenu` and the `RenameWorkbench` context menu (dismissal, focus return to the trigger, roving focus, submenus) | Delivered, 23 November 2026 (see below) |
 | 49.4 | Fallback, tabs, toolbars and dialogs: the checklist for the remaining widget families (one package each) | After 49.3 |
 
 ### 49.2 result (comboboxes)
@@ -69,6 +69,38 @@ Escape, Tab, pointer press, and `aria-haspopup`/`aria-expanded`/`aria-controls`.
   Tab does not close the always-visible list (the `Overlay` focus trap keeps focus inside).
 - Not covered in happy-dom: real focus/blur order on a pointer press is checked through the
   `mousedown` default being prevented, not through a browser.
+
+### 49.3 result (menus)
+
+One shared checklist helper (`src/test/menuChecklist.ts`, test-only, reusing `press()` from the
+combobox helper) runs eight cases per menu, plus five submenu cases for the File menu:
+`FileMenu.checklist.test.tsx` (real `FileMenuSummary`/`FileMenuContent`/`FileSubmenu` inside a
+harness that copies `App`'s Escape and outside-`pointerdown` wiring; `App.test.tsx` pins that wiring
+against the real component, including the unstopped first-level Escape) and `RenameWorkbench.checklist.test.tsx` (the context menu).
+
+- Semantics today: opening focuses the first *enabled* entry and leaves it the only tab stop;
+  ArrowDown/ArrowUp **wrap**, Home/End exist (File menu); disabled entries are real `disabled`
+  buttons, skipped by the arrows and inert; Enter/Space work through native buttons; ArrowRight opens
+  and ArrowLeft/Escape close a submenu with focus back on its trigger (the first Escape is stopped);
+  Tab closes the whole menu and focus rests on the File control; an outside `pointerdown` closes.
+  The File control announces `aria-haspopup="menu"`/`aria-expanded`; submenu triggers add
+  `aria-controls` and the panel `aria-labelledby`. The context menu has one entry, no persistent
+  trigger (focus returns to the element it was opened from), Escape and Tab close it and are
+  swallowed.
+- Fixed (three small gaps, each found by the checklist before the fix): `FileMenuItem` rendered a
+  type-less button (a `submit` button inside any form). Fixed class-wide: `type: "button"` is now part of
+  the shared item props (`useFileMenuItemProps`), the two CSV buttons that can render outside a menu
+  carry it explicitly, and `App.test.tsx` asserts every rendered `[data-file-menu-item]` is
+  `type=button` (seven contributed entries were type-less before; no live submit risk was found); the context menu had no accessible name
+  (now `aria-label` = the existing "Rename" caption); its arrow keys, Home and End were not
+  prevented, so the page behind the menu could scroll.
+- Pinned as the current policy (not changed): arrow wrap-around; the first-level Escape of the File
+  menu is neither prevented nor stopped (it bubbles to the page; pinned on the real `App` as a
+  current-policy test, owner question 8); Tab in the context menu is
+  swallowed while the File menu leaves it to the browser; the first-level File menu (`role="menu"`)
+  has no accessible name and no `aria-controls` link from the File control (submenus have both).
+- Not covered in happy-dom: real focus/blur order on a pointer press and the native Enter/Space to
+  click conversion; they are asserted through native `<button type="button">` entries.
 
 ## Boundaries
 
@@ -99,3 +131,12 @@ Raised by 49.2 (owner, not yet decided; behaviour unchanged meanwhile):
    semantics (first Escape clears/collapses, second closes)?
 5. **`aria-selected` meaning:** ADR-0191 suggests `aria-selected` for the chosen option plus a
    separate highlight attribute; all four widgets mark the highlighted option today. Change it?
+
+Raised by 49.3 (owner, not yet decided; behaviour unchanged meanwhile):
+
+6. **Wrapping and Tab:** keep arrow wrap-around in the File menu (the APG allows both), and keep the
+   inconsistency that Tab is swallowed by the context menu but left to the browser by the File menu?
+7. **Name the first-level File menu?** Today only its submenus are named and linked; naming it needs
+   an `id` shared between `FileMenuSummary` and `FileMenuContent` (an `App` call-site change).
+8. **First-level Escape in the File menu** is not stopped (submenu Escape is): stop it, so it cannot
+   reach other page-level Escape handlers?

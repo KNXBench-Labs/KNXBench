@@ -53,10 +53,13 @@ export default function RenameWorkbench({ tree, scope, onApplied, children }: {
       event.preventDefault(); setMenu({ ...chosen, x: event.clientX, y: event.clientY });
     }}>
     {children}
-    {visibleMenu && <div ref={menuRef} role="menu" className="rename-context-menu"
+    {visibleMenu && <div ref={menuRef} role="menu" aria-label={t("rename.title")} className="rename-context-menu"
       style={{ left: Math.max(8, Math.min(visibleMenu.x, window.innerWidth - 200)),
         top: Math.max(8, Math.min(visibleMenu.y, window.innerHeight - 72)) }}
-      onKeyDown={(event) => { if (event.key === "Escape" || event.key === "Tab") { event.preventDefault(); event.stopPropagation(); setMenu(null); } }}>
+      onKeyDown={(event) => {
+        // One entry: the arrows have nowhere to go, but must not scroll the page behind the menu.
+        if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) event.preventDefault();
+        if (event.key === "Escape" || event.key === "Tab") { event.preventDefault(); event.stopPropagation(); setMenu(null); } }}>
       <button type="button" role="menuitem" onClick={() => { setEditor(visibleMenu); setMenu(null); }}>{t("rename.title")} <kbd>F2</kbd></button>
     </div>}
     {current(editor) && editor && tree && <Overlay label={t("rename.title")} className="rename-dialog" onClose={() => { if (!pending) setEditor(null); }}>

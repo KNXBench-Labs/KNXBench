@@ -37,23 +37,23 @@ authentication and runtime options.
 
 All links are repository-relative anchors at the recorded base:
 
-- [Generic installation routes Windows readers to the existing guide](../../docs/manual/getting-started/04-installation.md#L162),
-  explicitly identifying its following commands as a Linux-host example.
-- [Existing pinned image tag](../../docs/manual/user-guide/windows-docker-desktop.md#L115)
-  and [new-installation checks/volume creation](../../docs/manual/user-guide/windows-docker-desktop.md#L157)
-  already use named volumes; [creation arguments](../../docs/manual/user-guide/windows-docker-desktop.md#L176)
+- [Generic installation routes Windows readers to the existing guide](../../docs/manual/getting-started/04-installation.md)
+  (line 162), explicitly identifying its following commands as a Linux-host example.
+- [Existing pinned image tag](../../docs/manual/user-guide/windows-docker-desktop.md#4-download-the-image-and-choose-your-login-password)
+  (line 115) and [new-installation checks/volume creation](../../docs/manual/user-guide/windows-docker-desktop.md#5-create-persistent-storage-and-the-container)
+  (line 157) already use named volumes; creation arguments (line 176)
   mount `knxbench-data` at `/data` and `knxbench-config` at `/config`, with
   hostname, loopback-published port and authentication settings.
-- [Storage inventory and retention](../../docs/manual/user-guide/windows-docker-desktop.md#L232)
-  describe projects, product database, TLS material and the separate config-root
+- [Storage inventory and retention](../../docs/manual/user-guide/windows-docker-desktop.md#7-understand-storage-and-day-to-day-starting)
+  (line 232) describe projects, product database, TLS material and the separate config-root
   key. Both roots must remain paired; replacing only one is insufficient.
-- [Stopped paired backups and restore](../../docs/manual/user-guide/windows-docker-desktop.md#L274)
-  already copy the whole roots, preserve originals and use empty new restore
+- [Stopped paired backups and restore](../../docs/manual/user-guide/windows-docker-desktop.md#8-back-up-and-restore-both-storage-locations)
+  (line 274) already copy the whole roots, preserve originals and use empty new restore
   volumes; the guide explicitly says its file-restore procedure has no Windows
   runtime verification yet. This is a documentation basis, not accepted migration
   execution evidence.
-- [Safe recreation/update](../../docs/manual/user-guide/windows-docker-desktop.md#L327)
-  preserves custom options and warns that returning to an older image after
+- [Safe recreation/update](../../docs/manual/user-guide/windows-docker-desktop.md#9-update-by-recreating-safely)
+  (line 327) preserves custom options and warns that returning to an older image after
   schema upgrades needs matching pre-upgrade backups. Migration must not silently
   become a version upgrade.
 

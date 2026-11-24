@@ -29,3 +29,6 @@ Release freeze: released by claude-release-alpha23 (`v0.1.0-alpha.23` at `81c6bc
 - WP-37 open-work doc + LEDGER updated on `work/wp37-modules-docs-20261118`; PR open, merge next. No bus/hardware/release/deploy.
 ## Retained boundaries (STANDING; observed 2026-11-02 20:47 CET)
 - Long-standing STANDING acceptance/reference sections live in `.ai/archive/` per `.ai/archive/README.md`; root intentionally stale/dirty, foreign tracks preserved, private bytes stay private.
+## Naming and Docker feedback intake (STANDING; owner documentation intake; observed 2026-11-24 12:32)
+- WP-51 and WP-52 recorded as independent plans in `docs/OPEN_WORK.md`; approved naming interview Q1–Q18, 24 November 2026. Recorded only, not claimed; no implementation Go.
+- Next: await explicit implementation Go for either package; no product/runtime acceptance or authority to resume foreign tracks.

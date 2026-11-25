@@ -5,13 +5,27 @@
 ## Decision recorded — 23 November 2026 (WP-49 open questions 4-8)
 
 Grilling round on the WebUI behaviour pins raised by WP-49.2 and 49.3 (questions 9-11, raised by 49.4a, stay open).
-
 - **Q4 Search and CommandPalette:** keep "the first Escape closes the overlay, Tab stays in the dialog" (APG dialog pattern); their always-visible lists get no collapse step.
 - **Q5 `aria-selected`:** keep marking the highlighted option (APG single-select combobox semantics). ADR-0191's Fallback section is amended: for single-select comboboxes the APG semantics apply, not ui-sdk's chosen-plus-highlight split.
 - **Q6 File menu and context menu:** arrow wrap-around stays (APG allows it). The rename context menu keeps swallowing Tab and returning focus to its opener (it has no persistent trigger); the File menu leaves Tab to the browser. Intended, not an inconsistency.
 - **Q7 name the first-level File menu:** fix. One id is shared by `FileMenuSummary` and `FileMenuContent`; the menu is `aria-labelledby` the File control and the control carries `aria-controls`.
 - **Q8 first-level File menu Escape:** fix. It is prevented and stopped, so one Escape closes exactly one level and the window Escape handler of `multiSelection.ts` no longer clears the multi-selection. The fix sits at the File menu only; `multiSelection.ts`, `Overlay` and `ModalForeground` are unchanged.
 - **Placement:** these land as their own package WP-49.3b, after 49.4a and before 49.4b.
+- Not authority for releases or bus or device writes.
+
+## Decision recorded — 23 November 2026 (WP-49 open questions 9-17, all DECIDED)
+
+The owner accepted every recommendation in the Q9-Q17 grilling round ("Alles Empfehlung"), delivered as package WP-49.5:
+
+- **Q9 Tabs:** Inspector and BusMonitorPanel keep wraparound and automatic activation; Home/End are added to the BusMonitorPanel tab switcher for consistency.
+- **Q10 Bus monitor `aria-controls`:** only the active tab carries it, while only the active panel is mounted; the inactive panel is never mounted just for `aria-controls`. The current-policy pin is promoted to the decided contract.
+- **Q11 Tab modifier keys:** both tab key handlers (Inspector, BusMonitorPanel) do NOT handle or preventDefault Alt/Ctrl/Meta-modified navigation keys; Shift-only handling stays. Positive controls for plain arrows/Shift; named cases for Alt+ArrowLeft, Ctrl+ArrowRight, Meta+Arrow, Home/End.
+- **Q12 Toolbars:** TelegramFlowView and InstructionEditor keep every enabled button a tab stop; no roving tabindex, no toolbar arrow navigation. Recorded as a conscious deviation from the APG toolbar pattern in ADR-0191's dated amendment.
+- **Q13 Instruction editor toolbar name:** its own accessible name via `deviceInstructions.toolbar` ("Formatting" / "Formatierung", with bar/tlh entries) in all four locales; the preview heading keeps its existing meaning.
+- **Q14 Overlay Escape:** `preventDefault()` is called before `stopPropagation()`/`onClose` on the handled Escape. This marks the event for later observers only; it does not retroactively inform capture listeners that already ran. Nested-top-only Escape and busy refusal stay.
+- **Q15 Overlay props:** exclusive union requiring exactly one of `label` / `labelledBy`; all 43 consumers typecheck unchanged. Neither/both is a compile error. The runtime dangling-`labelledBy`-id check stays; the source scan the type replaces is removed.
+- **Q16 Scroll lock:** no page/body scroll lock is added; the inert/`aria-hidden` isolation stays. Recorded as policy, not as unrestricted modal-pattern compliance.
+- **Q17 Rename focus return:** the renamed tree row is passed as Overlay `restoreFocusRef`, so focus returns there after closing a dialog opened from the context-menu item; the existing fallback applies when the row is gone; the F2 path is unchanged.
 - Not authority for releases or bus or device writes.
 
 ## Decision recorded — 23 November 2026 (WP-49 ADR-0191 accepted)

@@ -29,7 +29,7 @@ const files = Object.keys(import.meta.glob("./**/*.tsx"))
   .filter(path => !path.endsWith(".test.tsx"))
   .sort();
 
-describe("Overlay accessible names (WP-49.4c)", () => {
+describe("Overlay accessible names (WP-49.4c; Q15 decided 23 Nov 2026)", () => {
   it("finds the Overlay consumers (calibration: the scan is not vacuous)", () => {
     const consumers = files.filter(f => overlayTags(readFileSync(join(srcDir, f), "utf-8")).length > 0);
     // Exact on purpose: a consumer dropping out of the scan must fail. Adding or removing a dialog
@@ -42,16 +42,11 @@ describe("Overlay accessible names (WP-49.4c)", () => {
     expect(overlayTags("<OverlayFoo label=\"x\">")).toEqual([]);
   });
 
-  it("gives every Overlay exactly one name source: a label or a labelledBy", () => {
-    const unnamed: string[] = [];
-    for (const file of files) {
-      for (const tag of overlayTags(readFileSync(join(srcDir, file), "utf-8"))) {
-        const sources = [/\blabel=/.test(tag), /\blabelledBy=/.test(tag)].filter(Boolean).length;
-        if (sources !== 1) unnamed.push(`${file}: ${tag.slice(0, 80)}`);
-      }
-    }
-    expect(unnamed, "an Overlay without a name renders an unnamed dialog; the props type cannot enforce it").toEqual([]);
-  });
+  // The neither/both name-source case is now a COMPILE error via Overlay's
+  // exclusive-union `OverlayName` prop type (owner Q15, 23 Nov 2026, WP-49.5), so
+  // the source scan that used to check it is removed; the tsc mutants proving the
+  // type contract live in the WP-49.5 work record. What types cannot prove —
+  // a labelledBy id pointing at nothing — is still checked at runtime below.
 
   it("points every literal labelledBy at an element id that exists in the same file", () => {
     const dangling: string[] = [];

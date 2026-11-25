@@ -1079,6 +1079,10 @@ export function DeviceWorkspace(props: {
     <DevicePendingSummary parts={pending} />
     <RenameNameField tree={tree} target={{ kind: "device", id: detail.id, name: detail.name }} onApplied={onApplied} />
     <div className="device-tabs" role="tablist" aria-label={detail.name} onKeyDown={(e) => {
+      // Decided 23 Nov 2026 (owner Q11, WP-49.5): Alt/Ctrl/Meta-modified navigation
+      // keys are NOT handled or prevented, so browser shortcuts (Alt+Left = back,
+      // Ctrl+Arrow, Cmd+Arrow) keep working. Plain and Shift-modified keys stay handled.
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
       e.preventDefault();
       const step = e.key === "ArrowRight" ? 1 : -1;

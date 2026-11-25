@@ -25,7 +25,8 @@ async function mount(c: InstructionClient, parentKeyDown: () => void, ctx: Conte
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
-  await act(async () => root!.render(<div onKeyDown={parentKeyDown}><InstructionEditor deviceId={1} context={ctx} client={c} /></div>));
+  // The production host (DeviceInstructionsPanel) passes t("deviceInstructions.toolbar").
+  await act(async () => root!.render(<div onKeyDown={parentKeyDown}><InstructionEditor deviceId={1} context={ctx} client={c} toolbarName="Formatting" /></div>));
 }
 async function unmount() {
   if (root) await act(async () => root!.unmount());
@@ -60,6 +61,20 @@ describeToolbarChecklist({
 });
 
 describe("InstructionEditor toolbar: parent-owned behaviour", () => {
+  it("names the formatting toolbar differently from the preview heading (decided, owner Q13, 23 Nov 2026)", async () => {
+    await mount(client(), () => {});
+    try {
+      const bar = toolbar();
+      const heading = [...host!.querySelectorAll("h4")].find(h => h.textContent === "Rendered preview")!;
+      expect(bar.getAttribute("aria-label")).toBe("Formatting");
+      expect(bar.getAttribute("aria-label")).not.toBe(heading.textContent);
+      expect(heading.textContent).toBe("Rendered preview");
+      // Positive control: the four buttons and the preview are unchanged.
+      expect(controls().map(b => b.textContent)).toEqual(["Bold", "Italic", "Underline", "Remove formatting"]);
+      expect(host!.querySelector("[class*=preview]")).not.toBeNull();
+    } finally { await unmount(); }
+  });
+
   it("offers the four formatting buttons, and none at all in the read-only view (positive control)", async () => {
     await mount(client(), () => {});
     expect(controls().map(b => b.textContent)).toEqual(["Bold", "Italic", "Underline", "Remove formatting"]);

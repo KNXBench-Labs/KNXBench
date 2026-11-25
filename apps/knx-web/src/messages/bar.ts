@@ -336,4 +336,5 @@ export const messages = {
   "addressTable.unlinkFrom": "{object} vo {address} trenna",
   "addressTable.unknownDevice": "Unbekannts Gerätl #{id}",
   "addressTable.unnamedObject": "Objekt ohne Nam",
+  "deviceInstructions.toolbar": "Formatierung",
 } satisfies Partial<Record<MessageKey, string>>;

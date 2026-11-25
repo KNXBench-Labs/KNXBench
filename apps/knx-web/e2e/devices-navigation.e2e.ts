@@ -256,7 +256,8 @@ for (const language of ["en", "de"] as const) for (const density of ["compact", 
   });
 }
 
-for (const language of ["en", "de"] as const) test(`WP41 ${language}: saved/resized columns and draft survive Settings; active focus survives in-place refresh`, async ({ page }, info) => {
+/** Shared setup for the three focused WP41 cases: resized columns and an open draft editor. */
+async function openResizedColumnsWithDraft(page: Page, language: "en" | "de", density: "compact" | "comfortable" = "compact") {
   const m = language === "en" ? en : de;
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.addInitScript(() => {
@@ -264,8 +265,9 @@ for (const language of ["en", "de"] as const) test(`WP41 ${language}: saved/resi
     // Init scripts also run on reload: seed an absent preference, never overwrite a resize.
     if (localStorage.getItem(key) === null) localStorage.setItem(key, JSON.stringify({ name: 280, description: 220 }));
   });
-  const state = await intercept(page, language, 24, "technical-light", true, true, { density: "compact", study: true });
+  const state = await intercept(page, language, 24, "technical-light", true, true, { density, study: true });
   await openProject(page, language); await openList(page, language);
+  await expect(page.locator("html")).toHaveAttribute("data-density", density);
   const table = page.locator('[data-table-id="devices"]');
   const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem("knxbench:table-column-widths:v1:devices")!));
   expect(await stored()).toEqual({ name: 280, description: 220 });
@@ -287,6 +289,11 @@ for (const language of ["en", "de"] as const) test(`WP41 ${language}: saved/resi
   await draft.evaluate(node => node.setAttribute("data-wp41-retained", "same"));
   await page.keyboard.press("Tab"); await page.keyboard.press("Shift+Tab");
   await expect(draft).toBeFocused();
+  return { m, state, table, stored, renderedName, resized, selected, workspace, draft };
+}
+
+for (const language of ["en", "de"] as const) test(`WP41 ${language}: saved/resized columns and draft survive each Settings switch`, async ({ page }, info) => {
+  const { m, state, stored, resized, workspace, draft } = await openResizedColumnsWithDraft(page, language);
   const before = state.requests.length;
   for (const [theme, density] of [["technical-dark", "comfortable"], ["graphite", "compact"], ["technical-light", "comfortable"]]) {
     await page.keyboard.press("Control+Shift+P");
@@ -305,6 +312,18 @@ for (const language of ["en", "de"] as const) test(`WP41 ${language}: saved/resi
     expect(await stored()).toEqual(resized);
     await info.attach(`wp41-switch-${theme}-${density}`, { body: await workspace.screenshot(), contentType: "image/png" });
   }
+  await expect.poll(() => ({ theme: state.settings.theme, density: state.settings.density }))
+    .toEqual({ theme: "technical-light", density: "comfortable" });
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("knx-desktop:settings-cache")!)))
+    .toMatchObject({ schemaVersion: 1, settings: { theme: "technical-light", density: "comfortable" } });
+  expect(state.requests.slice(before).filter(request => /^(POST|DELETE) /.test(request) && request !== "POST /api/achievements/record")).toEqual([]);
+  expect(state.tree.snapshot_revision).toBe(1); expect(state.tree.can_undo).toBe(false);
+  expect(state.unexpected).toEqual([]);
+});
+
+for (const language of ["en", "de"] as const) test(`WP41 ${language}: active draft focus and value survive in-place server refresh`, async ({ page }, info) => {
+  const { state, stored, resized, workspace, draft } = await openResizedColumnsWithDraft(page, language, "comfortable");
+  const before = state.requests.length;
   // Re-enter by real pointer/keyboard input before testing an in-place update.
   await draft.click(); await page.keyboard.press("Tab"); await page.keyboard.press("Shift+Tab");
   await expect(draft).toBeFocused();
@@ -332,6 +351,18 @@ for (const language of ["en", "de"] as const) test(`WP41 ${language}: saved/resi
     .toMatchObject({ schemaVersion: 1, settings: { theme: "technical-light", density: "comfortable" } });
   expect(state.requests.slice(before).filter(request => /^(POST|DELETE) /.test(request) && request !== "POST /api/achievements/record")).toEqual([]);
   expect(state.tree.snapshot_revision).toBe(1); expect(state.tree.can_undo).toBe(false);
+  expect(state.unexpected).toEqual([]);
+});
+
+for (const language of ["en", "de"] as const) test(`WP41 ${language}: resized columns survive a full reload`, async ({ page }) => {
+  const { m, state, stored, renderedName, resized, selected, table } = await openResizedColumnsWithDraft(page, language);
+  // Reach the same persisted appearance the combined case reached via its settings cycle.
+  await page.keyboard.press("Control+Shift+P");
+  const palette = page.getByRole("dialog").getByRole("combobox");
+  await palette.fill(m["toolbar.settings"]); await palette.press("Enter");
+  await page.getByRole("combobox", { name: m["appearance.density"], exact: true }).selectOption("comfortable");
+  await expect(page.locator("html")).toHaveAttribute("data-density", "comfortable");
+  await page.getByRole("button", { name: m["settings.back"], exact: true }).click();
   await page.locator(".device-editor-navigation button").first().click();
   await expect(selected).toBeChecked();
   const finalRenderedName = await renderedName();

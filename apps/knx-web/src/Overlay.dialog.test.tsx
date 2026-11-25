@@ -69,7 +69,7 @@ function adapter(name: string, variant: Variant, withRestore = false): DialogAda
     nameSource: variant === "labelledby" ? "aria-labelledby" : "aria-label",
     describedBy: "none",
     shell: "overlay",
-    escape: { closes: true, prevented: false, stopped: true },
+    escape: { closes: true, prevented: true, stopped: true },
     busy: async () => { await act(async () => q("[data-busy]").click()); },
     openerGone: withRestore ? {
       remove: async () => { await act(async () => q("[data-opener]").remove()); },
@@ -168,10 +168,14 @@ describe("Overlay beyond the shared checklist", () => {
     }
   });
 
-  it("names a dialog only through its props: neither prop renders an unnamed dialog (pinned gap, see WP-49)", async () => {
+  it("names a dialog only through its props: the exclusive-union OverlayName type makes neither-prop and both-props compile errors (owner Q15, 23 Nov 2026; the runtime render below is the gap the type closed)", async () => {
     host = document.createElement("div"); document.body.append(host);
     root = createRoot(host);
-    await act(async () => root!.render(<Overlay onClose={vi.fn()}><button>Inside</button></Overlay>));
+    // Cast past the union to prove the RUNTIME still renders an unnamed dialog if a
+    // JS-only caller bypasses the types; the compile-time contract is proven by the
+    // tsc mutants recorded in WP-49.5 (neither prop / both props must not compile).
+    const bypass = { onClose: vi.fn(), children: <button>Inside</button> } as unknown as Parameters<typeof Overlay>[0];
+    await act(async () => root!.render(<Overlay {...bypass} />));
     const panel = host.querySelector('[role="dialog"]')!;
     expect(panel.hasAttribute("aria-label")).toBe(false);
     expect(panel.hasAttribute("aria-labelledby")).toBe(false);

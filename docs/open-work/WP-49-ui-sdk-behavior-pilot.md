@@ -51,7 +51,8 @@ files (tests excluded) carry 6 `role="dialog"`, 4 `role="menu"`,
 | 49.4a | Fallback, tabs: the checklist for the tablists in `Inspector` and `BusMonitorPanel` | Delivered, 23 November 2026, PR #145 (main `b15363a25`; see below) |
 | 49.3b | Apply the owner decisions on questions 4-8 (23 November 2026): name the first-level File menu, stop its first-level Escape, turn the other pins into decided rules | Delivered, 23 November 2026, PR #147 (main `f3836adc9`; see below) |
 | 49.4b | Fallback, toolbars: the checklist for `TelegramFlowView` and `features/rtf/InstructionEditor` | Delivered, 23 November 2026, PR #148 (main `78b08f298`; see below) |
-| 49.4c | Fallback, dialogs: the checklist for the `Overlay` shell and its dialog consumers (`NewProjectDialog`, `LoginScreen`, `RenameWorkbench`, the `App` dialogs) | Delivered pending review, 23 November 2026 (review and gate pending; see below) |
+| 49.4c | Fallback, dialogs: the checklist for the `Overlay` shell and its dialog consumers (`NewProjectDialog`, `LoginScreen`, `RenameWorkbench`, the `App` dialogs) | Delivered, 23 November 2026, PR #150 (main `8ab381831`; see below) |
+| 49.5 | Apply the owner decisions on questions 9-17 (23 November 2026) | This package, local commit only (see below) |
 
 ### 49.2 result (comboboxes)
 
@@ -189,7 +190,7 @@ section stays pinned in 49.4b. Each mounts inside a parent that counts keydowns.
 - Trap: `Overlay` wraps Tab on the last stop and Shift+Tab on the first (prevented), leaves mid-list Tab
   to the browser and pulls focus back in when it has left the dialog. A nested `Overlay` keeps Tab inside
   the top dialog. The login screen has no trap of its own.
-- Escape: `Overlay` stops it and closes, but does NOT call `preventDefault` (owner question 14). The
+- Escape: `Overlay` stops, prevents and closes it (decided 23 Nov 2026, owner Q14; see 49.5). The
   rename name field handles Escape itself (prevented and stopped). Dialogs that refuse to close while
   busy (`onClose` ignored): RenameWorkbench (`pending`, pinned), ProjectHistoryDialog, LogExportDialog,
   NameRecipeDialog, DeviceComparisonDialog (`adopting`; static grep only, not mounted here). The key is
@@ -197,7 +198,7 @@ section stays pinned in 49.4b. Each mounts inside a parent that counts keydowns.
 - Background: while an `Overlay` is open everything outside its branch is `inert` and `aria-hidden`,
   restored on close (nested dialogs: only the top is active). The login screen isolates nothing itself;
   `AuthGate` makes the app `inert` (pinned in `AuthGate.test.tsx`). No scroll lock exists in either
-  (pinned: body and root `overflow` untouched; owner question 16).
+  (pinned: body and root `overflow` untouched; decided 23 Nov 2026, owner Q16: no scroll lock, see 49.5).
 - Stacking: Escape closes only the top dialog and focus returns to the control that opened it inside the
   lower one; the next Escape closes the lower one (nested-in-tree layout).
 - Fixed (one gap, found by the RenameWorkbench checklist run): focus did not return to the opener of a
@@ -217,13 +218,12 @@ section stays pinned in 49.4b. Each mounts inside a parent that counts keydowns.
   pins the exact scan size (40 files, 43 tags; update both when adding or removing a dialog); the login
   password field's `aria-describedby="login-error"` is pinned while an error shows and absent otherwise. Each
   has a mutant that now fails by name. The `RenameWorkbench` context-menu path is pinned as current policy
-  (owner question 17).
+  (decided 23 Nov 2026, owner Q17; fixed in 49.5).
 - Review evidence: the Playwright comparison of candidate against base was identical. Default lane 184/184
   passing on both sides with the same 12 environmental `theme-manager` 403 failures (symlinked `node_modules`
   fonts outside the Vite fs allow-list in archive copies); devices 88/88, catalogue 24/24, dialogs 22/22.
 
 ### 49.3b result (owner decisions 4-8)
-
 - Q7 fixed: `FileMenuSummary` and `FileMenuContent` take one required `menuId`; the menu carries that
   `id` and `aria-labelledby` the File control, the control carries `aria-controls` (`App` passes
   `useId()`). The menu checklist now asserts a name and the two-way link for every menu button, and
@@ -239,6 +239,30 @@ section stays pinned in 49.4b. Each mounts inside a parent that counts keydowns.
 - Open risk: a non-`Overlay` portal child of the File menu (a picker) would now have its Escape stopped
   at the File control too; the control already closed the menu and took focus for it.
 
+### Decisions 23 Nov 2026 (delivered in 49.5)
+
+All nine questions Q9-Q17 are DECIDED ([OWN-01](OWN-01-owner-decisions.md)) and implemented in package 49.5:
+
+- Q9: BusMonitorPanel's tab switcher gains Home/End (wraparound + automatic activation stay); the shared
+  `tabsChecklist.ts` now runs Home/End as `present` for both tablists.
+- Q10: `aria-controls` stays on the active BusMonitorPanel tab only while only the active panel is mounted;
+  the current-policy pin is promoted to the decided contract.
+- Q11: both tab key handlers skip Alt/Ctrl/Meta-modified navigation keys (no preventDefault), Shift-only
+  handling stays; the checklist gained a named modifier test with plain/Shift positive controls.
+- Q12: both toolbars keep every enabled button a tab stop (no roving tabindex); the pins are decided rules
+  and ADR-0191 carries a dated amendment recording the conscious APG-toolbar deviation.
+- Q13: the InstructionEditor formatting toolbar is named via `deviceInstructions.toolbar` ("Formatting" /
+  "Formatierung", plus bar/tlh entries) instead of `copy.rendered`; the preview heading is unchanged.
+- Q14: `Overlay`'s Escape handler calls `preventDefault()` before `stopPropagation()`/`onClose` (later
+  observers only, not retroactive for capture listeners); the pins asserting `defaultPrevented===false` flipped.
+- Q15: `Overlay` props are the exclusive union `OverlayName` (`{label}` XOR `{labelledBy}`); all 43 consumers
+  typecheck unchanged, neither/both fails `tsc` (mutant-proven), and `overlayNames.test.ts` keeps only the
+  runtime dangling-`labelledBy`-id check.
+- Q16: no page/body scroll lock; recorded as decided policy in `Overlay`'s doc comment and the dialog checklist.
+- Q17: `RenameWorkbench` passes the renamed tree row as `restoreFocusRef`, so the context-menu path returns
+  focus there; pinned in `RenameWorkbench.dialog.test.tsx` (menu, cancel, successful rename, row-gone fallback)
+  and verified in a real Chromium spec (`e2e/rename-focus-return.e2e.ts`, dialogs lane: menu path + F2 control).
+
 ## Boundaries
 
 - Web UI only; no domain, server, storage or bus changes.
@@ -252,7 +276,6 @@ section stays pinned in 49.4b. Each mounts inside a parent that counts keydowns.
 ## Open decisions
 
 Answered by the owner on 23 November 2026 ([OWN-01](OWN-01-owner-decisions.md)):
-
 1. **Is a beta headless dependency acceptable?** Yes in principle, if the spike
    convinces, under an exact version pin (no `^`/`~`), updates only deliberately
    in their own PR with tests, and a documented revert path in the ADR.
@@ -272,35 +295,14 @@ Raised by 49.2 and 49.3, answered by the owner on 23 November 2026 ([OWN-01](OWN
 7. **Name the first-level File menu:** done (shared id, `aria-labelledby`, `aria-controls`).
 8. **First-level Escape in the File menu:** stopped, so one Escape closes one level.
 
-Raised by 49.4a (owner, not yet decided; behaviour unchanged meanwhile):
+Raised by 49.4a/49.4b/49.4c, all answered by the owner on 23 November 2026 ([OWN-01](OWN-01-owner-decisions.md)) and delivered in 49.5 — see "Decisions 23 Nov 2026 (delivered in 49.5)" above:
 
-9. **Tabs policy:** keep automatic activation with wrap-around in both tablists (the APG allows
-   both), and add Home/End to the two-tab bus monitor view switch (the APG lists them as optional)?
-10. **`aria-controls` on unselected bus monitor view tabs:** keep omitting it (the Table panel is
-    not mounted then), or always mount both panels?
-11. **Modifiers on tab arrows:** both tab keydown handlers (`Inspector.tsx`, `BusMonitorPanel.tsx`)
-    ignore modifier keys, so Alt+Left (browser back) and Ctrl+Arrow are `preventDefault`-ed. Skip
-    handling when a modifier is held? Behaviour unchanged meanwhile.
-
-Raised by 49.4b (owner, not yet decided; behaviour unchanged meanwhile):
-
-12. **Toolbar tab order:** both toolbars (flow view, instruction editor) leave every button a tab stop,
-    with no arrow keys. The APG toolbar pattern prefers one tab stop with arrow navigation, but
-    converting changes the Tab order for every user. Keep, or convert to a roving tabindex with
-    ArrowLeft/ArrowRight and Home/End? See the 49.4b result.
-13. **Instruction editor toolbar name:** the formatting toolbar is named `copy.rendered` ("Rendered
-    preview"), the same text as the preview heading (`InstructionEditor.tsx` lines 119 and 121).
-    Give the toolbar its own name (e.g. "Formatting")? Behaviour unchanged meanwhile.
-
-Raised by 49.4c (owner, not yet decided; behaviour unchanged meanwhile):
-
-14. **Escape default:** `Overlay` stops Escape but does not `preventDefault` it (only the rename field does).
-    Prevent it in the shell so the browser's own Escape action (e.g. leaving fullscreen) does not also fire?
-15. **Required dialog name:** `Overlay`'s props allow neither `label` nor `labelledBy`; only the source scan
-    in `overlayNames.test.ts` enforces a name. Make the props a union type so a missing name fails to compile?
-16. **Scroll lock:** neither `Overlay` nor the login screen locks page scroll behind the dialog. Add one, or keep
-    relying on the inert background?
-17. **Focus after the rename dialog from the context menu:** opening it from the context-menu item (pointer or
-    menu path) ends with focus on `<body>` after close, on base and on this change alike, because the menu item
-    unmounts and `RenameWorkbench` passes no `restoreFocusRef`. Pass the tree row as `restoreFocusRef`? Pinned
-    as current policy in `RenameWorkbench.dialog.test.tsx`; behaviour unchanged meanwhile.
+9. **Tabs policy:** keep automatic activation with wrap-around in both tablists, and add Home/End to the bus monitor view switch. DECIDED, delivered.
+10. **`aria-controls` on unselected bus monitor view tabs:** keep omitting it while only the active panel is mounted. DECIDED, delivered.
+11. **Modifiers on tab arrows:** skip handling Alt/Ctrl/Meta-modified navigation keys in both tab handlers. DECIDED, delivered.
+12. **Toolbar tab order:** keep every enabled button a tab stop, no roving tabindex (APG deviation recorded in ADR-0191). DECIDED, delivered.
+13. **Instruction editor toolbar name:** its own name via `deviceInstructions.toolbar`. DECIDED, delivered.
+14. **Escape default:** `Overlay` now preventDefaults the Escape it handles. DECIDED, delivered.
+15. **Required dialog name:** `Overlay` props are the exclusive union `OverlayName`. DECIDED, delivered.
+16. **Scroll lock:** keep no page scroll lock; recorded as policy. DECIDED, delivered.
+17. **Focus after the rename dialog from the context menu:** pass the tree row as `restoreFocusRef`. DECIDED, delivered.

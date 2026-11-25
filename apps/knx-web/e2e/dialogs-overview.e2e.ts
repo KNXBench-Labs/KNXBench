@@ -257,17 +257,14 @@ for (const language of ["en", "de"] as const) for (const theme of ["porcelain", 
   });
 }
 
-test("every shipped palette keeps the unsaved-changes answers legible", async ({ page }) => {
-  for (const theme of PALETTES) {
-    const f = await fixture(page, "en", theme, 1440);
-    const dialog = await openReplaceDialog(page, en);
-    await expect(dialog.locator("footer button")).toHaveText([en["replace.cancel"], en["replace.discard"], en["replace.save"]]);
-    for (const { text, ratio } of await contrasts(page, ".replace-confirm footer button")) {
-      expect(ratio, `${theme}: ${text}`).toBeGreaterThanOrEqual(4.5);
-    }
-    expect(f.unexpected).toEqual([]);
-    await page.unrouteAll({ behavior: "ignoreErrors" });
+for (const theme of PALETTES) test(`palette ${theme} keeps the unsaved-changes answers legible`, async ({ page }) => {
+  const f = await fixture(page, "en", theme, 1440);
+  const dialog = await openReplaceDialog(page, en);
+  await expect(dialog.locator("footer button")).toHaveText([en["replace.cancel"], en["replace.discard"], en["replace.save"]]);
+  for (const { text, ratio } of await contrasts(page, ".replace-confirm footer button")) {
+    expect(ratio, `${theme}: ${text}`).toBeGreaterThanOrEqual(4.5);
   }
+  expect(f.unexpected).toEqual([]);
 });
 
 test("zero findings and a missing report are stated, not linked", async ({ page }) => {

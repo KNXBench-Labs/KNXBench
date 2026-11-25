@@ -52,7 +52,7 @@ files (tests excluded) carry 6 `role="dialog"`, 4 `role="menu"`,
 | 49.3b | Apply the owner decisions on questions 4-8 (23 November 2026): name the first-level File menu, stop its first-level Escape, turn the other pins into decided rules | Delivered, 23 November 2026, PR #147 (main `f3836adc9`; see below) |
 | 49.4b | Fallback, toolbars: the checklist for `TelegramFlowView` and `features/rtf/InstructionEditor` | Delivered, 23 November 2026, PR #148 (main `78b08f298`; see below) |
 | 49.4c | Fallback, dialogs: the checklist for the `Overlay` shell and its dialog consumers (`NewProjectDialog`, `LoginScreen`, `RenameWorkbench`, the `App` dialogs) | Delivered, 23 November 2026, PR #150 (main `8ab381831`; see below) |
-| 49.5 | Apply the owner decisions on questions 9-17 (23 November 2026) | This package, local commit only (see below) |
+| 49.5 | Apply the owner decisions on questions 9-17 (23 November 2026) | Delivered, 25 November 2026, PR #152 (main `6092ec52f`; see below) |
 
 ### 49.2 result (comboboxes)
 

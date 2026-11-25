@@ -257,7 +257,7 @@ for (const language of ["en", "de"] as const) for (const density of ["compact", 
 }
 
 /** Shared setup for the three focused WP41 cases: resized columns and an open draft editor. */
-async function openResizedColumnsWithDraft(page: Page, language: "en" | "de") {
+async function openResizedColumnsWithDraft(page: Page, language: "en" | "de", density: "compact" | "comfortable" = "compact") {
   const m = language === "en" ? en : de;
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.addInitScript(() => {
@@ -265,8 +265,9 @@ async function openResizedColumnsWithDraft(page: Page, language: "en" | "de") {
     // Init scripts also run on reload: seed an absent preference, never overwrite a resize.
     if (localStorage.getItem(key) === null) localStorage.setItem(key, JSON.stringify({ name: 280, description: 220 }));
   });
-  const state = await intercept(page, language, 24, "technical-light", true, true, { density: "compact", study: true });
+  const state = await intercept(page, language, 24, "technical-light", true, true, { density, study: true });
   await openProject(page, language); await openList(page, language);
+  await expect(page.locator("html")).toHaveAttribute("data-density", density);
   const table = page.locator('[data-table-id="devices"]');
   const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem("knxbench:table-column-widths:v1:devices")!));
   expect(await stored()).toEqual({ name: 280, description: 220 });
@@ -321,7 +322,7 @@ for (const language of ["en", "de"] as const) test(`WP41 ${language}: saved/resi
 });
 
 for (const language of ["en", "de"] as const) test(`WP41 ${language}: active draft focus and value survive in-place server refresh`, async ({ page }, info) => {
-  const { state, stored, resized, workspace, draft } = await openResizedColumnsWithDraft(page, language);
+  const { state, stored, resized, workspace, draft } = await openResizedColumnsWithDraft(page, language, "comfortable");
   const before = state.requests.length;
   // Re-enter by real pointer/keyboard input before testing an in-place update.
   await draft.click(); await page.keyboard.press("Tab"); await page.keyboard.press("Shift+Tab");

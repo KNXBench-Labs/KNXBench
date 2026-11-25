@@ -3576,6 +3576,7 @@ export const messages: Record<MessageKey, string> = {
   "deviceIdentity.database.empty": "(leerer Wert)",
   "deviceIdentity.tab": "Produktdaten",
   "deviceInstructions.tab": "Installationshinweise",
+  "deviceInstructions.toolbar": "Formatierung",
   "deviceInstructions.refreshFailed": "Die Änderung wurde übernommen, aber das Neuladen des Projekts ist fehlgeschlagen: {reason}. Lade das Projekt neu, bevor du etwas anderes änderst; wende sie nicht erneut an.",
   "deviceIdentity.productRef": "Produktreferenz",
   "deviceIdentity.programRef": "Applikationsprogramm-Referenz",

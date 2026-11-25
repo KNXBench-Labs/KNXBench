@@ -3721,6 +3721,7 @@ export const messages = {
   "deviceIdentity.database.empty": "(empty value)",
   "deviceIdentity.tab": "Product data",
   "deviceInstructions.tab": "Installation instructions",
+  "deviceInstructions.toolbar": "Formatting",
   "deviceInstructions.refreshFailed": "The change was applied, but reloading the project failed: {reason}. Reload the project before you change anything else; do not apply it again.",
   "deviceIdentity.productRef": "Product reference",
   "deviceIdentity.programRef": "Application program reference",

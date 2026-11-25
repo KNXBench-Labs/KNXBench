@@ -66,7 +66,7 @@ describeDialogChecklist(adapter);
 describe("RenameWorkbench dialog beyond the shared checklist", () => {
   afterEach(async () => { if (root) await adapter.unmount(); });
 
-  it("lets the shell take Escape from a button: closes, stopped, and not prevented (the field is the only one that prevents it)", async () => {
+  it("lets the shell take Escape from a button: closes, stopped, and prevented (decided, owner Q14, 23 Nov 2026; the field handles its own Escape the same way)", async () => {
     const parent = vi.fn();
     await adapter.mount(parent);
     opener().focus();
@@ -76,7 +76,7 @@ describe("RenameWorkbench dialog beyond the shared checklist", () => {
     const before = parent.mock.calls.length;
     const escape = await press(cancel, "Escape");
     expect(dialog()).toBeNull();
-    expect(escape.defaultPrevented).toBe(false);
+    expect(escape.defaultPrevented).toBe(true);
     expect(parent.mock.calls.length - before).toBe(0);
     expect(document.activeElement).toBe(opener());
   });
@@ -95,9 +95,11 @@ describe("RenameWorkbench dialog beyond the shared checklist", () => {
   });
 });
 
-// Owner question 17 (WP-49): CURRENT POLICY, pinned and not endorsed. Opened from the context-menu item
-// the menu unmounts as the dialog mounts and no restoreFocusRef is passed, so focus ends on <body>.
-it("ends with focus on the page body after closing a dialog opened from the context-menu item (owner question 17, current policy)", async () => {
+// Decided behaviour (owner Q17, 23 Nov 2026, WP-49.5): the renamed tree row is the
+// Overlay's restoreFocusRef, so after closing a dialog opened from the context-menu
+// item focus returns to the row (the menu item itself unmounts on open). F2 is the
+// positive control: the row was the opener and gets focus back directly.
+it("returns focus to the renamed tree row after closing a dialog opened from the context-menu item (owner Q17, 23 Nov 2026, decided)", async () => {
   await adapter.mount(() => {});
   opener().focus();
   await act(async () => { opener().dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 10, clientY: 10 })); });
@@ -107,6 +109,36 @@ it("ends with focus on the page body after closing a dialog opened from the cont
   expect(dialog()).not.toBeNull();
   await press(document.activeElement as HTMLElement, "Escape");
   expect(dialog()).toBeNull();
-  expect(document.activeElement, "owner question 17: the vanished menu item is not replaced by the tree row").toBe(document.body);
+  expect(document.activeElement, "owner Q17: the tree row replaces the vanished menu item").toBe(opener());
+  await adapter.unmount();
+});
+
+it("returns focus to the tree row after a successful rename too (owner Q17; the row identity may change, the element is the same row)", async () => {
+  await adapter.mount(() => {});
+  opener().focus();
+  await act(async () => { opener().dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 10, clientY: 10 })); });
+  await act(async () => host!.querySelector<HTMLElement>('[role="menuitem"]')!.click());
+  expect(dialog()).not.toBeNull();
+  vi.mocked(api.renameEntity).mockResolvedValue({ ...tree, snapshot_revision: 2 });
+  const input = host!.querySelector<HTMLInputElement>("input[data-rename-name]")!;
+  await act(async () => setNativeValue(input, "Renamed"));
+  await act(async () => { input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })); });
+  // The rename promise resolves on a microtask; flush it without fake timers.
+  await act(async () => { await Promise.resolve(); });
+  expect(dialog()).toBeNull();
+  expect(document.activeElement).toBe(opener());
+  await adapter.unmount();
+});
+
+it("keeps focus on the page when the row is gone at close (the shell's existing fallback, owner Q17)", async () => {
+  await adapter.mount(() => {});
+  opener().focus();
+  await act(async () => { opener().dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 10, clientY: 10 })); });
+  await act(async () => host!.querySelector<HTMLElement>('[role="menuitem"]')!.click());
+  expect(dialog()).not.toBeNull();
+  await act(async () => opener().remove());
+  await press(document.activeElement as HTMLElement, "Escape");
+  expect(dialog()).toBeNull();
+  expect(document.activeElement).toBe(document.body);
   await adapter.unmount();
 });

@@ -15,9 +15,9 @@ export interface TabsAdapter {
   tabs(): HTMLElement[];
   /** Every `role=tabpanel` element of the widget in the document, hidden ones included. */
   panels(): HTMLElement[];
-  /** `all`: every tab names its panel. `selected-only`: only the selected tab does (its panel is not always mounted). */
+  /** `all`: every tab names its panel. `selected-only`: only the selected tab does (its panel is not always mounted). Decided contract (owner Q10, 23 Nov 2026): the bus monitor keeps `selected-only`. */
   controls: "all" | "selected-only";
-  /** `present`: Home/End select the first/last tab. `absent`: they are ignored (current policy, owner question). */
+  /** `present`: Home/End select the first/last tab. `absent`: they are ignored. Decided (owner Q9, 23 Nov 2026): both tablists handle Home/End. */
   homeEnd: "present" | "absent";
   /** `tab-stop`: every panel is itself focusable (tabIndex 0). `none`: panels are not tab stops. */
   panelStop: "tab-stop" | "none";
@@ -119,10 +119,10 @@ export function describeTabsChecklist(adapter: TabsAdapter) {
       }
     });
 
-    it("selects and focuses the next/previous tab on ArrowRight/ArrowLeft (automatic activation, wrapping)", async () => {
+    it("selects and focuses the next/previous tab on ArrowRight/ArrowLeft (automatic activation, wrapping — decided, owner Q9, 23 Nov 2026)", async () => {
       const count = adapter.tabs().length;
       focusActive();
-      // Current policy (owner question): arrows wrap and activate at once; the APG allows both.
+      // Decided (owner Q9): arrows wrap and activate at once; the APG allows both.
       for (let i = 1; i <= count; i++) {
         const before = activeIndex();
         const event = await press(focused(), "ArrowRight");
@@ -161,11 +161,31 @@ export function describeTabsChecklist(adapter: TabsAdapter) {
         expect(focused()).toBe(adapter.tabs()[0]);
         invariants("Home");
       } else {
-        // Current policy (owner question): Home/End are not handled and are left to the browser.
+        // Decided absent is no longer used by any adapter (owner Q9 made Home/End present everywhere).
         expect(end.defaultPrevented).toBe(false);
         expect(afterEnd).toBe(start);
         expect(home.defaultPrevented).toBe(false);
         expect(activeIndex()).toBe(start);
+      }
+    });
+
+    it("leaves Alt/Ctrl/Meta-modified navigation keys to the browser, unhandled and unprevented (decided, owner Q11, 23 Nov 2026)", async () => {
+      focusActive();
+      const start = activeIndex();
+      for (const key of ["ArrowLeft", "ArrowRight", "Home", "End"]) {
+        for (const mods of [{ altKey: true }, { ctrlKey: true }, { metaKey: true }]) {
+          const event = await press(focused(), key, mods);
+          expect(event.defaultPrevented, `${key} ${JSON.stringify(mods)} must not be prevented (browser shortcut)`).toBe(false);
+          expect(activeIndex(), `${key} ${JSON.stringify(mods)} must not change the selection`).toBe(start);
+          expect(focused(), `${key} ${JSON.stringify(mods)} must not move focus`).toBe(adapter.tabs()[start]);
+        }
+      }
+      // Positive control: the plain and Shift-modified keys are still handled.
+      for (const mods of [{}, { shiftKey: true }]) {
+        const before = activeIndex();
+        const event = await press(focused(), "ArrowRight", mods);
+        expect(event.defaultPrevented, `plain/Shift ArrowRight ${JSON.stringify(mods)} stays handled`).toBe(true);
+        expect(activeIndex()).toBe((before + 1) % adapter.tabs().length);
       }
     });
 

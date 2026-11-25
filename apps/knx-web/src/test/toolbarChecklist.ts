@@ -23,9 +23,11 @@ const isDisabled = (el: HTMLElement) => el instanceof HTMLButtonElement && el.di
 const nameOf = (el: HTMLElement) => (el.getAttribute("aria-label") ?? el.textContent ?? "").trim();
 
 /**
- * Registers the shared checklist cases for one toolbar. Current policy for every toolbar (owner
- * question 12): NO roving tabindex, so every enabled button is a tab stop; the toolbar handles no
- * keys itself, so arrows, Home and End are left to the browser. Converting changes the Tab order.
+ * Registers the shared checklist cases for one toolbar. DECIDED rule for every toolbar
+ * (owner Q12, 23 Nov 2026, WP-49.5): NO roving tabindex, so every enabled button is a tab
+ * stop; the toolbar handles no keys itself, so arrows, Home and End are left to the
+ * browser. This is a conscious deviation from the APG toolbar pattern, recorded in the
+ * ADR-0191 dated amendment; converting would change the Tab order for every user.
  */
 export function describeToolbarChecklist(adapter: ToolbarAdapter) {
   describe(`${adapter.name}: toolbar checklist`, () => {
@@ -79,14 +81,14 @@ export function describeToolbarChecklist(adapter: ToolbarAdapter) {
       }
     });
 
-    it("leaves every enabled control a tab stop: no roving tabindex (current policy, owner question 12)", () => {
+    it("leaves every enabled control a tab stop: no roving tabindex (decided rule, owner Q12, 23 Nov 2026)", () => {
       for (const c of adapter.controls()) {
         expect(c.tabIndex, nameOf(c)).toBe(0);
         expect(c.hasAttribute("tabindex"), "native tab stop, no tabindex attribute").toBe(false);
       }
     });
 
-    it("does not handle arrows, Home or End, modified or not, and keeps focus where it is (owner questions 11, 12)", async () => {
+    it("does not handle arrows, Home or End, modified or not, and keeps focus where it is (decided rule, owner Q12, 23 Nov 2026)", async () => {
       const first = adapter.controls()[0];
       first.focus();
       for (const key of ["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Home", "End"]) {

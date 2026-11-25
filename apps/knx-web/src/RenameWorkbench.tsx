@@ -15,6 +15,13 @@ export default function RenameWorkbench({ tree, scope, onApplied, children }: {
   const [pending, setPending] = useState(false);
   const [menu, setMenu] = useState<(Entry & { x: number; y: number }) | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  // Decided 23 Nov 2026 (owner Q17, WP-49.5): the tree row the rename was opened
+  // from is the Overlay's restoreFocusRef, so closing the dialog returns focus
+  // there. The context-menu item unmounts when the dialog opens, so the shell's
+  // opener fallback cannot see it; the F2 path keeps the row as its opener anyway.
+  // When the row is gone (renamed entity re-rendered away), the shell's existing
+  // fallback applies unchanged.
+  const rowRef = useRef<HTMLElement | null>(null);
   useEffect(() => { setEditor(null); setMenu(null); setPending(false); },
     [scope, tree?.server_incarnation, tree?.project_incarnation]);
   const current = (entry: Entry | null) => entry && tree && entry.scope === scope
@@ -32,6 +39,10 @@ export default function RenameWorkbench({ tree, scope, onApplied, children }: {
     if (!tree || !hasRenameContext(tree) || !(element instanceof Element)
       || element.closest("input, textarea, select, [contenteditable], [role='dialog']")) return null;
     const node = element.closest<HTMLElement>("[data-rename-kind][data-rename-id]");
+    // Remember the row itself as the focus-return target (owner Q17, 23 Nov 2026):
+    // the menu item that opens the dialog unmounts on open, so the row is what
+    // the shell should restore focus to.
+    if (node) rowRef.current = node;
     const kind = node?.dataset.renameKind; const id = Number(node?.dataset.renameId);
     if ((kind !== "device" && kind !== "group_address") || !Number.isSafeInteger(id)) return null;
     // Canonical device-list catalogue rows also include instances absent from
@@ -62,7 +73,7 @@ export default function RenameWorkbench({ tree, scope, onApplied, children }: {
         if (event.key === "Escape" || event.key === "Tab") { event.preventDefault(); event.stopPropagation(); setMenu(null); } }}>
       <button type="button" role="menuitem" onClick={() => { setEditor(visibleMenu); setMenu(null); }}>{t("rename.title")} <kbd>F2</kbd></button>
     </div>}
-    {current(editor) && editor && tree && <Overlay label={t("rename.title")} className="rename-dialog" onClose={() => { if (!pending) setEditor(null); }}>
+    {current(editor) && editor && tree && <Overlay label={t("rename.title")} className="rename-dialog" restoreFocusRef={rowRef} onClose={() => { if (!pending) setEditor(null); }}>
       <h2>{t("rename.title")}</h2>
       <RenameNameField tree={tree} target={editor.target} onApplied={onApplied} autoFocus onPendingChange={setPending} onDone={() => { setPending(false); setEditor(null); }} />
     </Overlay>}

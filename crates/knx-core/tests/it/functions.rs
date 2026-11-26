@@ -554,3 +554,527 @@ fn allocators_issue_and_raise_function_ids_independently() {
     assert_eq!((ids.peek_function(), ids.peek_function_member()), (7, 9));
     assert!(!ids.raise_to(&IdAllocators::default()), "never lowered");
 }
+
+#[test]
+fn project_rename_validates_new_names_preserves_other_fields_and_restores_historical_names_exactly()
+{
+    use knx_core::address::GroupAddressStyle;
+    use knx_core::names::{NameError, MAX_EDITED_NAME_CODEPOINTS};
+
+    // Works on a minimal project with zero installations too.
+    let mut empty_project = Project::new(Language("en".into()));
+    let inverse = Command::RenameProject {
+        name: "Minimal Project".into(),
+    }
+    .apply(&mut empty_project)
+    .unwrap();
+    assert_eq!(empty_project.info.name, "Minimal Project");
+    assert_eq!(
+        inverse,
+        Command::RestoreProjectName {
+            name: String::new()
+        }
+    );
+    inverse.apply(&mut empty_project).unwrap();
+    assert_eq!(empty_project.info.name, "");
+
+    let historical_names = [
+        String::new(),
+        "   ".into(),
+        "\t \u{2003} ".into(),
+        "x".repeat(MAX_EDITED_NAME_CODEPOINTS + 1),
+        "Imported\tproject\u{7}".into(),
+    ];
+    for original in historical_names {
+        let mut project = with_light();
+        project.info.project_id = "P-0511".into();
+        project.info.name = original.clone();
+        project.info.project_number = Some("PRJ-51".into());
+        project.info.group_address_style = GroupAddressStyle::TwoLevel;
+        project.info.completion = CompletionStatus::FinishedDesign;
+        project.info.ets_schema_version = 23;
+        project.info.unlifted_group_address_dpt_declarations = 2;
+        let before = project.clone();
+
+        let new_name = "  Haus 🛠  ".to_string();
+        let rename = Command::RenameProject {
+            name: new_name.clone(),
+        };
+        assert_eq!(
+            rename.rename_target_name(&project),
+            Ok(Some(original.as_str()))
+        );
+        assert_eq!(rename.rename_value(), Some(new_name.as_str()));
+
+        // Direct apply/restore inverse check.
+        let mut direct = before.clone();
+        let inverse = rename.apply(&mut direct).unwrap();
+        assert_eq!(
+            inverse,
+            Command::RestoreProjectName {
+                name: original.clone()
+            }
+        );
+        let mut expected = before.clone();
+        expected.info.name = new_name.clone();
+        assert_eq!(direct, expected, "non-name project fields must not change");
+        let redo_cmd = inverse.apply(&mut direct).unwrap();
+        assert_eq!(
+            direct, before,
+            "restore inverse must recover exact historical name"
+        );
+        assert_eq!(
+            redo_cmd,
+            Command::RestoreProjectName {
+                name: new_name.clone()
+            }
+        );
+        redo_cmd.apply(&mut direct).unwrap();
+        assert_eq!(direct, expected);
+
+        // CommandStack undo/redo and no-op preserving redo.
+        let mut stack = CommandStack::new();
+        stack.do_command(&mut project, rename).unwrap();
+        assert_eq!(project, expected);
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project, before);
+        stack
+            .do_command(
+                &mut project,
+                Command::RenameProject {
+                    name: original.clone(),
+                },
+            )
+            .unwrap();
+        assert!(!stack.can_undo());
+        assert!(stack.can_redo());
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project, expected);
+        let (undo_states, redo_states) = stack.snapshot_states(&project).unwrap();
+        assert_eq!(undo_states, vec![before]);
+        assert!(redo_states.is_empty());
+    }
+
+    // Boundary length (1024 Unicode scalars) is accepted; invalid inputs are refused cleanly.
+    let mut project = with_light();
+    project.info.name = "Existing".into();
+    let max_valid = "🛠".repeat(MAX_EDITED_NAME_CODEPOINTS);
+    round_trip(
+        &mut project,
+        Command::RenameProject {
+            name: max_valid.clone(),
+        },
+    );
+    assert_eq!(project.info.name, max_valid);
+
+    let invalid_cases = [
+        (String::new(), NameError::Blank),
+        ("   ".into(), NameError::Blank),
+        ("\u{85}\u{2003}".into(), NameError::Blank),
+        (
+            "🛠".repeat(MAX_EDITED_NAME_CODEPOINTS + 1),
+            NameError::TooLong,
+        ),
+        ("bad\nname".into(), NameError::ControlCharacter),
+        ("bad\tname".into(), NameError::ControlCharacter),
+        ("bad\0name".into(), NameError::ControlCharacter),
+        ("bad\u{2028}name".into(), NameError::ControlCharacter),
+    ];
+    for (bad, expected_error) in invalid_cases {
+        let mut stack = CommandStack::new();
+        let before = project.clone();
+        assert_eq!(
+            refused(&project, Command::RenameProject { name: bad.clone() }),
+            CommandError::InvalidName(expected_error)
+        );
+        assert_eq!(
+            stack.do_command(&mut project, Command::RenameProject { name: bad }),
+            Err(CommandError::InvalidName(expected_error))
+        );
+        assert_eq!(project, before);
+        assert!(!stack.can_undo());
+    }
+}
+
+#[test]
+fn function_rename_validates_name_only_preserves_other_details_and_restores_historical_names_exactly(
+) {
+    use knx_core::names::{NameError, MAX_EDITED_NAME_CODEPOINTS};
+
+    let historical_names = [
+        String::new(),
+        "   ".into(),
+        "\t \u{2003} ".into(),
+        "x".repeat(MAX_FUNCTION_SHORT_TEXT_CODEPOINTS + 1),
+        "x".repeat(MAX_EDITED_NAME_CODEPOINTS + 1),
+        "Imported\u{7}function".into(),
+    ];
+    for original in historical_names {
+        let mut project = with_light();
+        // Add a second sibling Function to prove only the targeted Function changes.
+        Command::CreateFunction {
+            function: function(2, 2, vec![member(3, 3, Some("Dim"))]),
+        }
+        .apply(&mut project)
+        .unwrap();
+        // Seed non-name fields with historical values, including ones that would
+        // not pass full `FunctionDetails::validate()`, proving name-only scope.
+        project.functions[0].source = SourceRef {
+            path: "P-0511/0.xml".into(),
+            ets_id: "F-1".into(),
+        };
+        project.functions[0].details = FunctionDetails {
+            name: original.clone(),
+            function_type: Some("T".repeat(MAX_FUNCTION_SHORT_TEXT_CODEPOINTS + 5)),
+            number: Some("1.2".into()),
+            comment: Some("Imported\u{7}comment\r\nline 2".into()),
+            description: Some("Existing description".into()),
+            completion: CompletionStatus::FinishedDesign,
+        };
+        let before = project.clone();
+
+        let new_name = "  Living light 🛠  ".to_string();
+        let rename = Command::RenameFunction {
+            id: FunctionId(1),
+            name: new_name.clone(),
+        };
+        assert_eq!(
+            rename.rename_target_name(&project),
+            Ok(Some(original.as_str()))
+        );
+        assert_eq!(rename.rename_value(), Some(new_name.as_str()));
+
+        let mut direct = before.clone();
+        let inverse = rename.apply(&mut direct).unwrap();
+        assert_eq!(
+            inverse,
+            Command::RestoreFunctionName {
+                id: FunctionId(1),
+                name: original.clone(),
+            }
+        );
+        let mut expected = before.clone();
+        expected.functions[0].details.name = new_name.clone();
+        assert_eq!(
+            direct, expected,
+            "every non-name Function detail, member, sibling and project field must stay unchanged"
+        );
+        let redo_cmd = inverse.apply(&mut direct).unwrap();
+        assert_eq!(
+            direct, before,
+            "restore inverse must recover exact historical name"
+        );
+        assert_eq!(
+            redo_cmd,
+            Command::RestoreFunctionName {
+                id: FunctionId(1),
+                name: new_name.clone(),
+            }
+        );
+        redo_cmd.apply(&mut direct).unwrap();
+        assert_eq!(direct, expected);
+
+        let mut stack = CommandStack::new();
+        stack.do_command(&mut project, rename).unwrap();
+        assert_eq!(project, expected);
+        stack.undo(&mut project).unwrap();
+        assert_eq!(project, before);
+        stack
+            .do_command(
+                &mut project,
+                Command::RenameFunction {
+                    id: FunctionId(1),
+                    name: original.clone(),
+                },
+            )
+            .unwrap();
+        assert!(!stack.can_undo());
+        assert!(stack.can_redo());
+        stack.redo(&mut project).unwrap();
+        assert_eq!(project, expected);
+        let (undo_states, redo_states) = stack.snapshot_states(&project).unwrap();
+        assert_eq!(undo_states, vec![before]);
+        assert!(redo_states.is_empty());
+    }
+
+    // Boundary length (255 Unicode scalars) is accepted; invalid inputs are refused cleanly.
+    let mut project = with_light();
+    let max_valid = "🛠".repeat(MAX_FUNCTION_SHORT_TEXT_CODEPOINTS);
+    round_trip(
+        &mut project,
+        Command::RenameFunction {
+            id: FunctionId(1),
+            name: max_valid.clone(),
+        },
+    );
+    assert_eq!(project.functions[0].details.name, max_valid);
+
+    let invalid_cases = [
+        (String::new(), FunctionError::InvalidName(NameError::Blank)),
+        ("   ".into(), FunctionError::InvalidName(NameError::Blank)),
+        (
+            "\u{85}\u{2003}".into(),
+            FunctionError::InvalidName(NameError::Blank),
+        ),
+        (
+            "🛠".repeat(MAX_FUNCTION_SHORT_TEXT_CODEPOINTS + 1),
+            FunctionError::TooLong("name"),
+        ),
+        (
+            "🛠".repeat(MAX_EDITED_NAME_CODEPOINTS + 1),
+            FunctionError::InvalidName(NameError::TooLong),
+        ),
+        (
+            "bad\nname".into(),
+            FunctionError::InvalidName(NameError::ControlCharacter),
+        ),
+        (
+            "bad\tname".into(),
+            FunctionError::InvalidName(NameError::ControlCharacter),
+        ),
+        (
+            "bad\0name".into(),
+            FunctionError::InvalidName(NameError::ControlCharacter),
+        ),
+        (
+            "bad\u{2028}name".into(),
+            FunctionError::InvalidName(NameError::ControlCharacter),
+        ),
+    ];
+    for (bad, expected_error) in invalid_cases {
+        let mut stack = CommandStack::new();
+        let before = project.clone();
+        assert_eq!(
+            refused(
+                &project,
+                Command::RenameFunction {
+                    id: FunctionId(1),
+                    name: bad.clone(),
+                }
+            ),
+            CommandError::InvalidFunction(expected_error.clone())
+        );
+        assert_eq!(
+            stack.do_command(
+                &mut project,
+                Command::RenameFunction {
+                    id: FunctionId(1),
+                    name: bad,
+                }
+            ),
+            Err(CommandError::InvalidFunction(expected_error))
+        );
+        assert_eq!(project, before);
+        assert!(!stack.can_undo());
+    }
+}
+
+#[test]
+fn function_rename_and_restore_refuse_missing_and_ambiguous_ids_atomically() {
+    let base = with_light();
+    for missing in [FunctionId(0), FunctionId(99)] {
+        let rename = Command::RenameFunction {
+            id: missing,
+            name: "Valid".into(),
+        };
+        let restore = Command::RestoreFunctionName {
+            id: missing,
+            name: String::new(),
+        };
+        assert_eq!(
+            rename.rename_target_name(&base),
+            Err(CommandError::FunctionNotFound(missing))
+        );
+        assert_eq!(
+            refused(&base, rename.clone()),
+            CommandError::FunctionNotFound(missing)
+        );
+        assert_eq!(
+            refused(&base, restore),
+            CommandError::FunctionNotFound(missing)
+        );
+        let mut candidate = base.clone();
+        let mut stack = CommandStack::new();
+        assert_eq!(
+            stack.do_command(&mut candidate, rename),
+            Err(CommandError::FunctionNotFound(missing))
+        );
+        assert_eq!(candidate, base);
+        assert!(!stack.can_undo());
+    }
+
+    // Duplicate FunctionId(1) in `project.functions` must be refused unambiguously.
+    let mut duplicated = with_light();
+    duplicated.functions.push(function(1, 2, vec![]));
+    duplicated.functions.push(function(2, 2, vec![]));
+    let before = duplicated.clone();
+
+    let duplicate_err =
+        CommandError::FunctionInvariant(FunctionInvariantError::DuplicateFunctionId(FunctionId(1)));
+    let rename_dup = Command::RenameFunction {
+        id: FunctionId(1),
+        name: "Renamed".into(),
+    };
+    assert_eq!(
+        rename_dup.rename_target_name(&duplicated),
+        Err(duplicate_err.clone())
+    );
+    assert_eq!(refused(&duplicated, rename_dup), duplicate_err);
+    assert_eq!(
+        refused(
+            &duplicated,
+            Command::RestoreFunctionName {
+                id: FunctionId(1),
+                name: String::new(),
+            }
+        ),
+        duplicate_err
+    );
+    // Even if `name` matches the first duplicate's current name, `do_command` must refuse, not no-op.
+    let mut stack = CommandStack::new();
+    let same_name = duplicated.functions[0].details.name.clone();
+    assert_eq!(
+        stack.do_command(
+            &mut duplicated,
+            Command::RenameFunction {
+                id: FunctionId(1),
+                name: same_name,
+            }
+        ),
+        Err(duplicate_err.clone())
+    );
+    assert_eq!(duplicated, before);
+    assert!(!stack.can_undo());
+
+    // Renaming a distinct Function while another ID is duplicated is also refused atomically.
+    assert_eq!(
+        refused(
+            &duplicated,
+            Command::RenameFunction {
+                id: FunctionId(2),
+                name: "Other".into(),
+            }
+        ),
+        duplicate_err
+    );
+}
+
+#[test]
+fn project_and_function_rename_batch_applies_atomically_and_rolls_back_completely_on_failure() {
+    use knx_core::names::NameError;
+
+    let mut project = with_light();
+    project.info.name = String::new();
+    project.functions[0].details.name = " \t ".into();
+    let before = project.clone();
+
+    // Valid batch applies both as one undoable step and restores exact historical names.
+    round_trip(
+        &mut project,
+        Command::Batch(vec![
+            Command::RenameProject {
+                name: "Building A".into(),
+            },
+            Command::RenameFunction {
+                id: FunctionId(1),
+                name: "Living Light".into(),
+            },
+        ]),
+    );
+    assert_eq!(project.info.name, "Building A");
+    assert_eq!(project.functions[0].details.name, "Living Light");
+
+    // Failed batches must roll back earlier valid project and function renames atomically.
+    let mut rollback_project = before.clone();
+    let failing_batches = [
+        (
+            Command::Batch(vec![
+                Command::RenameProject {
+                    name: "Should roll back".into(),
+                },
+                Command::RenameFunction {
+                    id: FunctionId(1),
+                    name: "Should also roll back".into(),
+                },
+                Command::RenameFunction {
+                    id: FunctionId(99),
+                    name: "Missing".into(),
+                },
+            ]),
+            2,
+            CommandError::FunctionNotFound(FunctionId(99)),
+        ),
+        (
+            Command::Batch(vec![
+                Command::RenameProject {
+                    name: "Should roll back".into(),
+                },
+                Command::RenameFunction {
+                    id: FunctionId(1),
+                    name: "   ".into(),
+                },
+            ]),
+            1,
+            CommandError::InvalidFunction(FunctionError::InvalidName(NameError::Blank)),
+        ),
+        (
+            Command::Batch(vec![
+                Command::RenameFunction {
+                    id: FunctionId(1),
+                    name: "Should roll back".into(),
+                },
+                Command::RenameProject { name: "   ".into() },
+            ]),
+            1,
+            CommandError::InvalidName(NameError::Blank),
+        ),
+    ];
+    for (batch, expected_index, expected_source) in failing_batches {
+        let mut stack = CommandStack::new();
+        let err = stack.do_command(&mut rollback_project, batch).unwrap_err();
+        assert_eq!(
+            err,
+            CommandError::BatchItem {
+                index: expected_index,
+                source: Box::new(expected_source),
+            }
+        );
+        assert_eq!(
+            rollback_project, before,
+            "failed batch must leave project untouched"
+        );
+        assert!(!stack.can_undo(), "failed batch must leave stack untouched");
+    }
+
+    // Batch against a project with a duplicated function id is refused atomically
+    // at step 0 by `Command::apply`'s function-invariant guard before publishing.
+    let mut dup_project = before.clone();
+    dup_project.functions.push(function(1, 2, vec![]));
+    let dup_before = dup_project.clone();
+    let mut stack = CommandStack::new();
+    let err = stack
+        .do_command(
+            &mut dup_project,
+            Command::Batch(vec![
+                Command::RenameProject {
+                    name: "Should roll back".into(),
+                },
+                Command::RenameFunction {
+                    id: FunctionId(1),
+                    name: "Ambiguous".into(),
+                },
+            ]),
+        )
+        .unwrap_err();
+    assert_eq!(
+        err,
+        CommandError::BatchItem {
+            index: 0,
+            source: Box::new(CommandError::FunctionInvariant(
+                FunctionInvariantError::DuplicateFunctionId(FunctionId(1)),
+            )),
+        }
+    );
+    assert_eq!(dup_project, dup_before);
+    assert!(!stack.can_undo());
+}

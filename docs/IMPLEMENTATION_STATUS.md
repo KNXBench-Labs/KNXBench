@@ -1,6 +1,6 @@
 # Implementation delivery history
 
-## Catalogue direct keyboard selection (26 November 2026; local candidate)
+## Catalogue direct keyboard selection (26 November 2026; published as PR #154)
 
 With Product hidden, each row's native selection button moves to its first
 visible metadata cell. Visible metadata text stays intact; the accessible name
@@ -9,14 +9,14 @@ visibility preferences are preserved, including reload. Visible Product still
 has one selection button per row. Click propagation delivers one pick callback;
 mouse rows, search selection, sorting/resizing and unresolved-batch locks remain.
 
-Focused diagnostics: 96 source tests in four files, the catalogue fixture
-typecheck, a Vite 8.3.5 production fixture build, 12 installation/selection
-Chromium cases and four existing retry cases passed. New keyboard cases cover
-en/de, 1440 px porcelain and 400 px graphite; eight focus captures were inspected.
-The initial lock test incorrectly expected an input after the pending view
-replaced it; its corrected oracle checks retained selection, disabled buttons
-and retry state. Coordinator review and native package acceptance are pending;
-this is neither a release nor full accessibility compliance evidence.
+Merge commit `ca93fa4d5` (tree-identical to gated commit `13e95e411`). The
+change-scoped 11-stage package gate passed (`inputsFrozen=True`,
+`userDataTouched=[]`, `web-gate`: 36 stages, 1,553 browser tests — 1,454
+functional and 99 exclusive; an earlier run timed out in unrelated
+`background-activity.e2e.ts:215` under load and passed cleanly in an isolated
+targeted run). Review used a documented coordinator self-review while external
+CLI reviewers were at usage limits; this is neither a release nor full
+accessibility compliance evidence.
 
 ## Empty-column preferences (23 November 2026; published as PR #141)
 
@@ -25,8 +25,8 @@ columns declared by a nonempty schema, only in memory. Valid subsets remain;
 reads and refreshes do not repair localStorage. Explicit chooser actions still
 persist. Both Devices and catalogue use the same validation. Merge commit
 `951af9a3b`; see the [package dossier](status/2026-11-23-empty-column-preferences.md)
-for proof and acceptance limits. The separate hidden-selection OWN-01 lead has a bounded local candidate above;
-this does not close broader WP-48, beta or release scope.
+for proof and acceptance limits. The separate hidden-selection OWN-01 lead is
+delivered above as PR #154; this does not close broader WP-48, beta or release scope.
 
 
 This page is a short delivery index, not the current feature inventory.

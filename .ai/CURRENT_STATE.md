@@ -1,4 +1,4 @@
-# Restart snapshot — Windows spike and parallel tracks (observed 2026-11-23)
+# Restart snapshot — Windows spike and parallel tracks (observed 2026-11-26)
 ## WP-50 Windows desktop feasibility (WAITING; owner Windows coordinator; observed 2026-11-26 07:31)
 - Owner chose docs-only Slice 3a on 26 November: ADR-0192 Proposed inventories ProductDB Unix mechanisms and unproved Windows candidates; no code/port/toolchain/Windows checks. Independent Spec and Standards design reviews APPROVE `b9d91c098` without findings; ADR acceptance and native proof pending.
 - Slice 1 PR #146 and slice 2 PR #149 remain historical: 13/20 default Windows cross typechecks, productdb 43 Unix errors + xtask 2; own ICO delivered. No link/binary/run/native acceptance or Windows support. No historical checks rerun.

@@ -14,6 +14,7 @@ mod multi_installation;
 mod notes;
 mod property_download;
 mod property_recovery;
+mod structural_names;
 mod system300_group_tables;
 mod systemb_group_tables;
 mod systemb_object_table;

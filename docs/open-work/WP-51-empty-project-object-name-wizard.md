@@ -2,8 +2,8 @@
 
 Owner request: 24 November 2026, approved naming-wizard interview decisions
 Q1, Q2 and Q4–Q17; Q18 requests this independent work package.
-Status: Partial in progress — slice 51.1a backend foundation delivered-in-candidate; remaining 51.1, 51.2–51.4 and Wizard not complete.
-Slice 51.1a covers validated, reversible name-only domain commands for Project (`RenameProject` / `RestoreProjectName`) and Project Function (`RenameFunction` / `RestoreFunctionName`), unambiguous Function ID resolution, native working-history snapshot replay/roundtrip coverage, and diagnostic allowlist wiring. No wizard UI, recipes, detection, or other Q9 entity rename/restore gaps are complete yet.
+Status: Partial in progress — slice 51.1a published; slice 51.1b structural name commands implemented in candidate, pending coordinator review/gate/delivery; remaining 51.1, 51.2–51.4 and Wizard not complete.
+Slice 51.1a covers validated, reversible name-only domain commands for Project (`RenameProject` / `RestoreProjectName`) and Project Function (`RenameFunction` / `RestoreFunctionName`), unambiguous Function ID resolution, native working-history snapshot replay/roundtrip coverage, and diagnostic allowlist wiring. Slice 51.1b adds validated structural renames and exact Restore*Name inverses for Installation, all 11 supported BuildingPart kinds, Area, Line and GroupRange. Installation name operations reject duplicate IDs without changing legacy create resolution. Name no-ops, programming-state preservation, atomic rollback and native working-history replay use the existing command stack. No wizard UI, recipes, detection or provenance work is included.
 Blocked by: None (WP-51 and WP-52 are independent).
 
 ## Source report and evidence limits
@@ -46,20 +46,14 @@ claims that the requested feature exists:
   provide preview identity, expiry, revision and persistence patterns.
   [GA toolbar entry](../../apps/knx-web/src/BulkActionToolbar.tsx#L84) is currently
   GA-only, not the requested project-wide entry.
-- [Device/GA validated rename and old-name restore](../../crates/knx-core/src/command.rs#L2349)
-  already distinguish edited names from undo of imported text. Structural rename
-  arms exist for [areas](../../crates/knx-core/src/command.rs#L2770),
-  [lines](../../crates/knx-core/src/command.rs#L2887),
-  [building parts](../../crates/knx-core/src/command.rs#L3355),
-  [group ranges](../../crates/knx-core/src/command.rs#L3613) and
-  [installations](../../crates/knx-core/src/command.rs#L3905); their existence
-  does not establish equivalent edited-name validation or safe restoration of
-  empty imported names. [Function detail updates](../../crates/knx-core/src/command.rs#L2195)
-  exist but are not a dedicated name-only wizard command. Complete the missing
-  validated, reversible name-only command paths, including project naming and
-  any gaps across these types, within this feature before wiring Apply. Preserve
-  all other details and support undo back to the exact original empty/whitespace
-  value; do not validate away historical values during restore.
+- [Device/GA validated rename and old-name restore](../../crates/knx-core/src/command.rs)
+  distinguish edited names from undo of imported text. Published slice 51.1a
+  adds Project and Function name-only commands. Slice 51.1b extends this pattern
+  to installations, all supported building kinds, areas, lines and group ranges:
+  edited names pass `validate_edited_name`; dedicated restore commands retain
+  exact imported names, including invalid historical text. Missing or duplicate
+  target identities refuse mutation and name lookup. Labels may repeat. These
+  are backend foundations; discovery, preview and Apply wiring remain open.
 - Entity bases: [project name](../../crates/knx-core/src/project.rs#L231),
   [installation](../../crates/knx-core/src/installation.rs#L15),
   [device name/description](../../crates/knx-core/src/device.rs#L20),
@@ -125,11 +119,27 @@ none is an individually complete product slice, and the Wizard is not complete.
 
 | Stage | Planned work | Actual status |
 | --- | --- | --- |
-| 51.1a | Validated, reversible name-only domain commands for Project (`RenameProject`/`RestoreProjectName`) and Project Function (`RenameFunction`/`RestoreFunctionName`), unambiguous Function identity checks, native working-history replay and focused regression tests | Delivered-in-candidate (backend foundation only; pending coordinator gate/merge; no wizard UI or remaining Q9 types) |
-| 51.1 (remaining) | Audit remaining Q9 entities' source/model/name constraints; complete remaining validated name-only commands and exact old-value inverses; define provenance and deterministic missing-name detection without mutating import data | Planned (not started) |
+| 51.1a | Validated, reversible name-only domain commands for Project (`RenameProject`/`RestoreProjectName`) and Project Function (`RenameFunction`/`RestoreFunctionName`), unambiguous Function identity checks, native working-history replay and focused regression tests | Published before 51.1b (publication record at `746778942`; backend foundation only) |
+| 51.1b | Validated structural name-only commands and exact restore inverses; unique installation name resolution; core identity/admission/no-op/batch regressions and native history replay across every supported building kind | Implemented in candidate; focused diagnostics recorded below; coordinator review, scoped gate and delivery pending |
+| 51.1 (remaining) | Audit Q9 source/model/name constraints beyond the implemented command paths; define provenance and deterministic missing-name detection without mutating import data | Planned (not started) |
 | 51.2 | Implement all recipes, ambiguity/manual cases, parent dependency invalidation, bounded scan/count/page semantics and preview binding; reuse candidate stack, `Command::Batch`, stale-snapshot guards and durable native write-before-publish | Planned (not started) |
 | 51.3 | Implement entry timing, Later/manual reopen, grouped editable selection, source/context/errors, duplicate warnings, 256 cap and explicit confirmation; reuse Overlay; keyboard/focus, narrow displays and all supported translations; update all Q2 device consumers | Planned (not started) |
 | 51.4 | Integrate native/session-only persistence, save/reopen and Undo, failure/conflict paths and end-to-end acceptance across every supported entity; update affected user/status/limitations docs only with verified results | Planned (not started) |
+
+### 51.1b focused implementation diagnostics (26 November 2026)
+
+Two offline, locked Cargo selections passed with dedicated scratch data/config
+homes: `knx-core --test it structural_names::` (7 passed) and
+`knx-store --test it project_history::structural_names_replay_inverses_save_open_undo_reopen_and_redo_exact_snapshots`
+(1 passed, four historical-name fixtures). The [core matrix](../../crates/knx-core/tests/it/structural_names.rs)
+checks all 11 building kinds, both group-range levels and the other structural
+types for Unicode admission/limits, exact invalid-name restoration, complete
+state equality, identity refusals, duplicate labels, no-ops and failed mixed-batch
+history preservation. The [native history regression](../../crates/knx-store/tests/it/project_history.rs)
+compares full snapshots including opaque data and manufacturer references through
+inverse replay, save/open, undo, reopen and redo. No bus or hardware operations.
+These are focused implementation diagnostics, not package acceptance: independent
+review, the scoped package gate and delivery remain the coordinator's next steps.
 
 ## Acceptance matrix (planned, unchecked)
 
@@ -170,9 +180,10 @@ objects to pass end-to-end acceptance; backend completion alone is insufficient.
 
 ## Open decisions
 
-None at owner level: the naming interview frontier is closed. Slice 51.1a has
-implementation Go and is delivered-in-candidate; remaining 51.1, 51.2–51.4 and
-the Wizard remain incomplete. Source-derived details still to establish within
+None at owner level: the naming interview frontier is closed. Slice 51.1a is
+published. The owner authorized exactly successor 51.1b; implementation stops
+at that boundary. Coordinator review, scoped gate and delivery are pending;
+remaining 51.1, 51.2–51.4 and the Wizard remain incomplete. Source-derived details still to establish within
 this plan:
 exact descriptive-text/product-resolution access for every type, validated command
 coverage and history serialization, address/span formatting, scan/page budgets

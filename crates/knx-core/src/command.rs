@@ -353,6 +353,11 @@ pub enum Command {
         id: AreaId,
         name: String,
     },
+    /// Undo-only exact name restoration, including invalid imported text.
+    RestoreAreaName {
+        id: AreaId,
+        name: String,
+    },
     /// `line.id` is pre-allocated by the caller via
     /// `Project::ids::next_line_id`. `area` names the owning area, which
     /// must already exist.
@@ -372,6 +377,11 @@ pub enum Command {
         installation: InstallationId,
     },
     RenameLine {
+        id: LineId,
+        name: String,
+    },
+    /// Undo-only exact name restoration, including invalid imported text.
+    RestoreLineName {
         id: LineId,
         name: String,
     },
@@ -484,6 +494,11 @@ pub enum Command {
         id: BuildingPartId,
         name: String,
     },
+    /// Undo-only exact name restoration, including invalid imported text.
+    RestoreBuildingPartName {
+        id: BuildingPartId,
+        name: String,
+    },
     /// Reparents a part without changing its identity or its referenced devices.
     /// `None` makes it a root building part; the target's child list appends it.
     MoveBuildingPart {
@@ -536,6 +551,11 @@ pub enum Command {
         installation: InstallationId,
     },
     RenameGroupRange {
+        id: GroupRangeId,
+        name: String,
+    },
+    /// Undo-only exact name restoration, including invalid imported text.
+    RestoreGroupRangeName {
         id: GroupRangeId,
         name: String,
     },
@@ -620,9 +640,13 @@ pub enum Command {
         keep: AreaId,
         removed: Vec<RemovedLineReference>,
     },
-    /// Renames an installation (MODEL-01). Self-inverting: the inverse
-    /// carries the previous name.
+    /// Changes only an installation name; the inverse preserves imported exceptions.
     RenameInstallation {
+        id: InstallationId,
+        name: String,
+    },
+    /// Undo-only exact name restoration, including invalid imported text.
+    RestoreInstallationName {
         id: InstallationId,
         name: String,
     },
@@ -888,6 +912,8 @@ pub enum CommandError {
         style: GroupAddressStyle,
     },
     InstallationNotFound,
+    /// An installation id occurs more than once in the project.
+    InstallationIdentityAmbiguous(InstallationId),
     /// A command tried to insert an entity under an id another entity of
     /// the same kind already holds (ADR-0039 Decision 3). Refused so a stale
     /// allocator snapshot becomes a typed error instead of a duplicate that
@@ -1116,6 +1142,10 @@ impl fmt::Display for CommandError {
                 "group range {id} (boundary raw value {raw}) does not fit style {style:?}, refusing the whole restyle"
             ),
             CommandError::InstallationNotFound => write!(f, "project has no installation"),
+            CommandError::InstallationIdentityAmbiguous(id) => write!(
+                f,
+                "installation {id} has duplicate identities; repair the project before editing it"
+            ),
             CommandError::IdInUse { kind, id } => write!(
                 f,
                 "{kind} id {id} is already in use; refusing to create a second entity under it"
@@ -1408,6 +1438,19 @@ fn target_installation(
         None if project.installations.is_empty() => Err(CommandError::InstallationNotFound),
         None => Ok(0),
     }
+}
+
+/// Name edits and name lookups must resolve one installation, never the first duplicate.
+fn require_unique_installation(
+    project: &Project,
+    id: InstallationId,
+) -> Result<usize, CommandError> {
+    owning_installation(
+        project,
+        |installation| usize::from(installation.id == id),
+        CommandError::InstallationNotFound,
+        CommandError::InstallationIdentityAmbiguous(id),
+    )
 }
 
 /// The one installation that holds an entity. `count` reports how often the
@@ -2805,7 +2848,10 @@ impl Command {
                 installation.topology.areas.insert(*position, area.clone());
                 Ok(Command::DeleteArea { id: area.id })
             }
-            Command::RenameArea { id, name } => {
+            Command::RenameArea { id, name } | Command::RestoreAreaName { id, name } => {
+                if matches!(self, Command::RenameArea { .. }) {
+                    crate::names::validate_edited_name(name).map_err(CommandError::InvalidName)?;
+                }
                 let id = *id;
                 let index = require_unique_area(project, id)?;
                 let installation = &mut project.installations[index];
@@ -2816,7 +2862,7 @@ impl Command {
                     .find(|area| area.id == id)
                     .ok_or(CommandError::AreaNotFound(id))?;
                 let previous = std::mem::replace(&mut area.name, name.clone());
-                Ok(Command::RenameArea { id, name: previous })
+                Ok(Command::RestoreAreaName { id, name: previous })
             }
             Command::CreateLine { area, line } => {
                 check_id_free(project, IdKind::Line, line.id.0)?;
@@ -2922,7 +2968,10 @@ impl Command {
                     .insert(*area_position, line.id);
                 Ok(Command::DeleteLine { id: line.id })
             }
-            Command::RenameLine { id, name } => {
+            Command::RenameLine { id, name } | Command::RestoreLineName { id, name } => {
+                if matches!(self, Command::RenameLine { .. }) {
+                    crate::names::validate_edited_name(name).map_err(CommandError::InvalidName)?;
+                }
                 let id = *id;
                 let index = require_unique_line(project, id)?;
                 let installation = &mut project.installations[index];
@@ -2933,7 +2982,7 @@ impl Command {
                     .find(|line| line.id == id)
                     .ok_or(CommandError::LineNotFound(id))?;
                 let previous = std::mem::replace(&mut line.name, name.clone());
-                Ok(Command::RenameLine { id, name: previous })
+                Ok(Command::RestoreLineName { id, name: previous })
             }
             Command::MoveLineToArea { id, area } => {
                 let index = require_unique_line(project, *id)?;
@@ -3390,7 +3439,11 @@ impl Command {
                 }
                 Ok(Command::DeleteBuildingPart { id: part.id })
             }
-            Command::RenameBuildingPart { id, name } => {
+            Command::RenameBuildingPart { id, name }
+            | Command::RestoreBuildingPartName { id, name } => {
+                if matches!(self, Command::RenameBuildingPart { .. }) {
+                    crate::names::validate_edited_name(name).map_err(CommandError::InvalidName)?;
+                }
                 let id = *id;
                 let index = require_unique_building_part(project, id)?;
                 let installation = &mut project.installations[index];
@@ -3400,7 +3453,7 @@ impl Command {
                     .find(|p| p.id == id)
                     .ok_or(CommandError::BuildingPartNotFound(id))?;
                 let previous = std::mem::replace(&mut part.name, name.clone());
-                Ok(Command::RenameBuildingPart { id, name: previous })
+                Ok(Command::RestoreBuildingPartName { id, name: previous })
             }
             Command::MoveBuildingPart { id, parent } => {
                 let index = require_unique_building_part(project, *id)?;
@@ -3648,7 +3701,11 @@ impl Command {
                 }
                 Ok(Command::DeleteGroupRange { id: range.id })
             }
-            Command::RenameGroupRange { id, name } => {
+            Command::RenameGroupRange { id, name }
+            | Command::RestoreGroupRangeName { id, name } => {
+                if matches!(self, Command::RenameGroupRange { .. }) {
+                    crate::names::validate_edited_name(name).map_err(CommandError::InvalidName)?;
+                }
                 let id = *id;
                 let index = require_unique_group_range(project, id)?;
                 let installation = &mut project.installations[index];
@@ -3658,7 +3715,7 @@ impl Command {
                     .find(|r| r.id == id)
                     .ok_or(CommandError::GroupRangeNotFound(id))?;
                 let previous = std::mem::replace(&mut range.name, name.clone());
-                Ok(Command::RenameGroupRange { id, name: previous })
+                Ok(Command::RestoreGroupRangeName { id, name: previous })
             }
             Command::MoveGroupRange { id, parent } => {
                 let index = require_unique_group_range(project, *id)?;
@@ -3940,11 +3997,15 @@ impl Command {
                     keep: *keep,
                 })
             }
-            Command::RenameInstallation { id, name } => {
-                let index = target_installation(project, Some(*id))?;
+            Command::RenameInstallation { id, name }
+            | Command::RestoreInstallationName { id, name } => {
+                if matches!(self, Command::RenameInstallation { .. }) {
+                    crate::names::validate_edited_name(name).map_err(CommandError::InvalidName)?;
+                }
+                let index = require_unique_installation(project, *id)?;
                 let previous =
                     std::mem::replace(&mut project.installations[index].name, name.clone());
-                Ok(Command::RenameInstallation {
+                Ok(Command::RestoreInstallationName {
                     id: *id,
                     name: previous,
                 })
@@ -3987,7 +4048,7 @@ impl Command {
 }
 
 impl Command {
-    /// Current name of a rename target. Refuses ambiguous GA identities before mutation.
+    /// Current name of a rename target, refusing ambiguous identities before mutation.
     pub fn rename_target_name<'a>(
         &self,
         project: &'a Project,
@@ -4017,8 +4078,42 @@ impl Command {
             // Resolved exactly as `apply` resolves it (stable ID, never name
             // or order), so a guarded rename checks the name it will replace.
             Self::RenameInstallation { id, .. } => {
-                let index = target_installation(project, Some(*id))?;
+                let index = require_unique_installation(project, *id)?;
                 Ok(Some(&project.installations[index].name))
+            }
+            Self::RenameArea { id, .. } => {
+                let index = require_unique_area(project, *id)?;
+                Ok(project.installations[index]
+                    .topology
+                    .areas
+                    .iter()
+                    .find(|area| area.id == *id)
+                    .map(|area| area.name.as_str()))
+            }
+            Self::RenameLine { id, .. } => {
+                let index = require_unique_line(project, *id)?;
+                Ok(project.installations[index]
+                    .topology
+                    .lines
+                    .iter()
+                    .find(|line| line.id == *id)
+                    .map(|line| line.name.as_str()))
+            }
+            Self::RenameBuildingPart { id, .. } => {
+                let index = require_unique_building_part(project, *id)?;
+                Ok(project.installations[index]
+                    .buildings
+                    .iter()
+                    .find(|part| part.id == *id)
+                    .map(|part| part.name.as_str()))
+            }
+            Self::RenameGroupRange { id, .. } => {
+                let index = require_unique_group_range(project, *id)?;
+                Ok(project.installations[index]
+                    .group_ranges
+                    .iter()
+                    .find(|range| range.id == *id)
+                    .map(|range| range.name.as_str()))
             }
             Self::RenameProject { .. } => Ok(Some(&project.info.name)),
             Self::RenameFunction { id, .. } => {
@@ -4033,6 +4128,10 @@ impl Command {
             Self::RenameDevice { name, .. }
             | Self::RenameGroupAddress { name, .. }
             | Self::RenameInstallation { name, .. }
+            | Self::RenameArea { name, .. }
+            | Self::RenameLine { name, .. }
+            | Self::RenameBuildingPart { name, .. }
+            | Self::RenameGroupRange { name, .. }
             | Self::RenameProject { name }
             | Self::RenameFunction { name, .. } => Some(name),
             _ => None,

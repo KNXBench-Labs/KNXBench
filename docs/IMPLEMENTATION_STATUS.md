@@ -1,5 +1,16 @@
 # Implementation delivery history
 
+## Structural name commands (26 November 2026; WP-51.1b candidate)
+
+Installation, BuildingPart (all 11 kinds), Area, Line and GroupRange renames
+validate edited names and return dedicated exact-name restore inverses. Installation
+name operations refuse duplicate IDs; legacy create targeting stays unchanged.
+The existing command stack handles no-ops, batches and native history. Core and
+store regressions compare complete states, including programming flags and retained
+opaque data. Focused diagnostics are recorded in [WP-51](open-work/WP-51-empty-project-object-name-wizard.md);
+coordinator review, scoped package gate and delivery remain pending. No wizard UI,
+detection, recipes or provenance implementation; WP-51 remains partial.
+
 ## Catalogue direct keyboard selection (26 November 2026; published as PR #154)
 
 With Product hidden, each row's native selection button moves to its first

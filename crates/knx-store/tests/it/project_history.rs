@@ -702,6 +702,265 @@ fn programmed_device_project(raw: &str) -> NativeSnapshot {
     snapshot
 }
 
+fn structural_name_snapshot(legacy: &str) -> NativeSnapshot {
+    use knx_core::{
+        Area, AreaId, BuildingPart, BuildingPartId, BuildingPartType, CompletionStatus, DeviceId,
+        GroupAddress, GroupRange, GroupRangeId, Line, LineId, SourceRef,
+    };
+    let mut snapshot = programmed_device_project("17");
+    let source = SourceRef {
+        path: "synthetic.xml".into(),
+        ets_id: "structure".into(),
+    };
+    let installation = &mut snapshot.project.installations[0];
+    installation.name = legacy.into();
+    installation.default_line = Some(LineId(1));
+    installation.multicast_address = Some("224.0.23.12".parse().unwrap());
+    installation.topology.unassigned.clear();
+    installation.topology.areas.push(Area {
+        id: AreaId(1),
+        source: source.clone(),
+        name: legacy.into(),
+        address: 1,
+        completion: CompletionStatus::Accepted,
+        lines: vec![LineId(1)],
+    });
+    installation.topology.lines.push(Line {
+        id: LineId(1),
+        source: source.clone(),
+        name: legacy.into(),
+        address: 1,
+        medium_ref: "MT-0".into(),
+        domain_address: Some("0".into()),
+        domain_address_is_checked: Some(false),
+        ip_routing_multicast_address: Some("224.0.23.12".parse().unwrap()),
+        multicast_ttl: Some(16),
+        completion: CompletionStatus::Tested,
+        devices: vec![DeviceId(1)],
+    });
+    let kinds = [
+        BuildingPartType::Building,
+        BuildingPartType::Floor,
+        BuildingPartType::Room,
+        BuildingPartType::Corridor,
+        BuildingPartType::DistributionBoard,
+        BuildingPartType::BuildingPart,
+        BuildingPartType::Stairway,
+        BuildingPartType::RoomPart,
+        BuildingPartType::Area,
+        BuildingPartType::Ground,
+        BuildingPartType::Segment,
+    ];
+    for (index, kind) in kinds.into_iter().enumerate() {
+        let id = index as u32 + 1;
+        installation.buildings.push(BuildingPart {
+            id: BuildingPartId(id),
+            source: source.clone(),
+            name: legacy.into(),
+            number: Some(format!("N{id}")),
+            kind,
+            default_line: Some(LineId(1)),
+            completion: CompletionStatus::Locked,
+            children: if index + 1 < kinds.len() {
+                vec![BuildingPartId(id + 1)]
+            } else {
+                vec![]
+            },
+            devices: if index == 0 {
+                vec![DeviceId(1)]
+            } else {
+                vec![]
+            },
+            parent: if id > 1 {
+                Some(BuildingPartId(id - 1))
+            } else {
+                None
+            },
+        });
+    }
+    installation.group_ranges = vec![
+        GroupRange {
+            id: GroupRangeId(1),
+            source: source.clone(),
+            name: legacy.into(),
+            start: GroupAddress::from_raw(0),
+            end: GroupAddress::from_raw(2047),
+            parent: None,
+            children: vec![GroupRangeId(2)],
+        },
+        GroupRange {
+            id: GroupRangeId(2),
+            source,
+            name: legacy.into(),
+            start: GroupAddress::from_raw(0),
+            end: GroupAddress::from_raw(255),
+            parent: Some(GroupRangeId(1)),
+            children: vec![],
+        },
+    ];
+    snapshot.project.ids = knx_core::IdAllocators::from_counts(1, 1, 1, 0, 2, 0, 11, 1, 0);
+    snapshot
+}
+
+#[test]
+fn structural_names_replay_inverses_save_open_undo_reopen_and_redo_exact_snapshots() {
+    use knx_core::{AreaId, BuildingPartId, InstallationId, LineId};
+    for legacy in [
+        String::new(),
+        " \t\u{2003} ".into(),
+        "x".repeat(1025),
+        "legacy\u{7}".into(),
+    ] {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("structural-names.knxdb");
+        let conn = knx_store::open_and_migrate(&path).unwrap();
+        let baseline = structural_name_snapshot(&legacy);
+        let generation =
+            history::save_editor(&conn, &baseline, &CommandStack::new(), None, true).unwrap();
+        assert_eq!(NativeSnapshot::read(&conn).unwrap(), baseline);
+        let mut working = baseline.clone();
+        let mut expected = baseline.clone();
+        let mut stack = CommandStack::new();
+        let mut states = vec![baseline.clone()];
+        let mut commands = Vec::new();
+        // Build each expected state by changing its name alone, independently of command replay.
+        for index in 0..16 {
+            let name = format!("Küche 🛠 {index}");
+            let installation = &mut expected.project.installations[0];
+            let command = match index {
+                0 => {
+                    installation.name = name.clone();
+                    Command::RenameInstallation {
+                        id: InstallationId(1),
+                        name,
+                    }
+                }
+                1 => {
+                    installation.topology.areas[0].name = name.clone();
+                    Command::RenameArea {
+                        id: AreaId(1),
+                        name,
+                    }
+                }
+                2 => {
+                    installation.topology.lines[0].name = name.clone();
+                    Command::RenameLine {
+                        id: LineId(1),
+                        name,
+                    }
+                }
+                3..=4 => {
+                    let range = &mut installation.group_ranges[index - 3];
+                    range.name = name.clone();
+                    Command::RenameGroupRange { id: range.id, name }
+                }
+                _ => {
+                    installation.buildings[index - 5].name = name.clone();
+                    Command::RenameBuildingPart {
+                        id: BuildingPartId((index - 4) as u32),
+                        name,
+                    }
+                }
+            };
+            stack
+                .do_command(&mut working.project, command.clone())
+                .unwrap();
+            assert_eq!(working, expected, "structural edit {index}");
+            assert_eq!(stack.comparison_revision(knx_core::DeviceId(1)), 0);
+            states.push(expected.clone());
+            commands.push(command);
+        }
+        // One further batch changes every structural name together, using the same stack.
+        for command in &mut commands {
+            match command {
+                Command::RenameInstallation { name, .. }
+                | Command::RenameArea { name, .. }
+                | Command::RenameLine { name, .. }
+                | Command::RenameGroupRange { name, .. }
+                | Command::RenameBuildingPart { name, .. } => name.push_str(" final"),
+                _ => unreachable!("fixture contains only structural renames"),
+            }
+        }
+        let installation = &mut expected.project.installations[0];
+        installation.name.push_str(" final");
+        installation.topology.areas[0].name.push_str(" final");
+        installation.topology.lines[0].name.push_str(" final");
+        for range in &mut installation.group_ranges {
+            range.name.push_str(" final");
+        }
+        for part in &mut installation.buildings {
+            part.name.push_str(" final");
+        }
+        stack
+            .do_command(&mut working.project, Command::Batch(commands))
+            .unwrap();
+        assert_eq!(working, expected);
+        stack.undo(&mut working.project).unwrap();
+        assert_eq!(&working, states.last().unwrap());
+        stack.redo(&mut working.project).unwrap();
+        assert_eq!(working, expected);
+        states.push(expected.clone());
+        let generation =
+            history::save_editor(&conn, &working, &stack, Some(generation), false).unwrap();
+        assert_eq!(NativeSnapshot::read(&conn).unwrap(), baseline);
+        drop(conn);
+
+        let conn = knx_store::open_existing_and_migrate(&path).unwrap();
+        let recovered = history::load_editor(&conn).unwrap().unwrap();
+        assert_eq!(recovered.generation, generation);
+        assert_eq!(recovered.baseline, baseline);
+        assert_eq!(recovered.working, expected);
+        assert_eq!(
+            recovered.undo,
+            states[..states.len() - 1]
+                .iter()
+                .map(|s| s.project.clone())
+                .collect::<Vec<_>>()
+        );
+        assert!(recovered.redo.is_empty());
+        let mut working = recovered.working;
+        let mut stack = CommandStack::from_snapshot_states(recovered.undo, recovered.redo);
+        for expected in states[..states.len() - 1].iter().rev() {
+            stack.undo(&mut working.project).unwrap();
+            assert_eq!(&working, expected);
+        }
+        assert_eq!(
+            working, baseline,
+            "historical names and opaque context must survive undo"
+        );
+        let generation =
+            history::save_editor(&conn, &working, &stack, Some(generation), false).unwrap();
+        drop(conn);
+
+        let conn = knx_store::open_existing_and_migrate(&path).unwrap();
+        let recovered = history::load_editor(&conn).unwrap().unwrap();
+        assert_eq!(recovered.generation, generation);
+        assert_eq!(recovered.baseline, baseline);
+        assert_eq!(recovered.working, baseline);
+        assert!(recovered.undo.is_empty());
+        assert_eq!(
+            recovered.redo,
+            states[1..]
+                .iter()
+                .rev()
+                .map(|s| s.project.clone())
+                .collect::<Vec<_>>()
+        );
+        let mut working = recovered.working;
+        let mut stack = CommandStack::from_snapshot_states(recovered.undo, recovered.redo);
+        for expected in &states[1..] {
+            stack.redo(&mut working.project).unwrap();
+            assert_eq!(&working, expected);
+        }
+        history::save_editor(&conn, &working, &stack, Some(generation), true).unwrap();
+        assert_eq!(NativeSnapshot::read(&conn).unwrap(), expected);
+        assert_eq!(
+            history::load_editor(&conn).unwrap().unwrap().working,
+            expected
+        );
+    }
+}
+
 #[test]
 fn a_restored_version_does_not_resurrect_programmed_claims_and_the_correction_is_durable() {
     use knx_core::commissioning::pending::ProgrammingParts;

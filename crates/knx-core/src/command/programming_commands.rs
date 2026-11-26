@@ -91,10 +91,15 @@ pub(super) fn candidates(cmd: &Command, project: &Project, out: &mut BTreeSet<De
         | Command::SetDeviceDescription { .. }
         | Command::SetDeviceInstructions { .. }
         | Command::RenameArea { .. }
+        | Command::RestoreAreaName { .. }
         | Command::RenameLine { .. }
+        | Command::RestoreLineName { .. }
         | Command::RenameBuildingPart { .. }
+        | Command::RestoreBuildingPartName { .. }
         | Command::RenameGroupRange { .. }
+        | Command::RestoreGroupRangeName { .. }
         | Command::RenameInstallation { .. }
+        | Command::RestoreInstallationName { .. }
         | Command::InsertProjectNote { .. }
         | Command::RemoveProjectNote { .. }
         | Command::ReplaceProjectNote { .. }

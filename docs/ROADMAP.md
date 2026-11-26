@@ -1,5 +1,14 @@
 # Roadmap
 
+## Empty-name wizard backend (26 November 2026; WP-51 partial)
+
+After published 51.1a (Project and Function), the authorized 51.1b candidate adds
+validated structural rename commands and exact legacy-name undo for installations,
+all building kinds, areas, lines and group ranges, with core/native-history
+regressions. Coordinator review, scoped gate and delivery remain pending.
+Detection, provenance, recipes and UI remain future work; no additional successor
+is authorized by this slice. See [WP-51](open-work/WP-51-empty-project-object-name-wizard.md).
+
 ## Empty-column preferences (23 November 2026; published as PR #141)
 
 The shared browser visibility hook recovers an empty visible set by showing all

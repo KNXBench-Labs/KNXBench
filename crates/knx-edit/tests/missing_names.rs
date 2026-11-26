@@ -4,11 +4,11 @@ use knx_core::commissioning::{CommissioningState, CompletionStatus};
 use knx_core::flags::ResolvedFlags;
 use knx_core::provenance::Override;
 use knx_core::{
-    Area, AreaId, BinaryDataRef, BuildingPart, BuildingPartId, BuildingPartType,
-    ComObjectInstance, ComObjectInstanceId, DeviceId, DeviceInstance, Function, FunctionDetails,
-    FunctionId, FunctionMember, FunctionMemberId, GroupAddress, GroupAddressEntry,
-    GroupAddressId, GroupRange, GroupRangeId, IndividualAddress, Installation, InstallationId,
-    Language, Line, LineId, Project, SourceRef, Topology,
+    Area, AreaId, BinaryDataRef, BuildingPart, BuildingPartId, BuildingPartType, ComObjectInstance,
+    ComObjectInstanceId, DeviceId, DeviceInstance, Function, FunctionDetails, FunctionId,
+    FunctionMember, FunctionMemberId, GroupAddress, GroupAddressEntry, GroupAddressId, GroupRange,
+    GroupRangeId, IndividualAddress, Installation, InstallationId, Language, Line, LineId, Project,
+    SourceRef, Topology,
 };
 use knx_edit::missing_names::{
     detect_missing_names, BuildingPartKind, EvidenceContribution, EvidenceGap, EvidenceSourceKind,
@@ -439,7 +439,13 @@ fn surfaces_duplicate_zero_identities_and_missing_ambiguous_cyclic_parents() {
         },
         buildings: vec![
             // Cyclic building parts: 1 -> 2 -> 1
-            make_part(1, BuildingPartType::Building, "", Some(2), vec![DeviceId(1)]),
+            make_part(
+                1,
+                BuildingPartType::Building,
+                "",
+                Some(2),
+                vec![DeviceId(1)],
+            ),
             make_part(2, BuildingPartType::Floor, "", Some(1), vec![DeviceId(1)]),
             // Dangling parent reference
             make_part(3, BuildingPartType::Room, "", Some(999), vec![]),

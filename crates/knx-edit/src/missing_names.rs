@@ -427,7 +427,10 @@ impl ProjectIndex {
                     .entry(line.id.0)
                     .or_insert_with(|| is_blank_name(&line.name));
                 for &dev_id in &line.devices {
-                    idx.device_lines.entry(dev_id.0).or_default().push(line.id.0);
+                    idx.device_lines
+                        .entry(dev_id.0)
+                        .or_default()
+                        .push(line.id.0);
                 }
             }
 
@@ -1030,10 +1033,7 @@ pub fn detect_missing_names(
                 break;
             }
             let ga = &inst.group_addresses[ga_pos];
-            let occ = *ga_occ
-                .entry(ga_id_raw)
-                .and_modify(|c| *c += 1)
-                .or_insert(0);
+            let occ = *ga_occ.entry(ga_id_raw).and_modify(|c| *c += 1).or_insert(0);
             if !is_blank_name(&ga.name) {
                 continue;
             }
@@ -1112,11 +1112,7 @@ pub fn detect_missing_names(
                     } else {
                         ParentRefState::Resolved {
                             target: NameTargetId::Line(*line_id),
-                            parent_is_blank: idx
-                                .line_blank
-                                .get(line_id)
-                                .copied()
-                                .unwrap_or(false),
+                            parent_is_blank: idx.line_blank.get(line_id).copied().unwrap_or(false),
                         }
                     }
                 }
@@ -1259,10 +1255,7 @@ pub fn detect_missing_names(
         .skip(request.offset)
         .take(request.limit)
         .collect();
-    let has_more_in_scan = request
-        .offset
-        .saturating_add(items.len())
-        < candidates_found_in_scan;
+    let has_more_in_scan = request.offset.saturating_add(items.len()) < candidates_found_in_scan;
 
     let (total_candidates, total_by_kind) = match completeness {
         ScanCompleteness::Complete => (Some(candidates_found_in_scan), Some(scanner.by_kind)),

@@ -39,6 +39,7 @@ export default function CatalogResultsTable(props: {
   const activeRow = useRef<HTMLTableRowElement>(null);
   const { visible } = useTableColumnVisibility("catalog-results", CATALOG_TABLE_COLUMNS.map((column) => column.id));
   const columns = visibleColumns(CATALOG_TABLE_COLUMNS, visible);
+  const selectionColumn = visible.product ? "product" : columns[0]?.id;
   // Keep the keyboard-highlighted row visible vertically; a row wider than the scroller
   // must not drag the table sideways, so the user's horizontal position is restored.
   useLayoutEffect(() => {
@@ -78,13 +79,16 @@ export default function CatalogResultsTable(props: {
         })}</tr></thead>
         <tbody>{rows.map((item, i) => {
           const selected = selectedId === item.id;
+          const selectButton = (text: string, label?: string) => <button type="button"
+            className="catalog-select" aria-label={label} aria-pressed={selected} disabled={disabled}
+            onClick={(event) => { event.stopPropagation(); if (!disabled) onPick(item); }}>{text}</button>;
           return <tr key={item.id} id={catalogRowId(i)} data-item-id={item.id}
             ref={i === highlightIndex ? activeRow : undefined}
             className={`search-result${selected ? " selected" : ""}${i === highlightIndex ? " active" : ""}${disabled ? " disabled" : ""}`}
-            onClick={() => onPick(item)}>
+            onClick={() => { if (!disabled) onPick(item); }}>
             {columns.map((column) => column.id === "product"
               ? <td key={column.id} className="catalog-product-cell">
-                <button type="button" className="catalog-select" aria-pressed={selected} disabled={disabled}>{productLabel(item)}</button>
+                {selectButton(productLabel(item))}
                 {language !== null && fellBack(item.name, item.nameLanguage) && (
                   <LanguageFallbackBadge selected={language} source={item.sourceLanguage} />
                 )}
@@ -94,7 +98,9 @@ export default function CatalogResultsTable(props: {
                 )}
                 <CatalogItemIdentity item={item} />
               </td>
-              : <td key={column.id}>{cellText(item, column.id)}</td>)}
+              : <td key={column.id}>{column.id === selectionColumn
+                ? selectButton(cellText(item, column.id), `${productLabel(item)} — ${cellText(item, column.id)}`)
+                : cellText(item, column.id)}</td>)}
           </tr>;
         })}</tbody>
       </ResizableTable>

@@ -2,6 +2,15 @@
 
 # Implementation status
 
+## Catalogue keyboard selection (local source candidate, 26 November 2026)
+
+When Product is hidden, Tab reaches one selection button in each row's first
+visible metadata cell; Enter or Space selects that product. The accessible name
+includes the product identity, and valid column preferences survive reload.
+The unresolved batch-outcome selection lock remains. Focused fixture checks
+passed; coordinator review and package acceptance are pending. This is not part
+of the released Alpha 23 baseline or a full accessibility compliance claim.
+
 ## Alpha 23 baseline
 
 [Alpha 23](../releases/alpha23.md) ships, at the bounded scope its notes list: parameter

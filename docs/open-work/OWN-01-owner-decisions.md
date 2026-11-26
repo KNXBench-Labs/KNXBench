@@ -326,9 +326,15 @@ delivered work, and none is decided here.
   columns for a nonempty schema on 23 November 2026, without automatic storage
   writes. Published as PR #141, merge `951af9a3b`; see the
   [scoped dossier](../status/2026-11-23-empty-column-preferences.md).
-- Hidden selection controls remain an unconfirmed UX lead without an active owner.
-  No selection redesign or keyboard/selection-inaccessibility fix is claimed.
-  Lift: a targeted consumer/keyboard check in a future UI package.
+- Catalogue hidden-Product selection: baseline browser observation on 26 November
+  confirmed loss of the direct Tab route; mouse rows and search ArrowDown/Enter
+  still worked. The owner approved the bounded fix ("ja umsetzten"). A local
+  candidate retains one native selection button per row, moving it to the first
+  visible metadata cell when Product is hidden, without repairing valid preferences.
+  Focused source and production-built Chromium checks passed; coordinator review
+  and the native package gate remain pending. This closes neither other consumers'
+  selection questions nor broader accessibility acceptance. See the
+  [bounded result](../IMPLEMENTATION_STATUS.md#catalogue-direct-keyboard-selection-26-november-2026-local-candidate).
 
 ## Deferred by recorded decision (reopen only on a new decision)
 

@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": ["src", "e2e/catalog-installation.e2e.ts", "e2e/catalog-installation-fixture.tsx", "e2e/catalog-retry.e2e.ts", "e2e/catalog-retry-fixture.tsx"]
+}

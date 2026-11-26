@@ -1,5 +1,23 @@
 # Implementation delivery history
 
+## Catalogue direct keyboard selection (26 November 2026; local candidate)
+
+With Product hidden, each row's native selection button moves to its first
+visible metadata cell. Visible metadata text stays intact; the accessible name
+includes product identity, with pressed and disabled state retained. Product
+visibility preferences are preserved, including reload. Visible Product still
+has one selection button per row. Click propagation delivers one pick callback;
+mouse rows, search selection, sorting/resizing and unresolved-batch locks remain.
+
+Focused diagnostics: 96 source tests in four files, the catalogue fixture
+typecheck, a Vite 8.3.5 production fixture build, 12 installation/selection
+Chromium cases and four existing retry cases passed. New keyboard cases cover
+en/de, 1440 px porcelain and 400 px graphite; eight focus captures were inspected.
+The initial lock test incorrectly expected an input after the pending view
+replaced it; its corrected oracle checks retained selection, disabled buttons
+and retry state. Coordinator review and native package acceptance are pending;
+this is neither a release nor full accessibility compliance evidence.
+
 ## Empty-column preferences (23 November 2026; published as PR #141)
 
 The shared browser visibility hook recovers an empty visible set by showing all
@@ -7,8 +25,8 @@ columns declared by a nonempty schema, only in memory. Valid subsets remain;
 reads and refreshes do not repair localStorage. Explicit chooser actions still
 persist. Both Devices and catalogue use the same validation. Merge commit
 `951af9a3b`; see the [package dossier](status/2026-11-23-empty-column-preferences.md)
-for proof and acceptance limits. Hidden selection controls remain a separate
-OWN-01 lead; this does not close broader WP-48, beta or release scope.
+for proof and acceptance limits. The separate hidden-selection OWN-01 lead has a bounded local candidate above;
+this does not close broader WP-48, beta or release scope.
 
 
 This page is a short delivery index, not the current feature inventory.

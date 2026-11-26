@@ -21,8 +21,16 @@ impl fmt::Display for NameError {
 }
 impl std::error::Error for NameError {}
 
+/// Returns whether a project-object name is blank under Q5 (empty or Unicode whitespace-only).
+///
+/// Uses Rust's `str::trim().is_empty()`, so non-whitespace scalars such as `\u{feff}` are
+/// preserved as nonempty.
+pub fn is_blank_name(name: &str) -> bool {
+    name.trim().is_empty()
+}
+
 pub fn validate_edited_name(name: &str) -> Result<(), NameError> {
-    if name.trim().is_empty() {
+    if is_blank_name(name) {
         return Err(NameError::Blank);
     }
     if name.chars().count() > MAX_EDITED_NAME_CODEPOINTS {

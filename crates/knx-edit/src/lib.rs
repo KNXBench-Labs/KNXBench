@@ -2,4 +2,5 @@
 //!
 //! No importer, keys, protocol, transport, UI or generic command dispatch.
 
+pub mod missing_names;
 pub mod name_recipe;

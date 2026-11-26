@@ -556,7 +556,8 @@ fn allocators_issue_and_raise_function_ids_independently() {
 }
 
 #[test]
-fn project_rename_validates_new_names_preserves_other_fields_and_restores_historical_names_exactly() {
+fn project_rename_validates_new_names_preserves_other_fields_and_restores_historical_names_exactly()
+{
     use knx_core::address::GroupAddressStyle;
     use knx_core::names::{NameError, MAX_EDITED_NAME_CODEPOINTS};
 
@@ -568,7 +569,12 @@ fn project_rename_validates_new_names_preserves_other_fields_and_restores_histor
     .apply(&mut empty_project)
     .unwrap();
     assert_eq!(empty_project.info.name, "Minimal Project");
-    assert_eq!(inverse, Command::RestoreProjectName { name: String::new() });
+    assert_eq!(
+        inverse,
+        Command::RestoreProjectName {
+            name: String::new()
+        }
+    );
     inverse.apply(&mut empty_project).unwrap();
     assert_eq!(empty_project.info.name, "");
 
@@ -594,7 +600,10 @@ fn project_rename_validates_new_names_preserves_other_fields_and_restores_histor
         let rename = Command::RenameProject {
             name: new_name.clone(),
         };
-        assert_eq!(rename.rename_target_name(&project), Ok(Some(original.as_str())));
+        assert_eq!(
+            rename.rename_target_name(&project),
+            Ok(Some(original.as_str()))
+        );
         assert_eq!(rename.rename_value(), Some(new_name.as_str()));
 
         // Direct apply/restore inverse check.
@@ -610,7 +619,10 @@ fn project_rename_validates_new_names_preserves_other_fields_and_restores_histor
         expected.info.name = new_name.clone();
         assert_eq!(direct, expected, "non-name project fields must not change");
         let redo_cmd = inverse.apply(&mut direct).unwrap();
-        assert_eq!(direct, before, "restore inverse must recover exact historical name");
+        assert_eq!(
+            direct, before,
+            "restore inverse must recover exact historical name"
+        );
         assert_eq!(
             redo_cmd,
             Command::RestoreProjectName {
@@ -659,7 +671,10 @@ fn project_rename_validates_new_names_preserves_other_fields_and_restores_histor
         (String::new(), NameError::Blank),
         ("   ".into(), NameError::Blank),
         ("\u{85}\u{2003}".into(), NameError::Blank),
-        ("🛠".repeat(MAX_EDITED_NAME_CODEPOINTS + 1), NameError::TooLong),
+        (
+            "🛠".repeat(MAX_EDITED_NAME_CODEPOINTS + 1),
+            NameError::TooLong,
+        ),
         ("bad\nname".into(), NameError::ControlCharacter),
         ("bad\tname".into(), NameError::ControlCharacter),
         ("bad\0name".into(), NameError::ControlCharacter),
@@ -723,7 +738,10 @@ fn function_rename_validates_name_only_preserves_other_details_and_restores_hist
             id: FunctionId(1),
             name: new_name.clone(),
         };
-        assert_eq!(rename.rename_target_name(&project), Ok(Some(original.as_str())));
+        assert_eq!(
+            rename.rename_target_name(&project),
+            Ok(Some(original.as_str()))
+        );
         assert_eq!(rename.rename_value(), Some(new_name.as_str()));
 
         let mut direct = before.clone();
@@ -742,7 +760,10 @@ fn function_rename_validates_name_only_preserves_other_details_and_restores_hist
             "every non-name Function detail, member, sibling and project field must stay unchanged"
         );
         let redo_cmd = inverse.apply(&mut direct).unwrap();
-        assert_eq!(direct, before, "restore inverse must recover exact historical name");
+        assert_eq!(
+            direct, before,
+            "restore inverse must recover exact historical name"
+        );
         assert_eq!(
             redo_cmd,
             Command::RestoreFunctionName {
@@ -864,8 +885,14 @@ fn function_rename_and_restore_refuse_missing_and_ambiguous_ids_atomically() {
             rename.rename_target_name(&base),
             Err(CommandError::FunctionNotFound(missing))
         );
-        assert_eq!(refused(&base, rename.clone()), CommandError::FunctionNotFound(missing));
-        assert_eq!(refused(&base, restore), CommandError::FunctionNotFound(missing));
+        assert_eq!(
+            refused(&base, rename.clone()),
+            CommandError::FunctionNotFound(missing)
+        );
+        assert_eq!(
+            refused(&base, restore),
+            CommandError::FunctionNotFound(missing)
+        );
         let mut candidate = base.clone();
         let mut stack = CommandStack::new();
         assert_eq!(
@@ -888,7 +915,10 @@ fn function_rename_and_restore_refuse_missing_and_ambiguous_ids_atomically() {
         id: FunctionId(1),
         name: "Renamed".into(),
     };
-    assert_eq!(rename_dup.rename_target_name(&duplicated), Err(duplicate_err.clone()));
+    assert_eq!(
+        rename_dup.rename_target_name(&duplicated),
+        Err(duplicate_err.clone())
+    );
     assert_eq!(refused(&duplicated, rename_dup), duplicate_err);
     assert_eq!(
         refused(
@@ -993,9 +1023,7 @@ fn project_and_function_rename_batch_applies_atomically_and_rolls_back_completel
                     id: FunctionId(1),
                     name: "Should roll back".into(),
                 },
-                Command::RenameProject {
-                    name: "   ".into(),
-                },
+                Command::RenameProject { name: "   ".into() },
             ]),
             1,
             CommandError::InvalidName(NameError::Blank),
@@ -1011,7 +1039,10 @@ fn project_and_function_rename_batch_applies_atomically_and_rolls_back_completel
                 source: Box::new(expected_source),
             }
         );
-        assert_eq!(rollback_project, before, "failed batch must leave project untouched");
+        assert_eq!(
+            rollback_project, before,
+            "failed batch must leave project untouched"
+        );
         assert!(!stack.can_undo(), "failed batch must leave stack untouched");
     }
 

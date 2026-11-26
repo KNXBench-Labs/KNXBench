@@ -4,7 +4,30 @@ WP-50 slice 2. Date of source inspection: 2026-11-23. Host Linux x86_64, Rust
 1.98.0 (pinned), target `x86_64-pc-windows-msvc`. This is a **cross code check**
 (`cargo check`, no link, no binary, no execution, no Wine, no native Windows).
 
-## Sources and terms
+## Current disposition (26 November 2026)
+
+The owner chose **docs-only Slice 3a**, with
+[ADR-0192 Proposed](../adr/0192-productdb-windows-file-security.md). No ProductDB
+or xtask port, source/test/tool edit, toolchain/SDK/binary installation, Windows
+check or historical rerun is authorized by this slice. Public documentation/source
+HTTP reads supply design evidence only.
+
+The cargo-xwin/SDK route is **CLOSED**, not paused. At the owner's request on
+23 November, the SDK/CRT cache (about 649 MiB) and task-local cargo-xwin/xwin
+tools were deleted. The setup below is historical, not an installed environment.
+Historical logs were initially reported retained; a read-only presence check on
+26 November found the old slice 1, slice 2 and slice 3a evidence directories
+absent. They may have been auto-pruned on 25 November. Do not claim currently
+retained raw receipts or recreate them by rerunning checks. An independent
+factchecker exited 1; that is **not an approval**. Compiler counts below remain
+the historical maintained record, not fresh verification.
+
+Porting waits for an owner-provided Windows 11 x64 machine or **new** VM using
+MSVC. The existing analysis VM is excluded. This environment choice does not
+accept unread terms or authorize creating a VM/installing Microsoft components;
+future native toolchain terms need separate inspection/acceptance.
+
+## Sources and terms (historical SDK probe)
 
 Not legal advice and no judgement on what is prohibited. Whether and how the terms
 apply to this use is **unresolved**.
@@ -52,18 +75,20 @@ apply to this use is **unresolved**.
   Studio" wording and continued instead of stopping; the coordinator then paused all SDK
   use. The owner has not consented with knowledge of these caveats, and no applicability
   is presumed authorised. No vendor was contacted.
-- Kept consequences: the SDK/CRT stays in a task-local cache, is never committed,
-  bundled or published; linking the CRT into a release binary is a separate question.
-  Further SDK use (download, cache, check, build, link) is paused until the terms
-  applicability and a suitable environment are decided.
+- Subsequent disposition: the owner closed the route and requested deletion;
+  cache and task-local tools were deleted on 23 November (see above). No further
+  SDK use or redistribution follows. The unread SDK terms and unresolved
+  applicability were not settled by deleting the cache or choosing a future
+  native environment.
 
-## Installed tools (task-local, no system or global config change)
+## Historical task-local setup (deleted; no current installation claim)
 
 - `cargo install --locked --root <task>/tools cargo-xwin@0.24.1 xwin@0.10.0`
   (crates.io, built from source with Rust 1.98.0). Binary sha256: cargo-xwin
   `c05bee55654de62ae9c2eb54b0698897764514e07df4f88f8c589c8952b47de1`, xwin
   `1d2399d28feeb86f87cee6ab52d2c8fab66ab519bda04252fbe75a6a1ca87956`.
-- Host clang / clang-cl 23.1.3 and `llvm-lib` (system packages already present, not installed here).
+- At the time: host clang / clang-cl 23.1.3 and `llvm-lib` (already present;
+  this record makes no current tool-availability claim).
 - `lld-link`: a symlink in the task tools directory to the `rust-lld` (LLD 22.1.8)
   shipped with the pinned Rust toolchain; no other linker was installed. The checks
   below do not link, so the linker was not exercised by them.
@@ -73,7 +98,7 @@ apply to this use is **unresolved**.
   `44a3e7dc44486c945abdc1fae97e7e22de4d05e80f03b00e9302ba4b72c3e0e3`), MSVC CRT
   `14.44.17.14`, Windows SDK `10.0.26100`, UCRT.
 
-## Compiler frontier
+## Historical compiler frontier (23 November; not rerun)
 
 Every command ran under `cargo xwin` with a task-local `CARGO_TARGET_DIR`, scratch
 `XDG_*`, `--locked`, via a Python subprocess controller that recorded argv and the exact
@@ -105,13 +130,62 @@ return code (not a shell wrapper). Scope: default targets (lib/bin), `cargo chec
     knx-productdb; their own source is still **not reached**.
 - Toolchain errors remaining: none observed after the setup.
 
-Evidence (task scratch, not tracked): logs and a JSON receipt with argv/return codes.
-The receipt has 22 entries: 2 workspace runs plus 20 per-package checks. The tool
-installation and the xwin cache setup (both exit 0) exist only as logs with an `exit=0`
-trailer, not as receipt entries; no setup was rerun to create them.
+Historical evidence description (task scratch, not tracked): logs and a JSON
+receipt with argv/return codes were reported. That receipt contained 22 entries:
+2 workspace runs plus 20 per-package checks. Tool installation and cache setup
+(both reported exit 0) had logs with an `exit=0` trailer, not receipt entries.
+Those evidence directories are now absent; no setup was rerun to reconstruct them.
 
 ## Not done
 
 No link, no Windows binary, no run (Wine or native), no resource-compiler/NSIS/MSI
 exercise, no WebView2. `icon.ico` only lets `tauri-build` proceed; the native icon
 appearance is unverified.
+
+## llvm-mingw route stopped before setup (reconfirmed 26 November 2026)
+
+The conditional alternative stopped before any toolchain download, Rust target
+installation, porting edit or commit. The stop was the unresolved literal notice
+in `COPYING.MinGW-w64-runtime/COPYING.MinGW-w64-runtime.txt`, pinned mingw-w64
+commit `41eb042358a52011b35350392130dcdc94a8ead8`, lines 209–220:
+
+```text
+FIXME: Cephes math lib
+Copyright (C) 1984-1998 Stephen L. Moshier
+
+It sounds vague, but as to be found at
+<http://lists.debian.org/debian-legal/2004/12/msg00295.html>, it gives an
+impression that the author could be willing to give an explicit
+permission to distribute those files e.g. under a BSD style license. So
+probably there is no problem here, although it could be good to get a
+permission from the author and then add a license into the Cephes files
+in MinGW runtime. At least on follow-up it is marked that debian sees the
+version a-like BSD one. As MinGW.org (where those cephes parts are coming
+from) distributes them now over 6 years, it should be fine.
+```
+
+Primary sources read again on 26 November (public text only):
+
+- [Pinned upstream notice, lines 209–220](https://github.com/mingw-w64/mingw-w64/blob/41eb042358a52011b35350392130dcdc94a8ead8/COPYING.MinGW-w64-runtime/COPYING.MinGW-w64-runtime.txt#L209-L220),
+  also fetched as [raw pinned text](https://raw.githubusercontent.com/mingw-w64/mingw-w64/41eb042358a52011b35350392130dcdc94a8ead8/COPYING.MinGW-w64-runtime/COPYING.MinGW-w64-runtime.txt).
+  The FIXME paragraph is present literally.
+- [Upstream issue mingw-w64/mingw-w64#64](https://github.com/mingw-w64/mingw-w64/issues/64),
+  state `open` in the [upstream API response](https://api.github.com/repos/mingw-w64/mingw-w64/issues/64).
+  The issue raises questions about this notice; its title and allegations are
+  not findings of this project.
+
+This records an unresolved prerequisite under the owner's stop rule, not a legal
+conclusion that the toolchain is unlawful. Another project's licence statement
+does not resolve the pinned runtime notice for this route. The owner selected
+docs-only on 26 November, **not** an exception authorizing llvm-mingw. No setup
+or use was performed in this slice.
+
+## ProductDB design evidence (26 November 2026)
+
+[ADR-0192](../adr/0192-productdb-windows-file-security.md) inventories source at
+`fe6b30dc3`, separates ProductDB from the server's lease/ownership responsibilities,
+and cites primary Microsoft docs for candidate APIs. Handle-relative traversal,
+ancestor binding, SID/DACL and privileged-principal policy, SQLite/VFS reopen
+identity, and publication durability remain unproved. Proposed native adversarial
+and mutant acceptance cases have not been run. No Windows implementation or
+native proof is claimed; Linux protection must be preserved.

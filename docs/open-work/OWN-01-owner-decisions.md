@@ -2,6 +2,29 @@
 
 **Status:** Decisions recorded; remaining evidence and owner review pending. Listed in [OPEN_WORK](../OPEN_WORK.md); per-ID status of record is the [ledger](../status/LEDGER.md).
 
+## Decision recorded — 26 November 2026 (WP-50 Slice 3a docs only)
+
+- **Finish Slice 3a as documentation only.** Draft
+  [ADR-0192](../adr/0192-productdb-windows-file-security.md) with status
+  **Proposed**, not Accepted; inventory current ProductDB Unix protection and
+  unproved Windows candidates. No production/test/tool source edits or ProductDB/
+  xtask porting, toolchain/SDK/binary downloads or installs, Windows checks or
+  historical reruns in this package.
+- **cargo-xwin/SDK route closed.** At owner request the SDK/CRT cache (~649 MiB)
+  and task-local cargo-xwin/xwin tools were deleted on 23 November. Historical
+  compiler results do not establish current tooling or native Windows acceptance.
+- **llvm-mingw remains stopped** at the pinned mingw-w64 Cephes FIXME, before
+  download/target installation/port/commit. Docs-only is not an exception to the
+  stop rule; [primary notice and open issue](../research/2026-11-23-windows-cross-build.md#llvm-mingw-route-stopped-before-setup-reconfirmed-26-november-2026)
+  are recorded without a legal conclusion.
+- **Porting waits for owner-provided Windows 11 x64 machine or new VM (MSVC).**
+  Existing analysis VM excluded. Environment choice is not acceptance of unread
+  terms and does not authorize VM creation or installation; applicable native
+  toolchain terms require separate inspection/acceptance.
+- No Windows support, implementation/native proof, bus/hardware, release or
+  deployment approval follows. Independent review and package gate are separate
+  from the implementer's documentation self-review.
+
 ## Decision recorded — 23 November 2026 (WP-49 open questions 4-8)
 
 Grilling round on the WebUI behaviour pins raised by WP-49.2 and 49.3 (questions 9-11, raised by 49.4a, stay open).

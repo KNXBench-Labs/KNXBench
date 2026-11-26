@@ -197,3 +197,4 @@ the old one gets `Status: Superseded by ADR-NNNN`.
 | [0189](0189-accepted-wp07-mapping-is-the-module-instance-authority.md) | The accepted WP-07 mapping is the module-instance authority (created as a second 0177, renumbered 2026-11-22) | Proposed | 2026-11-17 |
 | [0190](0190-one-workspace-version.md) | One workspace version for every program and library | Accepted | 2026-11-22 |
 | [0191](0191-ui-sdk-beta-headless-dependency-for-web-ui-behaviours.md) | A beta headless dependency (ui-sdk) for web UI behaviours: spike evaluation; fallback accepted, no dependency | Accepted | 2026-11-23 |
+| [0192](0192-productdb-windows-file-security.md) | Windows file-security requirements for ProductDB | Proposed | 2026-11-26 |

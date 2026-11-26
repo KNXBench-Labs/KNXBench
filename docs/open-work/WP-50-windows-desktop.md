@@ -12,9 +12,11 @@ claimed anywhere; native acceptance has not happened.
 is **Proposed**, not accepted: actual ProductDB Unix invariants, Windows candidates,
 explicit unproved boundaries and future native acceptance cases. No production,
 test or tool source changes; no ProductDB/xtask port, toolchain/SDK/binary
-installation or Windows checks in this slice. Independent review and the parent's
-package gate remain pending; the implementer performs documentation self-review
-and `git diff --check` only.
+installation or Windows checks in this slice. Independent Spec and Standards
+reviews approved the docs-only design at `b9d91c098` without findings. Publication
+requires independent review plus the parent's package gate; no gate or native
+result is inferred. The implementer's documentation self-review and
+`git diff --check` are separate from those independent reviews.
 
 The cargo-xwin/SDK route is **CLOSED**. At owner request the SDK/CRT cache
 (~649 MiB) and task-local cargo-xwin/xwin tools were deleted on 23 November.
@@ -198,7 +200,9 @@ cross typechecks only, not Windows support, native acceptance or a release claim
   SQLite/VFS reopen binding, file IDs/link count, SID/DACL/privileged-principal
   policy, lease lifetime, no-replace visibility and directory-entry durability
   need native evidence. No Windows mechanism has been implemented or proved.
-- Independent review and parent package gate of the docs-only package pending;
-  future native tests/mutants in ADR-0192 are requirements, not executed results.
+- Independent Spec and Standards design reviews approved `b9d91c098` without
+  findings. Publication requires independent review plus the parent's package
+  gate; no gate or native result is inferred. Future native tests/mutants in
+  ADR-0192 are requirements, not executed results.
 - WebView2 failure watcher design; installer format; signing (cost and certificate undecided).
 - Whether `ring`/`libsqlite3-sys` stay as they are (checked with clang-cl only; MSVC `cl` untested).

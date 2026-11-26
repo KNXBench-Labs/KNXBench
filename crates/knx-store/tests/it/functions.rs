@@ -344,3 +344,179 @@ fn an_inconsistent_function_set_is_not_saved() {
         "{error}"
     );
 }
+
+#[test]
+fn project_and_function_name_commands_roundtrip_native_working_history_including_restore_inverses()
+{
+    use knx_core::function::MAX_FUNCTION_SHORT_TEXT_CODEPOINTS;
+    use knx_core::names::MAX_EDITED_NAME_CODEPOINTS;
+    use knx_core::CommandStack;
+
+    let historical_cases = [
+        (String::new(), String::new(), "   ".to_string()),
+        (
+            " \t ".to_string(),
+            "x".repeat(MAX_FUNCTION_SHORT_TEXT_CODEPOINTS + 1),
+            "Imported\u{7}blind".to_string(),
+        ),
+        (
+            "p".repeat(MAX_EDITED_NAME_CODEPOINTS + 1),
+            "f".repeat(MAX_EDITED_NAME_CODEPOINTS + 1),
+            String::new(),
+        ),
+    ];
+
+    for (case_idx, (project_original, first_fn_original, second_fn_original)) in
+        historical_cases.into_iter().enumerate()
+    {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(format!("wp51-history-{case_idx}.knxdb"));
+        let conn = knx_store::open_and_migrate(&path).unwrap();
+
+        let mut base_project = with_functions();
+        base_project.info.project_id = format!("P-051{case_idx}");
+        base_project.info.name = project_original.clone();
+        base_project.info.project_number = Some("PRJ-51".into());
+        base_project.functions[0].details.name = first_fn_original.clone();
+        base_project.functions[1].details.name = second_fn_original.clone();
+
+        let baseline = NativeSnapshot {
+            project: base_project,
+            opaque: vec![knx_store::StoredOpaqueEntry {
+                source_path: "unknown.xml".into(),
+                xpath: "/unknown".into(),
+                kind: "element".into(),
+                name: "RetainedMarker".into(),
+                bytes: b"retained bytes".to_vec(),
+                sha256: "retained-hash".into(),
+            }],
+            manufacturer_refs: vec![knx_store::ManufacturerRef {
+                source_path: "M-0001/Hardware.xml".into(),
+                sha256: "manifest-hash".into(),
+                len: 12,
+                kind: "ManufacturerData".into(),
+            }],
+        };
+
+        let generation =
+            history::save_editor(&conn, &baseline, &CommandStack::new(), None, true).unwrap();
+
+        let mut working = baseline.clone();
+        let mut stack = CommandStack::new();
+
+        // Step 1: project rename (inverse is RestoreProjectName with historical name).
+        stack
+            .do_command(
+                &mut working.project,
+                Command::RenameProject {
+                    name: "Renamed Project".into(),
+                },
+            )
+            .unwrap();
+        let after_step_1 = working.clone();
+
+        // Step 2: function rename (inverse is RestoreFunctionName with historical name).
+        stack
+            .do_command(
+                &mut working.project,
+                Command::RenameFunction {
+                    id: FunctionId(1),
+                    name: "Living Light".into(),
+                },
+            )
+            .unwrap();
+        let after_step_2 = working.clone();
+
+        // Step 3: atomic batch combining project + function renames.
+        stack
+            .do_command(
+                &mut working.project,
+                Command::Batch(vec![
+                    Command::RenameProject {
+                        name: "Final Project".into(),
+                    },
+                    Command::RenameFunction {
+                        id: FunctionId(2),
+                        name: "Bedroom Blind".into(),
+                    },
+                ]),
+            )
+            .unwrap();
+        let after_step_3 = working.clone();
+
+        // Persist working history; exercises CommandStack::visit_snapshot_states_above
+        // replaying RestoreProjectName, RestoreFunctionName and Batch inverses into
+        // encoded native snapshots.
+        let generation =
+            history::save_editor(&conn, &working, &stack, Some(generation), false).unwrap();
+        assert_eq!(NativeSnapshot::read(&conn).unwrap(), baseline);
+        drop(conn);
+
+        // Reopen from disk and verify recovered working state and undo stack.
+        let conn = knx_store::open_existing_and_migrate(&path).unwrap();
+        let recovered = history::load_editor(&conn).unwrap().unwrap();
+        assert_eq!(recovered.generation, generation);
+        assert_eq!(recovered.baseline, baseline);
+        assert_eq!(recovered.working, after_step_3);
+        assert_eq!(
+            recovered.undo,
+            vec![
+                baseline.project.clone(),
+                after_step_1.project.clone(),
+                after_step_2.project.clone(),
+            ]
+        );
+        assert!(recovered.redo.is_empty());
+
+        // Undo step 3 and step 2, persist with both undo and redo stacks populated.
+        let mut working = recovered.working;
+        let mut stack = CommandStack::from_snapshot_states(recovered.undo, recovered.redo);
+        stack.undo(&mut working.project).unwrap();
+        assert_eq!(working, after_step_2);
+        stack.undo(&mut working.project).unwrap();
+        assert_eq!(working, after_step_1);
+        let generation =
+            history::save_editor(&conn, &working, &stack, Some(generation), false).unwrap();
+        drop(conn);
+
+        // Reopen again; undo to exact historical names, then redo all the way forward.
+        let conn = knx_store::open_existing_and_migrate(&path).unwrap();
+        let recovered = history::load_editor(&conn).unwrap().unwrap();
+        assert_eq!(recovered.generation, generation);
+        assert_eq!(recovered.working, after_step_1);
+        assert_eq!(recovered.undo, vec![baseline.project.clone()]);
+        assert_eq!(
+            recovered.redo,
+            vec![after_step_3.project.clone(), after_step_2.project.clone()]
+        );
+
+        let mut working = recovered.working;
+        let mut stack = CommandStack::from_snapshot_states(recovered.undo, recovered.redo);
+        stack.undo(&mut working.project).unwrap();
+        assert_eq!(
+            working, baseline,
+            "undo after history reload must restore exact historical empty/whitespace/overlong names"
+        );
+        assert_eq!(working.project.info.name, project_original);
+        assert_eq!(working.project.functions[0].details.name, first_fn_original);
+        assert_eq!(
+            working.project.functions[1].details.name,
+            second_fn_original
+        );
+
+        stack.redo(&mut working.project).unwrap();
+        assert_eq!(working, after_step_1);
+        stack.redo(&mut working.project).unwrap();
+        assert_eq!(working, after_step_2);
+        stack.redo(&mut working.project).unwrap();
+        assert_eq!(working, after_step_3);
+
+        // Promote to saved root and verify full project readback.
+        history::save_editor(&conn, &working, &stack, Some(generation), true).unwrap();
+        let saved = knx_store::load_project(&conn).unwrap();
+        assert_eq!(saved, after_step_3.project);
+        assert_eq!(saved.info.name, "Final Project");
+        assert_eq!(saved.functions[0].details.name, "Living Light");
+        assert_eq!(saved.functions[1].details.name, "Bedroom Blind");
+    }
+}

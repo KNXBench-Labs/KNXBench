@@ -124,12 +124,20 @@ fn long_text(field: &'static str, value: &str) -> Result<(), FunctionError> {
 }
 
 impl FunctionDetails {
+    /// Admission for an edited Function name alone: non-blank (the shared
+    /// edited-name rule), at most 255 code points (`knx:String255_t`), and
+    /// no control characters or line separators. Text is stored verbatim.
+    pub fn validate_name(name: &str) -> Result<(), FunctionError> {
+        crate::names::validate_edited_name(name).map_err(FunctionError::InvalidName)?;
+        short_text("name", name)?;
+        Ok(())
+    }
+
     /// Admission for an edited value: a non-blank name (the shared
     /// edited-name rule) of at most 255 code points, single-line short
     /// fields, bounded long texts. Text is stored exactly as given.
     pub fn validate(&self) -> Result<(), FunctionError> {
-        crate::names::validate_edited_name(&self.name).map_err(FunctionError::InvalidName)?;
-        short_text("name", &self.name)?;
+        Self::validate_name(&self.name)?;
         for (field, value) in [("type", &self.function_type), ("number", &self.number)] {
             if let Some(value) = value {
                 short_text(field, value)?;

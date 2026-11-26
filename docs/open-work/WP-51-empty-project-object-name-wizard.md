@@ -2,8 +2,8 @@
 
 Owner request: 24 November 2026, approved naming-wizard interview decisions
 Q1, Q2 and Q4–Q17; Q18 requests this independent work package.
-Status: Planned: awaiting implementation Go
-Recorded only, not claimed, no implementation Go.
+Status: Partial in progress — slice 51.1a backend foundation delivered-in-candidate; remaining 51.1, 51.2–51.4 and Wizard not complete.
+Slice 51.1a covers validated, reversible name-only domain commands for Project (`RenameProject` / `RestoreProjectName`) and Project Function (`RenameFunction` / `RestoreFunctionName`), unambiguous Function ID resolution, native working-history snapshot replay/roundtrip coverage, and diagnostic allowlist wiring. No wizard UI, recipes, detection, or other Q9 entity rename/restore gaps are complete yet.
 Blocked by: None (WP-51 and WP-52 are independent).
 
 ## Source report and evidence limits
@@ -120,15 +120,16 @@ if already nonempty; a proposed but unselected parent is not an accepted name.
 
 ## Bounded internal stages and actual status
 
-All stages are **Planned: awaiting implementation Go**. They are internal steps
-of one feature; none is an individually complete product slice.
+WP-51 is explicitly partial. The stages below are internal steps of one feature;
+none is an individually complete product slice, and the Wizard is not complete.
 
 | Stage | Planned work | Actual status |
 | --- | --- | --- |
-| 51.1 | Audit every Q9 entity's source/model/name constraints; complete missing validated name-only commands and exact old-value inverses; define provenance and deterministic missing-name detection without mutating import data | Planned: awaiting implementation Go |
-| 51.2 | Implement all recipes, ambiguity/manual cases, parent dependency invalidation, bounded scan/count/page semantics and preview binding; reuse candidate stack, `Command::Batch`, stale-snapshot guards and durable native write-before-publish | Planned: awaiting implementation Go |
-| 51.3 | Implement entry timing, Later/manual reopen, grouped editable selection, source/context/errors, duplicate warnings, 256 cap and explicit confirmation; reuse Overlay; keyboard/focus, narrow displays and all supported translations; update all Q2 device consumers | Planned: awaiting implementation Go |
-| 51.4 | Integrate native/session-only persistence, save/reopen and Undo, failure/conflict paths and end-to-end acceptance across every supported entity; update affected user/status/limitations docs only with verified results | Planned: awaiting implementation Go |
+| 51.1a | Validated, reversible name-only domain commands for Project (`RenameProject`/`RestoreProjectName`) and Project Function (`RenameFunction`/`RestoreFunctionName`), unambiguous Function identity checks, native working-history replay and focused regression tests | Delivered-in-candidate (backend foundation only; pending coordinator gate/merge; no wizard UI or remaining Q9 types) |
+| 51.1 (remaining) | Audit remaining Q9 entities' source/model/name constraints; complete remaining validated name-only commands and exact old-value inverses; define provenance and deterministic missing-name detection without mutating import data | Planned (not started) |
+| 51.2 | Implement all recipes, ambiguity/manual cases, parent dependency invalidation, bounded scan/count/page semantics and preview binding; reuse candidate stack, `Command::Batch`, stale-snapshot guards and durable native write-before-publish | Planned (not started) |
+| 51.3 | Implement entry timing, Later/manual reopen, grouped editable selection, source/context/errors, duplicate warnings, 256 cap and explicit confirmation; reuse Overlay; keyboard/focus, narrow displays and all supported translations; update all Q2 device consumers | Planned (not started) |
+| 51.4 | Integrate native/session-only persistence, save/reopen and Undo, failure/conflict paths and end-to-end acceptance across every supported entity; update affected user/status/limitations docs only with verified results | Planned (not started) |
 
 ## Acceptance matrix (planned, unchecked)
 
@@ -169,8 +170,10 @@ objects to pass end-to-end acceptance; backend completion alone is insufficient.
 
 ## Open decisions
 
-None at owner level: the naming interview frontier is closed. Implementation Go
-has not been given. Source-derived details still to establish within this plan:
+None at owner level: the naming interview frontier is closed. Slice 51.1a has
+implementation Go and is delivered-in-candidate; remaining 51.1, 51.2–51.4 and
+the Wizard remain incomplete. Source-derived details still to establish within
+this plan:
 exact descriptive-text/product-resolution access for every type, validated command
 coverage and history serialization, address/span formatting, scan/page budgets
 and completeness signals, preview invalidation/API plumbing, manual-draft

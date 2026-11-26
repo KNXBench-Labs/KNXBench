@@ -8,7 +8,9 @@ use super::{
     check_id_free, require_unique_building_part, require_unique_group_address, Command,
     CommandError, IdKind,
 };
-use crate::function::{Function, FunctionDetails, FunctionError, FunctionMember};
+use crate::function::{
+    Function, FunctionDetails, FunctionError, FunctionInvariantError, FunctionMember,
+};
 use crate::{BuildingPartId, FunctionId, FunctionMemberId, Project};
 
 fn index_of(project: &Project, id: FunctionId) -> Result<usize, CommandError> {
@@ -17,6 +19,23 @@ fn index_of(project: &Project, id: FunctionId) -> Result<usize, CommandError> {
         .iter()
         .position(|f| f.id == id)
         .ok_or(CommandError::FunctionNotFound(id))
+}
+
+/// Resolves `id` unambiguously in `project.functions`, refusing missing or
+/// duplicated identities before any mutation.
+pub(super) fn unique_index(project: &Project, id: FunctionId) -> Result<usize, CommandError> {
+    let mut matches = project
+        .functions
+        .iter()
+        .enumerate()
+        .filter(|(_, f)| f.id == id);
+    let (index, _) = matches.next().ok_or(CommandError::FunctionNotFound(id))?;
+    if matches.next().is_some() {
+        return Err(CommandError::FunctionInvariant(
+            FunctionInvariantError::DuplicateFunctionId(id),
+        ));
+    }
+    Ok(index)
 }
 
 /// The installation index owning `location`, the Function's scope.
@@ -141,6 +160,22 @@ pub(super) fn update(
         id,
         details: previous,
     })
+}
+
+/// Renames only `details.name`, leaving every other Function field and member
+/// untouched. `admit = false` is undo-only exact restoration.
+pub(super) fn rename(
+    project: &mut Project,
+    id: FunctionId,
+    name: &str,
+    admit: bool,
+) -> Result<Command, CommandError> {
+    let index = unique_index(project, id)?;
+    if admit {
+        FunctionDetails::validate_name(name).map_err(invalid)?;
+    }
+    let previous = std::mem::replace(&mut project.functions[index].details.name, name.to_owned());
+    Ok(Command::RestoreFunctionName { id, name: previous })
 }
 
 pub(super) fn relocate(

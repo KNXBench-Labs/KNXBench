@@ -1,7 +1,9 @@
-//! The command layer: every mutation is a `Command` whose `apply` returns
-//! its own inverse, so undo and redo replay the same mechanism (ARCHITECTURE
-//! §6). Validation lives here, not in the UI and not in storage. Any command
-//! that changes a `Resolved<T>` sets its layer to `Layer::UserEdit`.
+//! Reversible domain commands, validation and undo/redo history for a KNX project.
+//!
+//! Every mutation is a `Command` whose `apply` returns its own inverse, so
+//! undo and redo replay the same mechanism (ARCHITECTURE §6). Validation lives
+//! here, not in the UI and not in storage. Any command that changes a
+//! `Resolved<T>` sets its layer to `Layer::UserEdit`.
 
 pub mod comparison_adoption;
 #[cfg(test)]
@@ -137,6 +139,15 @@ pub enum Command {
     /// Undo-only exact name restoration, including imported empty/long names.
     RestoreGroupAddressName {
         id: GroupAddressId,
+        name: String,
+    },
+    /// Changes only the project name (`ProjectInfo::name`); the inverse
+    /// preserves imported empty, whitespace, overlong or control-bearing text.
+    RenameProject {
+        name: String,
+    },
+    /// Undo-only exact project-name restoration, not an external authoring operation.
+    RestoreProjectName {
         name: String,
     },
     /// Sets a device's description as a user edit. Unlike
@@ -677,6 +688,18 @@ pub enum Command {
     RestoreFunctionDetails {
         id: crate::FunctionId,
         details: crate::function::FunctionDetails,
+    },
+    /// Changes only a Function's name with Function-name edit admission,
+    /// preserving every other detail and member verbatim.
+    RenameFunction {
+        id: crate::FunctionId,
+        name: String,
+    },
+    /// Undo-only exact Function-name restoration, including imported empty,
+    /// whitespace, overlong or control-bearing text.
+    RestoreFunctionName {
+        id: crate::FunctionId,
+        name: String,
     },
     /// Places a Function in another building part of the same installation;
     /// self-inverting. Its members stay as they are.
@@ -2142,6 +2165,8 @@ impl Command {
             | Command::RestoreFunction { .. }
             | Command::UpdateFunction { .. }
             | Command::RestoreFunctionDetails { .. }
+            | Command::RenameFunction { .. }
+            | Command::RestoreFunctionName { .. }
             | Command::MoveFunction { .. }
             | Command::AddFunctionMember { .. }
             | Command::RemoveFunctionMember { .. }
@@ -2197,6 +2222,12 @@ impl Command {
             }
             Command::RestoreFunctionDetails { id, details } => {
                 function_commands::update(project, *id, details, false)
+            }
+            Command::RenameFunction { id, name } => {
+                function_commands::rename(project, *id, name, true)
+            }
+            Command::RestoreFunctionName { id, name } => {
+                function_commands::rename(project, *id, name, false)
             }
             Command::MoveFunction { id, location } => {
                 function_commands::relocate(project, *id, *location)
@@ -2387,6 +2418,13 @@ impl Command {
                     id: *id,
                     name: previous,
                 })
+            }
+            Command::RenameProject { name } | Command::RestoreProjectName { name } => {
+                if matches!(self, Command::RenameProject { .. }) {
+                    crate::names::validate_edited_name(name).map_err(CommandError::InvalidName)?;
+                }
+                let previous = std::mem::replace(&mut project.info.name, name.clone());
+                Ok(Command::RestoreProjectName { name: previous })
             }
             Command::SetDeviceDescription {
                 device,
@@ -3982,6 +4020,11 @@ impl Command {
                 let index = target_installation(project, Some(*id))?;
                 Ok(Some(&project.installations[index].name))
             }
+            Self::RenameProject { .. } => Ok(Some(&project.info.name)),
+            Self::RenameFunction { id, .. } => {
+                let index = function_commands::unique_index(project, *id)?;
+                Ok(Some(&project.functions[index].details.name))
+            }
             _ => Ok(None),
         }
     }
@@ -3989,7 +4032,9 @@ impl Command {
         match self {
             Self::RenameDevice { name, .. }
             | Self::RenameGroupAddress { name, .. }
-            | Self::RenameInstallation { name, .. } => Some(name),
+            | Self::RenameInstallation { name, .. }
+            | Self::RenameProject { name }
+            | Self::RenameFunction { name, .. } => Some(name),
             _ => None,
         }
     }

@@ -86,6 +86,8 @@ pub(super) fn candidates(cmd: &Command, project: &Project, out: &mut BTreeSet<De
         | Command::RestoreDeviceName { .. }
         | Command::RenameGroupAddress { .. }
         | Command::RestoreGroupAddressName { .. }
+        | Command::RenameProject { .. }
+        | Command::RestoreProjectName { .. }
         | Command::SetDeviceDescription { .. }
         | Command::SetDeviceInstructions { .. }
         | Command::RenameArea { .. }
@@ -106,6 +108,8 @@ pub(super) fn candidates(cmd: &Command, project: &Project, out: &mut BTreeSet<De
         | Command::RestoreFunction { .. }
         | Command::UpdateFunction { .. }
         | Command::RestoreFunctionDetails { .. }
+        | Command::RenameFunction { .. }
+        | Command::RestoreFunctionName { .. }
         | Command::MoveFunction { .. }
         | Command::AddFunctionMember { .. }
         | Command::RemoveFunctionMember { .. }

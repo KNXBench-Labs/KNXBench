@@ -300,12 +300,8 @@ fn all_nine_q9_categories_and_eleven_building_kinds_apply_undo_redo_and_preserve
         name: "Office Building".into(),
     });
 
-    let plan = preview_missing_name_apply(
-        &state,
-        &revision,
-        MissingNameApplyIntent { entries },
-    )
-    .expect("preview must succeed");
+    let plan = preview_missing_name_apply(&state, &revision, MissingNameApplyIntent { entries })
+        .expect("preview must succeed");
     assert_eq!(plan.preview().version, 1);
     assert_eq!(plan.preview().changed, 20);
     assert!(plan.preview().warnings.is_empty());
@@ -350,12 +346,30 @@ fn all_nine_q9_categories_and_eleven_building_kinds_apply_undo_redo_and_preserve
             .unwrap();
         assert_eq!(bp.name, format!("Space {id}"));
     }
-    assert_eq!(state.project.installations[0].topology.areas[0].name, "Area 1");
-    assert_eq!(state.project.installations[0].topology.lines[0].name, "Line 1.2");
-    assert_eq!(state.project.devices.get(DeviceId(1)).unwrap().name, "Relay 1");
-    assert_eq!(state.project.installations[0].group_ranges[0].name, "Lighting");
-    assert_eq!(state.project.installations[0].group_ranges[1].name, "Switching");
-    assert_eq!(state.project.installations[0].group_addresses[0].name, "Main Light Switch");
+    assert_eq!(
+        state.project.installations[0].topology.areas[0].name,
+        "Area 1"
+    );
+    assert_eq!(
+        state.project.installations[0].topology.lines[0].name,
+        "Line 1.2"
+    );
+    assert_eq!(
+        state.project.devices.get(DeviceId(1)).unwrap().name,
+        "Relay 1"
+    );
+    assert_eq!(
+        state.project.installations[0].group_ranges[0].name,
+        "Lighting"
+    );
+    assert_eq!(
+        state.project.installations[0].group_ranges[1].name,
+        "Switching"
+    );
+    assert_eq!(
+        state.project.installations[0].group_addresses[0].name,
+        "Main Light Switch"
+    );
     assert_eq!(state.project.functions[0].details.name, "Ceiling Light");
 
     // Verify non-name fields and opaque/manifest data are untouched.
@@ -379,9 +393,17 @@ fn all_nine_q9_categories_and_eleven_building_kinds_apply_undo_redo_and_preserve
     );
     assert_eq!(
         state.project.devices.get(DeviceId(1)).unwrap().product_ref,
-        original.project.devices.get(DeviceId(1)).unwrap().product_ref
+        original
+            .project
+            .devices
+            .get(DeviceId(1))
+            .unwrap()
+            .product_ref
     );
-    assert_eq!(state.project.functions[0].members, original.project.functions[0].members);
+    assert_eq!(
+        state.project.functions[0].members,
+        original.project.functions[0].members
+    );
 
     // Single-step Undo restores exact original blank/whitespace strings.
     let applied = state.clone();
@@ -412,7 +434,10 @@ fn q5_refuses_existing_non_blank_names_including_bom() {
         },
     )
     .unwrap_err();
-    assert_eq!(err_regular, MissingNameApplyError::TargetNotBlank(NameTargetId::Project));
+    assert_eq!(
+        err_regular,
+        MissingNameApplyError::TargetNotBlank(NameTargetId::Project)
+    );
 
     let err_bom = preview_missing_name_apply(
         &state,
@@ -425,7 +450,10 @@ fn q5_refuses_existing_non_blank_names_including_bom() {
         },
     )
     .unwrap_err();
-    assert_eq!(err_bom, MissingNameApplyError::TargetNotBlank(NameTargetId::Device(1)));
+    assert_eq!(
+        err_bom,
+        MissingNameApplyError::TargetNotBlank(NameTargetId::Device(1))
+    );
     assert_eq!(state, before);
 }
 
@@ -444,7 +472,9 @@ fn identity_bounds_and_name_admission_fail_closed() {
         declared_dpt: Override::Absent,
         description: None,
     };
-    state.project.installations[0].group_addresses.push(dup_ga.clone());
+    state.project.installations[0]
+        .group_addresses
+        .push(dup_ga.clone());
     state.project.installations[0].group_addresses.push(dup_ga);
     state.project.functions.push(Function {
         id: FunctionId(0),
@@ -456,9 +486,18 @@ fn identity_bounds_and_name_admission_fail_closed() {
 
     // Invalid revision (empty incarnation, >128 bytes, generation > MAX_SAFE_INTEGER)
     for bad_rev in [
-        NameRecipeRevision { project_incarnation: "".into(), generation: 1 },
-        NameRecipeRevision { project_incarnation: "a".repeat(129), generation: 1 },
-        NameRecipeRevision { project_incarnation: "ok".into(), generation: 9_007_199_254_740_992 },
+        NameRecipeRevision {
+            project_incarnation: "".into(),
+            generation: 1,
+        },
+        NameRecipeRevision {
+            project_incarnation: "a".repeat(129),
+            generation: 1,
+        },
+        NameRecipeRevision {
+            project_incarnation: "ok".into(),
+            generation: 9_007_199_254_740_992,
+        },
     ] {
         let err = preview_missing_name_apply(
             &state,
@@ -501,8 +540,14 @@ fn identity_bounds_and_name_admission_fail_closed() {
             &rev(),
             MissingNameApplyIntent {
                 entries: vec![
-                    MissingNameEntry { target: NameTargetId::Project, name: "A".into() },
-                    MissingNameEntry { target: NameTargetId::Project, name: "B".into() },
+                    MissingNameEntry {
+                        target: NameTargetId::Project,
+                        name: "A".into()
+                    },
+                    MissingNameEntry {
+                        target: NameTargetId::Project,
+                        name: "B".into()
+                    },
                 ],
             },
         )
@@ -571,7 +616,10 @@ fn identity_bounds_and_name_admission_fail_closed() {
             },
         )
         .unwrap_err(),
-        MissingNameApplyError::InvalidName(NameTargetId::Area(1), knx_core::names::NameError::Blank)
+        MissingNameApplyError::InvalidName(
+            NameTargetId::Area(1),
+            knx_core::names::NameError::Blank
+        )
     );
     assert_eq!(
         preview_missing_name_apply(
@@ -631,17 +679,19 @@ fn identity_bounds_and_name_admission_fail_closed() {
     let mut budget_entries = Vec::new();
     let four_byte_name = "🛠".repeat(1024); // 4096 bytes, 1024 codepoints (valid name)
     for i in 1..=256u32 {
-        big_state.project.installations[0].group_addresses.push(GroupAddressEntry {
-            id: GroupAddressId(i),
-            source: src(&format!("GA-{i}")),
-            name: " ".into(), // +1 byte each -> 256 * 4097 > 1_048_576
-            address: GroupAddress::from_raw((2048 + i) as u16),
-            central: false,
-            unfiltered: false,
-            range: None,
-            declared_dpt: Override::Absent,
-            description: None,
-        });
+        big_state.project.installations[0]
+            .group_addresses
+            .push(GroupAddressEntry {
+                id: GroupAddressId(i),
+                source: src(&format!("GA-{i}")),
+                name: " ".into(), // +1 byte each -> 256 * 4097 > 1_048_576
+                address: GroupAddress::from_raw((2048 + i) as u16),
+                central: false,
+                unfiltered: false,
+                range: None,
+                declared_dpt: Override::Absent,
+                description: None,
+            });
         budget_entries.push(MissingNameEntry {
             target: NameTargetId::GroupAddress(i),
             name: four_byte_name.clone(),
@@ -661,42 +711,48 @@ fn identity_bounds_and_name_admission_fail_closed() {
 }
 
 #[test]
-fn q14_duplicate_name_warnings_allow_exact_names_without_auto_suffix() {
+fn q13_duplicate_name_warnings_allow_exact_names_without_auto_suffix() {
     let mut state = full_q9_fixture();
     // Add existing named sibling GA(10) and two blank sibling GAs (11, 12) in GroupRange(2).
-    state.project.installations[0].group_addresses.push(GroupAddressEntry {
-        id: GroupAddressId(10),
-        source: src("GA-10"),
-        name: "Ceiling Light".into(),
-        address: GroupAddress::from_raw(2050),
-        central: false,
-        unfiltered: false,
-        range: Some(GroupRangeId(2)),
-        declared_dpt: Override::Absent,
-        description: None,
-    });
-    state.project.installations[0].group_addresses.push(GroupAddressEntry {
-        id: GroupAddressId(11),
-        source: src("GA-11"),
-        name: "".into(),
-        address: GroupAddress::from_raw(2051),
-        central: false,
-        unfiltered: false,
-        range: Some(GroupRangeId(2)),
-        declared_dpt: Override::Absent,
-        description: None,
-    });
-    state.project.installations[0].group_addresses.push(GroupAddressEntry {
-        id: GroupAddressId(12),
-        source: src("GA-12"),
-        name: "".into(),
-        address: GroupAddress::from_raw(2052),
-        central: false,
-        unfiltered: false,
-        range: Some(GroupRangeId(2)),
-        declared_dpt: Override::Absent,
-        description: None,
-    });
+    state.project.installations[0]
+        .group_addresses
+        .push(GroupAddressEntry {
+            id: GroupAddressId(10),
+            source: src("GA-10"),
+            name: "Ceiling Light".into(),
+            address: GroupAddress::from_raw(2050),
+            central: false,
+            unfiltered: false,
+            range: Some(GroupRangeId(2)),
+            declared_dpt: Override::Absent,
+            description: None,
+        });
+    state.project.installations[0]
+        .group_addresses
+        .push(GroupAddressEntry {
+            id: GroupAddressId(11),
+            source: src("GA-11"),
+            name: "".into(),
+            address: GroupAddress::from_raw(2051),
+            central: false,
+            unfiltered: false,
+            range: Some(GroupRangeId(2)),
+            declared_dpt: Override::Absent,
+            description: None,
+        });
+    state.project.installations[0]
+        .group_addresses
+        .push(GroupAddressEntry {
+            id: GroupAddressId(12),
+            source: src("GA-12"),
+            name: "".into(),
+            address: GroupAddress::from_raw(2052),
+            central: false,
+            unfiltered: false,
+            range: Some(GroupRangeId(2)),
+            declared_dpt: Override::Absent,
+            description: None,
+        });
     state.project.ids.raise_to(
         &IdAllocators::from_counts(1, 1, 1, 1, 2, 12, 11, 0, 0).with_function_counts(1, 1),
     );
@@ -723,7 +779,7 @@ fn q14_duplicate_name_warnings_allow_exact_names_without_auto_suffix() {
             ],
         },
     )
-    .expect("Q14 duplicates must be allowed with warnings");
+    .expect("Q13 duplicates must be allowed with warnings");
 
     let warnings = &plan.preview().warnings;
     assert_eq!(warnings.len(), 3);
@@ -822,6 +878,11 @@ fn q16_parent_invalidation_and_reevaluation_preserve_snapshot_and_provenance() {
     let reeval = reevaluate_affected_proposals(
         &state,
         &evidence,
+        &[
+            NameTargetId::BuildingPart(1),
+            NameTargetId::BuildingPart(3),
+            NameTargetId::Function(1),
+        ],
         &[
             MissingNameEntry {
                 target: NameTargetId::BuildingPart(1),
@@ -930,16 +991,8 @@ fn stale_snapshot_revision_and_confirmation_token_mismatches_refuse_with_zero_mu
 
     // Wrong authority for the same token
     assert_eq!(
-        apply_missing_name_apply(
-            &mut state,
-            &mut stack,
-            &revision,
-            &plan,
-            "auth-b",
-            &token,
-            None,
-        )
-        .unwrap_err(),
+        apply_missing_name_apply(&mut state, &mut stack, &revision, &plan, "auth-b", &token, None,)
+            .unwrap_err(),
         MissingNameApplyError::InvalidConfirmation
     );
     assert_eq!(state, snapshot_before);
@@ -952,13 +1005,7 @@ fn stale_snapshot_revision_and_confirmation_token_mismatches_refuse_with_zero_mu
     };
     assert_eq!(
         apply_missing_name_apply(
-            &mut state,
-            &mut stack,
-            &stale_rev,
-            &plan,
-            "auth-a",
-            &token,
-            None,
+            &mut state, &mut stack, &stale_rev, &plan, "auth-a", &token, None,
         )
         .unwrap_err(),
         MissingNameApplyError::Conflict
@@ -970,16 +1017,8 @@ fn stale_snapshot_revision_and_confirmation_token_mismatches_refuse_with_zero_mu
     state.project.info.project_number = Some("concurrent edit".into());
     let mutated_snapshot = state.clone();
     assert_eq!(
-        apply_missing_name_apply(
-            &mut state,
-            &mut stack,
-            &revision,
-            &plan,
-            "auth-a",
-            &token,
-            None,
-        )
-        .unwrap_err(),
+        apply_missing_name_apply(&mut state, &mut stack, &revision, &plan, "auth-a", &token, None,)
+            .unwrap_err(),
         MissingNameApplyError::Conflict
     );
     assert_eq!(state, mutated_snapshot);
@@ -987,7 +1026,7 @@ fn stale_snapshot_revision_and_confirmation_token_mismatches_refuse_with_zero_mu
 }
 
 #[test]
-fn q15_native_durable_write_before_publish_roundtrip_and_stale_generation_refusal() {
+fn q14_native_durable_write_before_publish_roundtrip_and_stale_generation_refusal() {
     let dir = TempDbDir::new("native-roundtrip");
     let db_path = dir.db_path("project.knxdb");
 
@@ -1026,7 +1065,7 @@ fn q15_native_durable_write_before_publish_roundtrip_and_stale_generation_refusa
     .unwrap();
     let token = plan.confirmation_token("native-auth").unwrap();
 
-    // 1. Stale history_generation persistence failure must leave memory untouched.
+    // 1. Stale history_generation must map to Conflict and leave memory untouched.
     let err = apply_missing_name_apply(
         &mut state,
         &mut stack,
@@ -1040,7 +1079,7 @@ fn q15_native_durable_write_before_publish_roundtrip_and_stale_generation_refusa
         }),
     )
     .unwrap_err();
-    assert!(matches!(err, MissingNameApplyError::Persistence(_)));
+    assert_eq!(err, MissingNameApplyError::Conflict);
     assert_eq!(state, original);
     assert!(!stack.can_undo());
 
@@ -1059,16 +1098,29 @@ fn q15_native_durable_write_before_publish_roundtrip_and_stale_generation_refusa
     )
     .expect("durable apply must succeed");
     assert!(outcome.changed);
-    let gen1 = outcome.native_generation.expect("native generation returned");
+    let gen1 = outcome
+        .native_generation
+        .expect("native generation returned");
     assert!(gen1 > gen0);
 
     // Reopen from disk and verify persisted names and undo stack.
     let conn = history::open_editor_store(&db_path, false).unwrap();
-    let mut loaded = history::load_editor(&conn).unwrap().expect("editor history present");
+    let mut loaded = history::load_editor(&conn)
+        .unwrap()
+        .expect("editor history present");
     assert_eq!(loaded.working.project.info.name, "Persisted Project");
-    assert_eq!(loaded.working.project.installations[0].name, "Persisted Inst");
-    assert_eq!(loaded.working.project.installations[0].group_addresses[0].name, "Persisted GA");
-    assert_eq!(loaded.working.project.functions[0].details.name, "Persisted Function");
+    assert_eq!(
+        loaded.working.project.installations[0].name,
+        "Persisted Inst"
+    );
+    assert_eq!(
+        loaded.working.project.installations[0].group_addresses[0].name,
+        "Persisted GA"
+    );
+    assert_eq!(
+        loaded.working.project.functions[0].details.name,
+        "Persisted Function"
+    );
 
     // Undo -> save -> reopen -> verify exact original blank/whitespace strings restored.
     let mut loaded_stack = CommandStack::from_snapshot_states(loaded.undo, loaded.redo);
@@ -1077,10 +1129,719 @@ fn q15_native_durable_write_before_publish_roundtrip_and_stale_generation_refusa
     drop(conn);
 
     let conn = history::open_editor_store(&db_path, false).unwrap();
-    let after_undo = history::load_editor(&conn).unwrap().expect("history after undo");
+    let after_undo = history::load_editor(&conn)
+        .unwrap()
+        .expect("history after undo");
     assert_eq!(after_undo.working.project.info.name, "   ");
     assert_eq!(after_undo.working.project.installations[0].name, "\t");
-    assert_eq!(after_undo.working.project.installations[0].group_addresses[0].name, "   ");
+    assert_eq!(
+        after_undo.working.project.installations[0].group_addresses[0].name,
+        "   "
+    );
     assert_eq!(after_undo.working.project.functions[0].details.name, "\t  ");
     assert_eq!(after_undo.working, original);
+}
+
+#[test]
+fn q14_native_concurrent_sqlite_writes_map_to_conflict_and_corrupt_store_to_persistence() {
+    // 1. Concurrent SQLite editor write advancing history_generation -> Conflict.
+    let dir = TempDbDir::new("native-conflicts");
+    let db_gen = dir.db_path("concurrent-gen.knxdb");
+    let mut state = full_q9_fixture();
+    let original = state.clone();
+    let mut stack = CommandStack::new();
+    let conn = knx_store::open_and_migrate(&db_gen).unwrap();
+    let gen0 = history::save_editor(&conn, &state, &stack, None, true).unwrap();
+
+    let revision = rev();
+    let plan = preview_missing_name_apply(
+        &state,
+        &revision,
+        MissingNameApplyIntent {
+            entries: vec![MissingNameEntry {
+                target: NameTargetId::Project,
+                name: "Apply After Concurrent".into(),
+            }],
+        },
+    )
+    .unwrap();
+    let token = plan.confirmation_token("conflict-auth").unwrap();
+
+    // Another writer advances the history generation on disk.
+    let mut other_state = state.clone();
+    let mut other_stack = CommandStack::new();
+    other_stack
+        .do_command(
+            &mut other_state.project,
+            Command::RenameArea {
+                id: AreaId(1),
+                name: "Concurrent Area".into(),
+            },
+        )
+        .unwrap();
+    let gen1 = history::save_editor(&conn, &other_state, &other_stack, Some(gen0), false).unwrap();
+    assert!(gen1 > gen0);
+    drop(conn);
+
+    let err = apply_missing_name_apply(
+        &mut state,
+        &mut stack,
+        &revision,
+        &plan,
+        "conflict-auth",
+        &token,
+        Some(NameRecipeNativeTarget {
+            path: &db_gen,
+            history_generation: gen0,
+        }),
+    )
+    .unwrap_err();
+    assert_eq!(err, MissingNameApplyError::Conflict);
+    assert_eq!(state, original);
+    assert!(!stack.can_undo());
+
+    // 2. Concurrent SQLite generation-0 root save causing working snapshot hash drift -> Conflict.
+    let db_gen0 = dir.db_path("concurrent-gen0.knxdb");
+    let conn0 = knx_store::open_and_migrate(&db_gen0).unwrap();
+    knx_store::save_project_with_passthrough(
+        &conn0,
+        &state.project,
+        &state.opaque,
+        &state.manufacturer_refs,
+    )
+    .unwrap();
+    let mut drifted = state.clone();
+    drifted.project.info.project_number = Some("concurrent-root-save".into());
+    knx_store::save_project_with_passthrough(
+        &conn0,
+        &drifted.project,
+        &drifted.opaque,
+        &drifted.manufacturer_refs,
+    )
+    .unwrap();
+    drop(conn0);
+
+    let err_hash = apply_missing_name_apply(
+        &mut state,
+        &mut stack,
+        &revision,
+        &plan,
+        "conflict-auth",
+        &token,
+        Some(NameRecipeNativeTarget {
+            path: &db_gen0,
+            history_generation: 0,
+        }),
+    )
+    .unwrap_err();
+    assert_eq!(err_hash, MissingNameApplyError::Conflict);
+    assert_eq!(state, original);
+    assert!(!stack.can_undo());
+
+    // 3. Genuine persistence error (corrupted SQLite file) -> Persistence(_).
+    let db_corrupt = dir.db_path("corrupt.knxdb");
+    std::fs::write(&db_corrupt, b"not a sqlite database at all").unwrap();
+    let err_persist = apply_missing_name_apply(
+        &mut state,
+        &mut stack,
+        &revision,
+        &plan,
+        "conflict-auth",
+        &token,
+        Some(NameRecipeNativeTarget {
+            path: &db_corrupt,
+            history_generation: 0,
+        }),
+    )
+    .unwrap_err();
+    assert!(matches!(err_persist, MissingNameApplyError::Persistence(_)));
+    assert_eq!(state, original);
+    assert!(!stack.can_undo());
+}
+
+#[test]
+fn q16_parent_selection_edit_deselection_and_validation_failures() {
+    let state = full_q9_fixture();
+    let before = state.clone();
+    let evidence = vec![MissingNameEvidence::ResolvedProduct {
+        device: DeviceId(1),
+        product_ref: "M-TEST_P-1".into(),
+        program_ref: "M-TEST_HP-1".into(),
+        product_text: "Switch Actuator".into(),
+        association: TextAssociation::Confirmed,
+    }];
+
+    // Empty changed_parents with valid draft_parents returns empty results without mutating.
+    let empty_changed = reevaluate_affected_proposals(
+        &state,
+        &evidence,
+        &[],
+        &[MissingNameEntry {
+            target: NameTargetId::BuildingPart(1),
+            name: "House".into(),
+        }],
+    )
+    .expect("empty changed_parents with valid draft_parents succeeds");
+    assert!(empty_changed.invalidated_targets.is_empty());
+    assert!(empty_changed.proposals.is_empty());
+    assert_eq!(state, before);
+
+    // 1. Selection: BuildingPart(1) + BuildingPart(3) selected -> Device(1) gets location path.
+    let after_select = reevaluate_affected_proposals(
+        &state,
+        &evidence,
+        &[NameTargetId::BuildingPart(1), NameTargetId::BuildingPart(3)],
+        &[
+            MissingNameEntry {
+                target: NameTargetId::BuildingPart(1),
+                name: "House".into(),
+            },
+            MissingNameEntry {
+                target: NameTargetId::BuildingPart(3),
+                name: "Kitchen".into(),
+            },
+        ],
+    )
+    .unwrap();
+    let dev_select = after_select
+        .proposals
+        .iter()
+        .find(|p| p.candidate.target == NameTargetId::Device(1))
+        .unwrap();
+    assert_eq!(
+        dev_select.proposed_name.as_deref(),
+        Some("House / Kitchen – Switch Actuator")
+    );
+
+    // 2. Edit: BuildingPart(3) edited to "Pantry" -> Device(1) updates.
+    let after_edit = reevaluate_affected_proposals(
+        &state,
+        &evidence,
+        &[NameTargetId::BuildingPart(3)],
+        &[
+            MissingNameEntry {
+                target: NameTargetId::BuildingPart(1),
+                name: "House".into(),
+            },
+            MissingNameEntry {
+                target: NameTargetId::BuildingPart(3),
+                name: "Pantry".into(),
+            },
+        ],
+    )
+    .unwrap();
+    let dev_edit = after_edit
+        .proposals
+        .iter()
+        .find(|p| p.candidate.target == NameTargetId::Device(1))
+        .unwrap();
+    assert_eq!(
+        dev_edit.proposed_name.as_deref(),
+        Some("House / Pantry – Switch Actuator")
+    );
+
+    // 3. Partial deselection: BuildingPart(3) deselected while BuildingPart(1) remains active.
+    let after_partial_deselect = reevaluate_affected_proposals(
+        &state,
+        &evidence,
+        &[NameTargetId::BuildingPart(3)],
+        &[MissingNameEntry {
+            target: NameTargetId::BuildingPart(1),
+            name: "House".into(),
+        }],
+    )
+    .unwrap();
+    let dev_partial = after_partial_deselect
+        .proposals
+        .iter()
+        .find(|p| p.candidate.target == NameTargetId::Device(1))
+        .unwrap();
+    assert_ne!(
+        dev_partial.proposed_name.as_deref(),
+        Some("House / Pantry – Switch Actuator")
+    );
+
+    // 4. Full deselection: last draft parent deselected (draft_parents empty, changed_parents non-empty).
+    let baseline = knx_edit::missing_name_recipes::propose_missing_names(
+        &state.project,
+        &evidence,
+        knx_edit::missing_names::MissingNameScanRequest::unbounded(0, usize::MAX),
+    );
+    let baseline_dev = baseline
+        .items
+        .iter()
+        .find(|p| p.candidate.target == NameTargetId::Device(1))
+        .unwrap();
+    let after_full_deselect =
+        reevaluate_affected_proposals(&state, &evidence, &[NameTargetId::BuildingPart(1)], &[])
+            .unwrap();
+    assert!(after_full_deselect
+        .invalidated_targets
+        .contains(&NameTargetId::Device(1)));
+    let dev_reverted = after_full_deselect
+        .proposals
+        .iter()
+        .find(|p| p.candidate.target == NameTargetId::Device(1))
+        .unwrap();
+    assert_eq!(dev_reverted.proposed_name, baseline_dev.proposed_name);
+    assert_eq!(dev_reverted.provenance, baseline_dev.provenance);
+    assert_eq!(state, before);
+
+    // 5. Draft-parent validation failures (even when changed_parents is empty).
+    let mut non_blank_state = full_q9_fixture();
+    non_blank_state.project.installations[0].buildings[0].name = "Existing Building".into();
+    assert_eq!(
+        reevaluate_affected_proposals(
+            &non_blank_state,
+            &evidence,
+            &[],
+            &[MissingNameEntry {
+                target: NameTargetId::BuildingPart(1),
+                name: "Overwrite".into(),
+            }],
+        )
+        .unwrap_err(),
+        MissingNameApplyError::TargetNotBlank(NameTargetId::BuildingPart(1))
+    );
+    assert_eq!(
+        reevaluate_affected_proposals(
+            &state,
+            &evidence,
+            &[],
+            &[MissingNameEntry {
+                target: NameTargetId::BuildingPart(1),
+                name: "Bad\nName".into(),
+            }],
+        )
+        .unwrap_err(),
+        MissingNameApplyError::InvalidName(
+            NameTargetId::BuildingPart(1),
+            knx_core::names::NameError::ControlCharacter,
+        )
+    );
+    assert_eq!(
+        reevaluate_affected_proposals(
+            &state,
+            &evidence,
+            &[NameTargetId::BuildingPart(1)],
+            &[
+                MissingNameEntry {
+                    target: NameTargetId::BuildingPart(1),
+                    name: "A".into(),
+                },
+                MissingNameEntry {
+                    target: NameTargetId::BuildingPart(1),
+                    name: "B".into(),
+                },
+            ],
+        )
+        .unwrap_err(),
+        MissingNameApplyError::DuplicateSelection(NameTargetId::BuildingPart(1))
+    );
+    let too_many_drafts: Vec<MissingNameEntry> = (0..=MAX_MISSING_NAME_SELECTION)
+        .map(|i| MissingNameEntry {
+            target: NameTargetId::BuildingPart((i + 1) as u32),
+            name: format!("BP {i}"),
+        })
+        .collect();
+    assert_eq!(
+        reevaluate_affected_proposals(&state, &evidence, &[], &too_many_drafts).unwrap_err(),
+        MissingNameApplyError::InvalidSelection
+    );
+}
+
+#[test]
+fn preview_and_confirmation_token_are_invariant_under_entry_permutations() {
+    let state = full_q9_fixture();
+    let revision = rev();
+    let order_a = vec![
+        MissingNameEntry {
+            target: NameTargetId::GroupAddress(1),
+            name: "GA One".into(),
+        },
+        MissingNameEntry {
+            target: NameTargetId::Project,
+            name: "Project One".into(),
+        },
+        MissingNameEntry {
+            target: NameTargetId::Device(1),
+            name: "Device One".into(),
+        },
+        MissingNameEntry {
+            target: NameTargetId::BuildingPart(3),
+            name: "Room One".into(),
+        },
+        MissingNameEntry {
+            target: NameTargetId::BuildingPart(1),
+            name: "House One".into(),
+        },
+    ];
+    let mut order_b = order_a.clone();
+    order_b.reverse();
+
+    let plan_a = preview_missing_name_apply(
+        &state,
+        &revision,
+        MissingNameApplyIntent { entries: order_a },
+    )
+    .unwrap();
+    let plan_b = preview_missing_name_apply(
+        &state,
+        &revision,
+        MissingNameApplyIntent { entries: order_b },
+    )
+    .unwrap();
+
+    assert_eq!(plan_a.preview(), plan_b.preview());
+    assert_eq!(
+        plan_a.confirmation_token("perm-auth").unwrap(),
+        plan_b.confirmation_token("perm-auth").unwrap()
+    );
+}
+
+#[test]
+fn exact_256_entry_batch_applies_atomically_with_single_undo_redo() {
+    let mut state = full_q9_fixture();
+    state.project.installations[0].group_addresses.clear();
+    let mut entries = Vec::with_capacity(MAX_MISSING_NAME_SELECTION);
+    for i in 1..=(MAX_MISSING_NAME_SELECTION as u32) {
+        let blank = if i % 2 == 0 { "" } else { "  " };
+        state.project.installations[0]
+            .group_addresses
+            .push(GroupAddressEntry {
+                id: GroupAddressId(i),
+                source: src(&format!("GA-{i}")),
+                name: blank.into(),
+                address: GroupAddress::from_raw((2048 + i) as u16),
+                central: false,
+                unfiltered: false,
+                range: None,
+                declared_dpt: Override::Absent,
+                description: None,
+            });
+        entries.push(MissingNameEntry {
+            target: NameTargetId::GroupAddress(i),
+            name: format!("Batch GA {i}"),
+        });
+    }
+    state.project.ids.raise_to(
+        &IdAllocators::from_counts(1, 1, 1, 1, 2, 260, 11, 0, 0).with_function_counts(1, 1),
+    );
+
+    let original = state.clone();
+    let revision = rev();
+    let plan = preview_missing_name_apply(&state, &revision, MissingNameApplyIntent { entries })
+        .expect("exact 256-entry batch must succeed");
+    assert_eq!(plan.preview().changed, MAX_MISSING_NAME_SELECTION);
+    assert_eq!(plan.preview().rows.len(), MAX_MISSING_NAME_SELECTION);
+
+    let token = plan.confirmation_token("max-batch").unwrap();
+    let mut stack = CommandStack::new();
+    let outcome = apply_missing_name_apply(
+        &mut state,
+        &mut stack,
+        &revision,
+        &plan,
+        "max-batch",
+        &token,
+        None,
+    )
+    .unwrap();
+    assert!(outcome.changed);
+    assert_eq!(stack.history_lengths(), (1, 0));
+    for (idx, ga) in state.project.installations[0]
+        .group_addresses
+        .iter()
+        .enumerate()
+    {
+        assert_eq!(ga.name, format!("Batch GA {}", idx + 1));
+    }
+
+    // Single Undo restores all 256 exact original blank strings.
+    stack.undo(&mut state.project).unwrap();
+    assert_eq!(state, original);
+    assert!(!stack.can_undo());
+    assert!(stack.can_redo());
+
+    // Single Redo restores all 256 names.
+    stack.redo(&mut state.project).unwrap();
+    for (idx, ga) in state.project.installations[0]
+        .group_addresses
+        .iter()
+        .enumerate()
+    {
+        assert_eq!(ga.name, format!("Batch GA {}", idx + 1));
+    }
+}
+
+#[test]
+fn cyclic_building_part_and_group_range_links_terminate_safely() {
+    let mut state = full_q9_fixture();
+    // Create a 2-cycle in BuildingPart parent links: BP(1) <-> BP(2).
+    state.project.installations[0].buildings[0].parent = Some(BuildingPartId(2));
+    state.project.installations[0].buildings[1].parent = Some(BuildingPartId(1));
+    state.project.installations[0].buildings[1]
+        .children
+        .push(BuildingPartId(1));
+    // Create a 2-cycle in GroupRange parent links: GR(1) <-> GR(2).
+    state.project.installations[0].group_ranges[0].parent = Some(GroupRangeId(2));
+    state.project.installations[0].group_ranges[1].parent = Some(GroupRangeId(1));
+    state.project.installations[0].group_ranges[1]
+        .children
+        .push(GroupRangeId(1));
+
+    let bp_deps = invalidated_dependents(&state.project, &[NameTargetId::BuildingPart(1)]);
+    assert!(bp_deps.contains(&NameTargetId::BuildingPart(2)));
+    assert!(bp_deps.contains(&NameTargetId::Device(1)));
+    assert!(!bp_deps.contains(&NameTargetId::BuildingPart(1)));
+
+    let gr_deps = invalidated_dependents(&state.project, &[NameTargetId::GroupRange(1)]);
+    assert!(gr_deps.contains(&NameTargetId::GroupRange(2)));
+    assert!(gr_deps.contains(&NameTargetId::GroupAddress(1)));
+    assert!(!gr_deps.contains(&NameTargetId::GroupRange(1)));
+
+    let reeval = reevaluate_affected_proposals(
+        &state,
+        &[],
+        &[NameTargetId::BuildingPart(1), NameTargetId::GroupRange(1)],
+        &[
+            MissingNameEntry {
+                target: NameTargetId::BuildingPart(1),
+                name: "Cycle BP".into(),
+            },
+            MissingNameEntry {
+                target: NameTargetId::GroupRange(1),
+                name: "Cycle GR".into(),
+            },
+        ],
+    )
+    .expect("cyclic reevaluation must terminate cleanly");
+    assert!(reeval
+        .invalidated_targets
+        .contains(&NameTargetId::GroupAddress(1)));
+
+    let plan = preview_missing_name_apply(
+        &state,
+        &rev(),
+        MissingNameApplyIntent {
+            entries: vec![
+                MissingNameEntry {
+                    target: NameTargetId::GroupRange(2),
+                    name: "GR Two".into(),
+                },
+                MissingNameEntry {
+                    target: NameTargetId::GroupRange(1),
+                    name: "GR One".into(),
+                },
+                MissingNameEntry {
+                    target: NameTargetId::BuildingPart(2),
+                    name: "BP Two".into(),
+                },
+                MissingNameEntry {
+                    target: NameTargetId::BuildingPart(1),
+                    name: "BP One".into(),
+                },
+            ],
+        },
+    )
+    .expect("cyclic preview must terminate cleanly");
+    assert_eq!(plan.preview().rows.len(), 4);
+}
+
+#[test]
+fn q13_multi_scope_devices_multi_area_lines_unassigned_and_blank_sibling_exclusion() {
+    let mut state = full_q9_fixture();
+    // Device(1) is already placed in BOTH BuildingPart(3) and Line(1).
+    // Add Device(2) (existing named in BP(3)), Device(3) (existing named in Line(1)),
+    // Device(4) (blank sibling in BP(3) & Line(1)), Device(5) & Device(6) (unassigned).
+    let make_dev = |id: u32, name: &str| DeviceInstance {
+        id: DeviceId(id),
+        source: src(&format!("D-{id}")),
+        name: name.into(),
+        description: None,
+        address: Some(IndividualAddress::new(1, 2, id as u8).unwrap()),
+        product_ref: "M-TEST_P-1".into(),
+        program_ref: "M-TEST_HP-1".into(),
+        commissioning: CommissioningState::default(),
+        visibility_calculated: true,
+        com_objects: vec![],
+        binary_data: vec![],
+    };
+    state.project.devices.insert(make_dev(2, "Shared Actuator"));
+    state.project.devices.insert(make_dev(3, "Shared Actuator"));
+    state.project.devices.insert(make_dev(4, "   "));
+    state
+        .project
+        .devices
+        .insert(make_dev(5, "Unassigned Existing"));
+    state.project.devices.insert(make_dev(6, ""));
+
+    state.project.installations[0].buildings[2]
+        .devices
+        .extend([DeviceId(2), DeviceId(4)]);
+    state.project.installations[0].topology.lines[0]
+        .devices
+        .extend([DeviceId(3), DeviceId(4)]);
+    state.project.installations[0]
+        .topology
+        .unassigned
+        .extend([DeviceId(5), DeviceId(6)]);
+
+    // Add a second Area(2) that also owns Line(1), plus an existing Line(2) in Area(2) with same name.
+    state.project.installations[0].topology.areas.push(Area {
+        id: AreaId(2),
+        source: src("A-2"),
+        name: "Area Two".into(),
+        address: 2,
+        completion: CompletionStatus::Undefined,
+        lines: vec![LineId(1), LineId(2)],
+    });
+    state.project.installations[0].topology.lines.push(Line {
+        id: LineId(2),
+        source: src("L-2"),
+        name: "Line Label".into(),
+        address: 3,
+        medium_ref: "MT-0".into(),
+        domain_address: None,
+        domain_address_is_checked: None,
+        ip_routing_multicast_address: None,
+        multicast_ttl: None,
+        completion: CompletionStatus::Undefined,
+        devices: vec![],
+    });
+
+    // Also verify build_dependency_graph includes inst.topology.unassigned.
+    let inst_deps = invalidated_dependents(&state.project, &[NameTargetId::Installation(0)]);
+    assert!(inst_deps.contains(&NameTargetId::Device(6)));
+
+    let plan = preview_missing_name_apply(
+        &state,
+        &rev(),
+        MissingNameApplyIntent {
+            entries: vec![
+                MissingNameEntry {
+                    target: NameTargetId::Device(1),
+                    name: "Shared Actuator".into(),
+                },
+                MissingNameEntry {
+                    target: NameTargetId::Device(6),
+                    name: "Unassigned Existing".into(),
+                },
+                MissingNameEntry {
+                    target: NameTargetId::Line(1),
+                    name: "Line Label".into(),
+                },
+            ],
+        },
+    )
+    .unwrap();
+
+    let warnings = &plan.preview().warnings;
+    // Device(1) collides in BOTH BuildingPartDevices(3) with Device(2) AND LineDevices(1) with Device(3),
+    // and blank sibling Device(4) is NOT reported as a conflict.
+    let dev1_bp = warnings
+        .iter()
+        .find(|w| {
+            w.target == NameTargetId::Device(1)
+                && w.scope == DuplicateNameScope::BuildingPartDevices { building_part: 3 }
+        })
+        .expect("BuildingPartDevices conflict expected");
+    assert_eq!(
+        dev1_bp.conflicts_with,
+        vec![DuplicateConflictSource::ExistingSibling(
+            NameTargetId::Device(2)
+        )]
+    );
+    let dev1_line = warnings
+        .iter()
+        .find(|w| {
+            w.target == NameTargetId::Device(1)
+                && w.scope == DuplicateNameScope::LineDevices { line: 1 }
+        })
+        .expect("LineDevices conflict expected");
+    assert_eq!(
+        dev1_line.conflicts_with,
+        vec![DuplicateConflictSource::ExistingSibling(
+            NameTargetId::Device(3)
+        )]
+    );
+
+    // Device(6) collides in ProjectUnassignedDevices with Device(5).
+    let dev6_unassigned = warnings
+        .iter()
+        .find(|w| {
+            w.target == NameTargetId::Device(6)
+                && w.scope == DuplicateNameScope::ProjectUnassignedDevices
+        })
+        .expect("ProjectUnassignedDevices conflict expected");
+    assert_eq!(
+        dev6_unassigned.conflicts_with,
+        vec![DuplicateConflictSource::ExistingSibling(
+            NameTargetId::Device(5)
+        )]
+    );
+
+    // Line(1) collides in Area(2)'s AreaLines scope with Line(2), proving ALL owning areas are checked.
+    let line1_area2 = warnings
+        .iter()
+        .find(|w| {
+            w.target == NameTargetId::Line(1)
+                && w.scope
+                    == DuplicateNameScope::AreaLines {
+                        installation: 0,
+                        area: Some(2),
+                    }
+        })
+        .expect("Area(2) AreaLines conflict expected");
+    assert_eq!(
+        line1_area2.conflicts_with,
+        vec![DuplicateConflictSource::ExistingSibling(
+            NameTargetId::Line(2)
+        )]
+    );
+}
+
+#[test]
+fn parent_order_index_backfills_missing_parent_pointers_from_children_links() {
+    let mut state = full_q9_fixture();
+    // Clear child.parent on BP(2) and GR(2), leaving only parent.children links.
+    state.project.installations[0].buildings[1].parent = None;
+    state.project.installations[0].group_ranges[1].parent = None;
+
+    let plan = preview_missing_name_apply(
+        &state,
+        &rev(),
+        MissingNameApplyIntent {
+            entries: vec![
+                MissingNameEntry {
+                    target: NameTargetId::GroupRange(2),
+                    name: "Child GR".into(),
+                },
+                MissingNameEntry {
+                    target: NameTargetId::GroupRange(1),
+                    name: "Parent GR".into(),
+                },
+                MissingNameEntry {
+                    target: NameTargetId::BuildingPart(2),
+                    name: "Child BP".into(),
+                },
+                MissingNameEntry {
+                    target: NameTargetId::BuildingPart(1),
+                    name: "Parent BP".into(),
+                },
+            ],
+        },
+    )
+    .unwrap();
+
+    let ordered: Vec<NameTargetId> = plan.preview().rows.iter().map(|r| r.target).collect();
+    assert_eq!(
+        ordered,
+        vec![
+            NameTargetId::BuildingPart(1),
+            NameTargetId::BuildingPart(2),
+            NameTargetId::GroupRange(1),
+            NameTargetId::GroupRange(2),
+        ]
+    );
 }

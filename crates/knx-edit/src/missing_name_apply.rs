@@ -11,9 +11,9 @@ use knx_store::project_history::{self as history, NativeSnapshot};
 use serde::{Deserialize, Serialize};
 
 use crate::missing_name_recipes::{
-    propose_missing_names, MissingNameEvidence, MissingNameProposal,
+    propose_missing_names_for_targets, MissingNameEvidence, MissingNameProposal,
 };
-use crate::missing_names::{MissingNameScanRequest, NameTargetId, NameTargetKind};
+use crate::missing_names::{NameTargetId, NameTargetKind};
 use crate::name_recipe::{NameRecipeNativeTarget, NameRecipeOutcome, NameRecipeRevision};
 
 pub const MAX_MISSING_NAME_SELECTION: usize = 256;
@@ -37,7 +37,7 @@ pub struct MissingNameApplyIntent {
     pub entries: Vec<MissingNameEntry>,
 }
 
-/// Scope in which sibling names are checked for Q14 duplicate warnings.
+/// Scope in which sibling names are checked for Q13 duplicate warnings.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum DuplicateNameScope {
@@ -73,7 +73,7 @@ pub enum DuplicateNameScope {
     },
 }
 
-/// Whether a Q14 duplicate warning collides with an existing sibling or a batch peer.
+/// Whether a Q13 duplicate warning collides with an existing sibling or a batch peer.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(tag = "source", content = "target", rename_all = "snake_case")]
 pub enum DuplicateConflictSource {
@@ -81,7 +81,7 @@ pub enum DuplicateConflictSource {
     BatchSibling(NameTargetId),
 }
 
-/// Explicit non-blocking duplicate-name warning emitted under Q14.
+/// Explicit non-blocking duplicate-name warning emitted under Q13.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DuplicateNameWarning {
     pub target: NameTargetId,
@@ -220,27 +220,30 @@ pub fn invalidated_dependents(
 
 /// Re-compute proposals for affected children using draft parent names without mutating `snapshot`.
 ///
-/// Validates every draft parent entry (uniqueness, Q5 blank-only guard, name admission), applies
-/// them onto a cloned `Project`, and re-runs evidence-based proposals for invalidated children
+/// `changed_parents` lists parents that were selected, edited, or deselected; `draft_parents` holds
+/// the remaining active draft parent names to overlay onto a cloned `Project`. Always validates
+/// `draft_parents` (uniqueness, Q5 blank-only guard, name admission, <= 256 entries) even when
+/// `changed_parents` is empty, then re-runs evidence-based proposals only for invalidated children
 /// while preserving exact provenance.
 pub fn reevaluate_affected_proposals(
     snapshot: &NativeSnapshot,
     evidence: &[MissingNameEvidence],
+    changed_parents: &[NameTargetId],
     draft_parents: &[MissingNameEntry],
 ) -> Result<MissingNameReevaluation, MissingNameApplyError> {
-    if draft_parents.is_empty() {
-        return Ok(MissingNameReevaluation {
-            invalidated_targets: Vec::new(),
-            proposals: Vec::new(),
-        });
-    }
     if draft_parents.len() > MAX_MISSING_NAME_SELECTION {
         return Err(MissingNameApplyError::InvalidSelection);
     }
 
     let resolved = validate_and_resolve_entries(&snapshot.project, draft_parents)?;
-    let changed_ids: Vec<NameTargetId> = resolved.iter().map(|entry| entry.target).collect();
-    let invalidated_targets = invalidated_dependents(&snapshot.project, &changed_ids);
+    if changed_parents.is_empty() {
+        return Ok(MissingNameReevaluation {
+            invalidated_targets: Vec::new(),
+            proposals: Vec::new(),
+        });
+    }
+
+    let invalidated_targets = invalidated_dependents(&snapshot.project, changed_parents);
     if invalidated_targets.is_empty() {
         return Ok(MissingNameReevaluation {
             invalidated_targets,
@@ -248,27 +251,22 @@ pub fn reevaluate_affected_proposals(
         });
     }
 
-    let mut draft_project = snapshot.project.clone();
-    let commands: Vec<Command> = resolved
-        .iter()
-        .map(|entry| rename_command(entry.target, entry.after.clone()))
-        .collect();
-    Command::Batch(commands)
-        .apply(&mut draft_project)
-        .map_err(MissingNameApplyError::Command)?;
-
-    let all_proposals = propose_missing_names(
-        &draft_project,
-        evidence,
-        MissingNameScanRequest::unbounded(0, usize::MAX),
-    );
     let invalidated_set: BTreeSet<NameTargetId> = invalidated_targets.iter().copied().collect();
+    let mut proposals = if resolved.is_empty() {
+        propose_missing_names_for_targets(&snapshot.project, evidence, &invalidated_set)
+    } else {
+        let mut draft_project = snapshot.project.clone();
+        let commands: Vec<Command> = resolved
+            .iter()
+            .map(|entry| rename_command(entry.target, entry.after.clone()))
+            .collect();
+        Command::Batch(commands)
+            .apply(&mut draft_project)
+            .map_err(MissingNameApplyError::Command)?;
+        propose_missing_names_for_targets(&draft_project, evidence, &invalidated_set)
+    };
+
     let order_index = ParentOrderIndex::build(&snapshot.project);
-    let mut proposals: Vec<MissingNameProposal> = all_proposals
-        .items
-        .into_iter()
-        .filter(|proposal| invalidated_set.contains(&proposal.candidate.target))
-        .collect();
     proposals.sort_by_key(|proposal| order_index.key(proposal.candidate.target));
 
     Ok(MissingNameReevaluation {
@@ -291,13 +289,18 @@ pub fn preview_missing_name_apply(
     let resolved = validate_and_resolve_entries(&snapshot.project, &intent.entries)?;
     let warnings = collect_duplicate_warnings(&snapshot.project, &resolved);
 
+    let mut canonical_entries = Vec::with_capacity(resolved.len());
     let mut rows = Vec::with_capacity(resolved.len());
     let mut commands = Vec::with_capacity(resolved.len());
     for entry in resolved {
+        canonical_entries.push(MissingNameEntry {
+            target: entry.target,
+            name: entry.after.clone(),
+        });
         commands.push(rename_command(entry.target, entry.after.clone()));
         rows.push(MissingNameApplyRow {
             target: entry.target,
-            kind: target_kind(entry.target),
+            kind: entry.target.kind(),
             before: entry.before,
             after: entry.after,
         });
@@ -312,7 +315,9 @@ pub fn preview_missing_name_apply(
     Ok(MissingNameApplyPlan {
         before: snapshot.clone(),
         revision: revision.clone(),
-        intent,
+        intent: MissingNameApplyIntent {
+            entries: canonical_entries,
+        },
         command,
         preview: MissingNameApplyPreview {
             version: 1,
@@ -326,7 +331,7 @@ pub fn preview_missing_name_apply(
 /// Atomically apply a previously previewed missing-name batch plan after verifying confirmation.
 ///
 /// In native mode (`native = Some(..)`), writes to SQLite with optimistic concurrency BEFORE
-/// publishing to `*snapshot` and `*stack` (Q15). In session-only mode (`native = None`), applies
+/// publishing to `*snapshot` and `*stack` (Q14). In session-only mode (`native = None`), applies
 /// strictly in memory without touching disk.
 pub fn apply_missing_name_apply(
     snapshot: &mut NativeSnapshot,
@@ -362,8 +367,7 @@ pub fn apply_missing_name_apply(
             .before
             .semantic_hash()
             .map_err(|e| MissingNameApplyError::Persistence(e.to_string()))?;
-        let conn = history::open_editor_store(target.path, false)
-            .map_err(|e| MissingNameApplyError::Persistence(e.to_string()))?;
+        let conn = history::open_editor_store(target.path, false).map_err(map_history_error)?;
         Some(
             history::save_editor_if_unchanged(
                 &conn,
@@ -373,7 +377,7 @@ pub fn apply_missing_name_apply(
                 &expected_hash,
                 false,
             )
-            .map_err(|e| MissingNameApplyError::Persistence(e.to_string()))?,
+            .map_err(map_history_error)?,
         )
     } else {
         None
@@ -385,6 +389,13 @@ pub fn apply_missing_name_apply(
         changed: true,
         native_generation,
     })
+}
+
+fn map_history_error(error: history::HistoryError) -> MissingNameApplyError {
+    match error {
+        history::HistoryError::Stale => MissingNameApplyError::Conflict,
+        other => MissingNameApplyError::Persistence(other.to_string()),
+    }
 }
 
 struct ResolvedEntry {
@@ -407,6 +418,9 @@ fn validate_and_resolve_entries(
     project: &Project,
     entries: &[MissingNameEntry],
 ) -> Result<Vec<ResolvedEntry>, MissingNameApplyError> {
+    if entries.is_empty() {
+        return Ok(Vec::new());
+    }
     let mut selected = BTreeSet::new();
     let mut text_bytes = 0usize;
     let mut resolved = Vec::with_capacity(entries.len());
@@ -541,10 +555,7 @@ where
     Ok(first)
 }
 
-fn validate_proposed_name(
-    target: NameTargetId,
-    name: &str,
-) -> Result<(), MissingNameApplyError> {
+fn validate_proposed_name(target: NameTargetId, name: &str) -> Result<(), MissingNameApplyError> {
     knx_core::names::validate_edited_name(name)
         .map_err(|e| MissingNameApplyError::InvalidName(target, e))?;
     if matches!(target, NameTargetId::Function(_)) {
@@ -552,20 +563,6 @@ fn validate_proposed_name(
             .map_err(|e| MissingNameApplyError::InvalidFunctionName(target, e))?;
     }
     Ok(())
-}
-
-fn target_kind(target: NameTargetId) -> NameTargetKind {
-    match target {
-        NameTargetId::Project => NameTargetKind::Project,
-        NameTargetId::Installation(_) => NameTargetKind::Installation,
-        NameTargetId::BuildingPart(_) => NameTargetKind::BuildingPart,
-        NameTargetId::Area(_) => NameTargetKind::Area,
-        NameTargetId::Line(_) => NameTargetKind::Line,
-        NameTargetId::Device(_) => NameTargetKind::Device,
-        NameTargetId::GroupRange(_) => NameTargetKind::GroupRange,
-        NameTargetId::GroupAddress(_) => NameTargetKind::GroupAddress,
-        NameTargetId::Function(_) => NameTargetKind::Function,
-    }
 }
 
 fn rename_command(target: NameTargetId, name: String) -> Command {
@@ -629,14 +626,38 @@ impl ParentOrderIndex {
         let mut gr_parents: BTreeMap<u32, Option<u32>> = BTreeMap::new();
         for inst in &project.installations {
             for bp in &inst.buildings {
-                bp_parents
-                    .entry(bp.id.0)
-                    .or_insert_with(|| bp.parent.map(|p| p.0));
+                let entry = bp_parents.entry(bp.id.0).or_insert(None);
+                if entry.is_none() {
+                    *entry = bp.parent.map(|p| p.0);
+                }
             }
             for gr in &inst.group_ranges {
-                gr_parents
-                    .entry(gr.id.0)
-                    .or_insert_with(|| gr.parent.map(|p| p.0));
+                let entry = gr_parents.entry(gr.id.0).or_insert(None);
+                if entry.is_none() {
+                    *entry = gr.parent.map(|p| p.0);
+                }
+            }
+        }
+        for inst in &project.installations {
+            for bp in &inst.buildings {
+                for child in &bp.children {
+                    if child.0 != bp.id.0 {
+                        let entry = bp_parents.entry(child.0).or_insert(None);
+                        if entry.is_none() {
+                            *entry = Some(bp.id.0);
+                        }
+                    }
+                }
+            }
+            for gr in &inst.group_ranges {
+                for child in &gr.children {
+                    if child.0 != gr.id.0 {
+                        let entry = gr_parents.entry(child.0).or_insert(None);
+                        if entry.is_none() {
+                            *entry = Some(gr.id.0);
+                        }
+                    }
+                }
             }
         }
         Self {
@@ -649,18 +670,14 @@ impl ParentOrderIndex {
         match target {
             NameTargetId::Project => (0, 0, 0),
             NameTargetId::Installation(id) => (1, 0, u32::from(id)),
-            NameTargetId::BuildingPart(id) => (
-                2,
-                self.building_depth.get(&id).copied().unwrap_or(0),
-                id,
-            ),
+            NameTargetId::BuildingPart(id) => {
+                (2, self.building_depth.get(&id).copied().unwrap_or(0), id)
+            }
             NameTargetId::Area(id) => (3, 0, id),
             NameTargetId::Line(id) => (4, 0, id),
-            NameTargetId::GroupRange(id) => (
-                5,
-                self.group_range_depth.get(&id).copied().unwrap_or(0),
-                id,
-            ),
+            NameTargetId::GroupRange(id) => {
+                (5, self.group_range_depth.get(&id).copied().unwrap_or(0), id)
+            }
             NameTargetId::Device(id) => (6, 0, id),
             NameTargetId::Function(id) => (7, 0, id),
             NameTargetId::GroupAddress(id) => (8, 0, id),
@@ -728,6 +745,9 @@ fn build_dependency_graph(project: &Project) -> BTreeMap<NameTargetId, BTreeSet<
                 add(line_id, NameTargetId::Device(dev.0));
             }
         }
+        for dev in &inst.topology.unassigned {
+            add(inst_id, NameTargetId::Device(dev.0));
+        }
 
         for range in &inst.group_ranges {
             let range_id = NameTargetId::GroupRange(range.id.0);
@@ -777,19 +797,91 @@ fn build_dependency_graph(project: &Project) -> BTreeMap<NameTargetId, BTreeSet<
     edges
 }
 
+struct DuplicateScopeIndex {
+    line_scopes: BTreeMap<(usize, LineId), BTreeSet<DuplicateNameScope>>,
+    device_scopes: BTreeMap<DeviceId, BTreeSet<DuplicateNameScope>>,
+}
+
+impl DuplicateScopeIndex {
+    fn build(project: &Project) -> Self {
+        let mut line_scopes: BTreeMap<(usize, LineId), BTreeSet<DuplicateNameScope>> =
+            BTreeMap::new();
+        let mut device_scopes: BTreeMap<DeviceId, BTreeSet<DuplicateNameScope>> = BTreeMap::new();
+
+        for (inst_idx, inst) in project.installations.iter().enumerate() {
+            for bp in &inst.buildings {
+                let scope = DuplicateNameScope::BuildingPartDevices {
+                    building_part: bp.id.0,
+                };
+                for &dev_id in &bp.devices {
+                    device_scopes
+                        .entry(dev_id)
+                        .or_default()
+                        .insert(scope.clone());
+                }
+            }
+
+            let mut line_areas: BTreeMap<LineId, BTreeSet<u32>> = BTreeMap::new();
+            for area in &inst.topology.areas {
+                for &line_id in &area.lines {
+                    line_areas.entry(line_id).or_default().insert(area.id.0);
+                }
+            }
+
+            for line in &inst.topology.lines {
+                let scopes = line_scopes.entry((inst_idx, line.id)).or_default();
+                if let Some(areas) = line_areas.get(&line.id) {
+                    for &area_id in areas {
+                        scopes.insert(DuplicateNameScope::AreaLines {
+                            installation: inst.id.0,
+                            area: Some(area_id),
+                        });
+                    }
+                } else {
+                    scopes.insert(DuplicateNameScope::AreaLines {
+                        installation: inst.id.0,
+                        area: None,
+                    });
+                }
+
+                let dev_scope = DuplicateNameScope::LineDevices { line: line.id.0 };
+                for &dev_id in &line.devices {
+                    device_scopes
+                        .entry(dev_id)
+                        .or_default()
+                        .insert(dev_scope.clone());
+                }
+            }
+        }
+
+        Self {
+            line_scopes,
+            device_scopes,
+        }
+    }
+
+    fn scopes_for_device(&self, device: DeviceId) -> Vec<DuplicateNameScope> {
+        match self.device_scopes.get(&device) {
+            Some(scopes) if !scopes.is_empty() => scopes.iter().cloned().collect(),
+            _ => vec![DuplicateNameScope::ProjectUnassignedDevices],
+        }
+    }
+}
+
 fn collect_duplicate_warnings(
     project: &Project,
     resolved: &[ResolvedEntry],
 ) -> Vec<DuplicateNameWarning> {
+    let scope_index = DuplicateScopeIndex::build(project);
     let mut existing_by_scope: BTreeMap<DuplicateNameScope, Vec<(NameTargetId, String)>> =
         BTreeMap::new();
-    index_existing_names(project, &mut existing_by_scope);
+    index_existing_names(project, &scope_index, &mut existing_by_scope);
 
     let mut batch_by_scope: BTreeMap<DuplicateNameScope, Vec<(NameTargetId, &str)>> =
         BTreeMap::new();
     let mut entry_scopes: Vec<Vec<DuplicateNameScope>> = Vec::with_capacity(resolved.len());
     for entry in resolved {
-        let scopes = scopes_for_target(project, entry.target);
+        let scopes = scopes_for_target(project, &scope_index, entry.target);
         for scope in &scopes {
             batch_by_scope
                 .entry(scope.clone())
@@ -833,6 +925,7 @@ fn collect_duplicate_warnings(
 
 fn index_existing_names(
     project: &Project,
+    scope_index: &DuplicateScopeIndex,
     out: &mut BTreeMap<DuplicateNameScope, Vec<(NameTargetId, String)>>,
 ) {
     let mut record = |scope: DuplicateNameScope, target: NameTargetId, name: &str| {
@@ -843,7 +936,7 @@ fn index_existing_names(
         }
     };
 
-    for inst in &project.installations {
+    for (inst_idx, inst) in project.installations.iter().enumerate() {
         record(
             DuplicateNameScope::ProjectInstallations,
             NameTargetId::Installation(inst.id.0),
@@ -869,20 +962,11 @@ fn index_existing_names(
             );
         }
         for line in &inst.topology.lines {
-            let owning_area = inst
-                .topology
-                .areas
-                .iter()
-                .find(|a| a.lines.contains(&line.id))
-                .map(|a| a.id.0);
-            record(
-                DuplicateNameScope::AreaLines {
-                    installation: inst.id.0,
-                    area: owning_area,
-                },
-                NameTargetId::Line(line.id.0),
-                &line.name,
-            );
+            if let Some(scopes) = scope_index.line_scopes.get(&(inst_idx, line.id)) {
+                for scope in scopes {
+                    record(scope.clone(), NameTargetId::Line(line.id.0), &line.name);
+                }
+            }
         }
         for range in &inst.group_ranges {
             record(
@@ -910,7 +994,7 @@ fn index_existing_names(
         if knx_core::names::is_blank_name(&device.name) {
             continue;
         }
-        for scope in scopes_for_target(project, NameTargetId::Device(device.id.0)) {
+        for scope in scope_index.scopes_for_device(device.id) {
             record(scope, NameTargetId::Device(device.id.0), &device.name);
         }
     }
@@ -926,7 +1010,11 @@ fn index_existing_names(
     }
 }
 
-fn scopes_for_target(project: &Project, target: NameTargetId) -> Vec<DuplicateNameScope> {
+fn scopes_for_target(
+    project: &Project,
+    scope_index: &DuplicateScopeIndex,
+    target: NameTargetId,
+) -> Vec<DuplicateNameScope> {
     match target {
         NameTargetId::Project => Vec::new(),
         NameTargetId::Installation(_) => vec![DuplicateNameScope::ProjectInstallations],
@@ -952,45 +1040,18 @@ fn scopes_for_target(project: &Project, target: NameTargetId) -> Vec<DuplicateNa
             Vec::new()
         }
         NameTargetId::Line(id) => {
-            for inst in &project.installations {
+            for (inst_idx, inst) in project.installations.iter().enumerate() {
                 if let Some(line) = inst.topology.lines.iter().find(|l| l.id.0 == id) {
-                    let area = inst
-                        .topology
-                        .areas
-                        .iter()
-                        .find(|a| a.lines.contains(&line.id))
-                        .map(|a| a.id.0);
-                    return vec![DuplicateNameScope::AreaLines {
-                        installation: inst.id.0,
-                        area,
-                    }];
+                    return scope_index
+                        .line_scopes
+                        .get(&(inst_idx, line.id))
+                        .map(|scopes| scopes.iter().cloned().collect())
+                        .unwrap_or_default();
                 }
             }
             Vec::new()
         }
-        NameTargetId::Device(id) => {
-            let mut scopes = BTreeSet::new();
-            let dev_id = DeviceId(id);
-            for inst in &project.installations {
-                for bp in &inst.buildings {
-                    if bp.devices.contains(&dev_id) {
-                        scopes.insert(DuplicateNameScope::BuildingPartDevices {
-                            building_part: bp.id.0,
-                        });
-                    }
-                }
-                for line in &inst.topology.lines {
-                    if line.devices.contains(&dev_id) {
-                        scopes.insert(DuplicateNameScope::LineDevices { line: line.id.0 });
-                    }
-                }
-            }
-            if scopes.is_empty() {
-                vec![DuplicateNameScope::ProjectUnassignedDevices]
-            } else {
-                scopes.into_iter().collect()
-            }
-        }
+        NameTargetId::Device(id) => scope_index.scopes_for_device(DeviceId(id)),
         NameTargetId::GroupRange(id) => {
             for inst in &project.installations {
                 if let Some(range) = inst.group_ranges.iter().find(|r| r.id.0 == id) {

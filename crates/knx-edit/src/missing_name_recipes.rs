@@ -1,6 +1,6 @@
 //! Builds read-only missing-name proposals from associated project and resolved product evidence.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use knx_core::names::{is_blank_name, validate_edited_name};
 use knx_core::{BuildingPartId, DeviceId, FunctionDetails, GroupAddress, Installation, Project};
@@ -67,96 +67,136 @@ pub fn propose_missing_names(
     let mut items: Vec<_> = discovery
         .items
         .iter()
-        .map(|candidate| {
-            let mut recipe = Recipe {
-                project,
-                sources: vec![],
-                gaps: vec![],
-                blocked: false,
-            };
-            if !candidate.identity_status.is_unique() {
-                recipe.refuse(
-                    EvidenceSourceKind::ParentName,
-                    "target identity is not unique or valid",
-                );
-            }
-            for parent in &candidate.parents {
-                match &parent.state {
-                    ParentRefState::Ambiguous { candidates } => recipe.ambiguous(
-                        EvidenceSourceKind::ParentName,
-                        "ambiguous parent",
-                        candidates.iter().map(|id| format!("{id:?}")).collect(),
-                    ),
-                    ParentRefState::Cyclic { .. } => {
-                        recipe.refuse(EvidenceSourceKind::ParentName, "cyclic parent")
-                    }
-                    ParentRefState::Missing { expected: Some(_) } => {
-                        recipe.refuse(EvidenceSourceKind::ParentName, "dangling parent")
-                    }
-                    _ => {}
-                }
-            }
-            if !recipe.blocked {
-                recipe.certify_context(candidate.target);
-            }
-            let proposed = if recipe.blocked {
-                None
-            } else {
-                recipe.name(candidate, evidence)
-            };
-            let proposed_name = proposed
-                .filter(|name| {
-                    let valid = validate_edited_name(name).is_ok()
-                        && name.chars().count() <= candidate.max_name_codepoints
-                        && (!matches!(candidate.target, NameTargetId::Function(_))
-                            || FunctionDetails::validate_name(name).is_ok());
-                    if !valid {
-                        recipe.refuse(
-                            EvidenceSourceKind::ParentName,
-                            "generated name fails edited-name admission",
-                        );
-                    }
-                    valid
-                })
-                .filter(|_| !recipe.blocked);
-            let provenance = NameProvenance {
-                origin: if proposed_name.is_some() {
-                    NameOrigin::Automatic
-                } else {
-                    NameOrigin::ManualRequired
-                },
-                sources: recipe.sources,
-                gaps: recipe.gaps,
-                derived_from_automatic: false,
-            };
-            MissingNameProposal {
-                candidate: candidate.clone(),
-                proposed_name,
-                provenance,
-                duplicate_label: false,
-            }
-        })
+        .map(|candidate| evaluate_candidate(project, evidence, candidate))
         .collect();
-    let existing = existing_names(project);
-    let labels: Vec<_> = items
+    mark_duplicate_labels(project, &mut items);
+    MissingNameProposals { discovery, items }
+}
+
+/// Proposes names only for the requested blank targets in canonical discovery order.
+pub(crate) fn propose_missing_names_for_targets(
+    project: &Project,
+    evidence: &[MissingNameEvidence],
+    targets: &BTreeSet<NameTargetId>,
+) -> Vec<MissingNameProposal> {
+    if targets.is_empty() {
+        return Vec::new();
+    }
+    let discovery = detect_missing_names(project, MissingNameScanRequest::unbounded(0, usize::MAX));
+    let mut items: Vec<_> = discovery
+        .items
         .iter()
-        .map(|p| (p.candidate.kind, p.proposed_name.clone()))
+        .filter(|candidate| targets.contains(&candidate.target))
+        .map(|candidate| evaluate_candidate(project, evidence, candidate))
         .collect();
-    for item in &mut items {
-        if let Some(name) = &item.proposed_name {
-            item.duplicate_label = existing
-                .iter()
-                .any(|(kind, value)| *kind == item.candidate.kind && value == name)
-                || labels
-                    .iter()
-                    .filter(|(kind, value)| {
-                        *kind == item.candidate.kind && value.as_ref() == Some(name)
-                    })
-                    .count()
-                    > 1;
+    mark_duplicate_labels(project, &mut items);
+    items
+}
+
+fn evaluate_candidate(
+    project: &Project,
+    evidence: &[MissingNameEvidence],
+    candidate: &MissingNameCandidate,
+) -> MissingNameProposal {
+    let mut recipe = Recipe {
+        project,
+        sources: vec![],
+        gaps: vec![],
+        blocked: false,
+    };
+    if !candidate.identity_status.is_unique() {
+        recipe.refuse(
+            EvidenceSourceKind::ParentName,
+            "target identity is not unique or valid",
+        );
+    }
+    for parent in &candidate.parents {
+        match &parent.state {
+            ParentRefState::Ambiguous { candidates } => recipe.ambiguous(
+                EvidenceSourceKind::ParentName,
+                "ambiguous parent",
+                candidates.iter().map(|id| format!("{id:?}")).collect(),
+            ),
+            ParentRefState::Cyclic { .. } => {
+                recipe.refuse(EvidenceSourceKind::ParentName, "cyclic parent")
+            }
+            ParentRefState::Missing { expected: Some(_) } => {
+                recipe.refuse(EvidenceSourceKind::ParentName, "dangling parent")
+            }
+            _ => {}
         }
     }
-    MissingNameProposals { discovery, items }
+    if !recipe.blocked {
+        recipe.certify_context(candidate.target);
+    }
+    let proposed = if recipe.blocked {
+        None
+    } else {
+        recipe.name(candidate, evidence)
+    };
+    let proposed_name = proposed
+        .filter(|name| {
+            let valid = validate_edited_name(name).is_ok()
+                && name.chars().count() <= candidate.max_name_codepoints
+                && (!matches!(candidate.target, NameTargetId::Function(_))
+                    || FunctionDetails::validate_name(name).is_ok());
+            if !valid {
+                recipe.refuse(
+                    EvidenceSourceKind::ParentName,
+                    "generated name fails edited-name admission",
+                );
+            }
+            valid
+        })
+        .filter(|_| !recipe.blocked);
+    let provenance = NameProvenance {
+        origin: if proposed_name.is_some() {
+            NameOrigin::Automatic
+        } else {
+            NameOrigin::ManualRequired
+        },
+        sources: recipe.sources,
+        gaps: recipe.gaps,
+        derived_from_automatic: false,
+    };
+    MissingNameProposal {
+        candidate: candidate.clone(),
+        proposed_name,
+        provenance,
+        duplicate_label: false,
+    }
+}
+
+fn mark_duplicate_labels(project: &Project, items: &mut [MissingNameProposal]) {
+    if items.is_empty() {
+        return;
+    }
+    let existing = existing_names(project);
+    let mut proposed_counts: HashMap<(NameTargetKind, &str), usize> =
+        HashMap::with_capacity(items.len());
+    for item in items.iter() {
+        if let Some(name) = item.proposed_name.as_deref() {
+            *proposed_counts
+                .entry((item.candidate.kind, name))
+                .or_insert(0) += 1;
+        }
+    }
+    let duplicate_flags: Vec<bool> = items
+        .iter()
+        .map(|item| {
+            item.proposed_name.as_deref().is_some_and(|name| {
+                existing.contains(&(item.candidate.kind, name))
+                    || proposed_counts
+                        .get(&(item.candidate.kind, name))
+                        .copied()
+                        .unwrap_or(0)
+                        > 1
+            })
+        })
+        .collect();
+    for (item, is_dup) in items.iter_mut().zip(duplicate_flags) {
+        item.duplicate_label = is_dup;
+    }
 }
 
 struct Recipe<'a> {
@@ -741,35 +781,38 @@ fn building_kind_label(kind: BuildingPartKind) -> &'static str {
     }
 }
 
-fn existing_names(project: &Project) -> Vec<(NameTargetKind, String)> {
+fn existing_names<'a>(project: &'a Project) -> HashSet<(NameTargetKind, &'a str)> {
     use NameTargetKind as K;
-    let mut names = vec![(K::Project, project.info.name.clone())];
+    let mut names = HashSet::new();
+    let mut record = |kind: NameTargetKind, name: &'a str| {
+        if !is_blank_name(name) {
+            names.insert((kind, name));
+        }
+    };
+    record(K::Project, project.info.name.as_str());
     for i in &project.installations {
-        names.push((K::Installation, i.name.clone()));
-        names.extend(
-            i.buildings
-                .iter()
-                .map(|v| (K::BuildingPart, v.name.clone())),
-        );
-        names.extend(i.topology.areas.iter().map(|v| (K::Area, v.name.clone())));
-        names.extend(i.topology.lines.iter().map(|v| (K::Line, v.name.clone())));
-        names.extend(
-            i.group_ranges
-                .iter()
-                .map(|v| (K::GroupRange, v.name.clone())),
-        );
-        names.extend(
-            i.group_addresses
-                .iter()
-                .map(|v| (K::GroupAddress, v.name.clone())),
-        );
+        record(K::Installation, i.name.as_str());
+        for v in &i.buildings {
+            record(K::BuildingPart, v.name.as_str());
+        }
+        for v in &i.topology.areas {
+            record(K::Area, v.name.as_str());
+        }
+        for v in &i.topology.lines {
+            record(K::Line, v.name.as_str());
+        }
+        for v in &i.group_ranges {
+            record(K::GroupRange, v.name.as_str());
+        }
+        for v in &i.group_addresses {
+            record(K::GroupAddress, v.name.as_str());
+        }
     }
-    names.extend(project.devices.iter().map(|v| (K::Device, v.name.clone())));
-    names.extend(
-        project
-            .functions
-            .iter()
-            .map(|v| (K::Function, v.details.name.clone())),
-    );
+    for v in project.devices.iter() {
+        record(K::Device, v.name.as_str());
+    }
+    for v in &project.functions {
+        record(K::Function, v.details.name.as_str());
+    }
     names
 }

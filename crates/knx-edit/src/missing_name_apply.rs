@@ -287,12 +287,11 @@ pub fn preview_missing_name_apply(
     }
 
     let resolved = validate_and_resolve_entries(&snapshot.project, &intent.entries)?;
-    let warnings = collect_duplicate_warnings(&snapshot.project, &resolved);
 
     let mut canonical_entries = Vec::with_capacity(resolved.len());
     let mut rows = Vec::with_capacity(resolved.len());
     let mut commands = Vec::with_capacity(resolved.len());
-    for entry in resolved {
+    for entry in &resolved {
         canonical_entries.push(MissingNameEntry {
             target: entry.target,
             name: entry.after.clone(),
@@ -301,12 +300,26 @@ pub fn preview_missing_name_apply(
         rows.push(MissingNameApplyRow {
             target: entry.target,
             kind: entry.target.kind(),
-            before: entry.before,
-            after: entry.after,
+            before: entry.before.clone(),
+            after: entry.after.clone(),
         });
     }
 
     let changed = commands.len();
+    let mut preview = MissingNameApplyPreview {
+        version: 1,
+        rows: Vec::new(),
+        changed,
+        warnings: Vec::new(),
+    };
+    let mut budget = PreviewBudget(MAX_MISSING_NAME_PREVIEW_BYTES);
+    budget.charge(&preview)?;
+    for (index, row) in rows.iter().enumerate() {
+        budget.separator(index)?;
+        budget.charge(row)?;
+    }
+    preview.rows = rows;
+    preview.warnings = collect_duplicate_warnings(&snapshot.project, &resolved, &mut budget)?;
     let command = Command::Batch(commands);
     command
         .apply(&mut snapshot.project.clone())
@@ -319,12 +332,7 @@ pub fn preview_missing_name_apply(
             entries: canonical_entries,
         },
         command,
-        preview: MissingNameApplyPreview {
-            version: 1,
-            rows,
-            changed,
-            warnings,
-        },
+        preview,
     })
 }
 
@@ -614,94 +622,75 @@ fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
     diff == 0
 }
 
-/// Deterministic parent-before-child ordering key across all 9 Q9 categories.
+/// Deterministic ordering over the same dependency edges used by invalidation.
 struct ParentOrderIndex {
-    building_depth: BTreeMap<u32, usize>,
-    group_range_depth: BTreeMap<u32, usize>,
+    positions: BTreeMap<NameTargetId, usize>,
 }
 
 impl ParentOrderIndex {
     fn build(project: &Project) -> Self {
-        let mut bp_parents: BTreeMap<u32, Option<u32>> = BTreeMap::new();
-        let mut gr_parents: BTreeMap<u32, Option<u32>> = BTreeMap::new();
-        for inst in &project.installations {
-            for bp in &inst.buildings {
-                let entry = bp_parents.entry(bp.id.0).or_insert(None);
-                if entry.is_none() {
-                    *entry = bp.parent.map(|p| p.0);
-                }
-            }
-            for gr in &inst.group_ranges {
-                let entry = gr_parents.entry(gr.id.0).or_insert(None);
-                if entry.is_none() {
-                    *entry = gr.parent.map(|p| p.0);
-                }
+        let edges = build_dependency_graph(project);
+        let mut incoming = BTreeMap::from([(NameTargetId::Project, 0usize)]);
+        for device in project.devices.iter() {
+            incoming
+                .entry(NameTargetId::Device(device.id.0))
+                .or_default();
+        }
+        for (&parent, children) in &edges {
+            incoming.entry(parent).or_default();
+            for &child in children {
+                *incoming.entry(child).or_default() += 1;
             }
         }
-        for inst in &project.installations {
-            for bp in &inst.buildings {
-                for child in &bp.children {
-                    if child.0 != bp.id.0 {
-                        let entry = bp_parents.entry(child.0).or_insert(None);
-                        if entry.is_none() {
-                            *entry = Some(bp.id.0);
+        let mut ready: BTreeSet<_> = incoming
+            .iter()
+            .filter(|(_, count)| **count == 0)
+            .map(|(&target, _)| (Self::kind_key(target), target))
+            .collect();
+        let mut positions = BTreeMap::new();
+        while !incoming.is_empty() {
+            // Cycles cannot satisfy every edge: break ties deterministically, then
+            // resume releasing children so their acyclic dependencies still order them.
+            let target = match ready.pop_first() {
+                Some((_, target)) => target,
+                None => *incoming.keys().min_by_key(|&&t| Self::kind_key(t)).unwrap(),
+            };
+            incoming.remove(&target);
+            positions.insert(target, positions.len());
+            if let Some(children) = edges.get(&target) {
+                for child in children {
+                    if let Some(count) = incoming.get_mut(child) {
+                        *count -= 1;
+                        if *count == 0 {
+                            ready.insert((Self::kind_key(*child), *child));
                         }
                     }
                 }
             }
-            for gr in &inst.group_ranges {
-                for child in &gr.children {
-                    if child.0 != gr.id.0 {
-                        let entry = gr_parents.entry(child.0).or_insert(None);
-                        if entry.is_none() {
-                            *entry = Some(gr.id.0);
-                        }
-                    }
-                }
-            }
         }
-        Self {
-            building_depth: compute_depths(&bp_parents),
-            group_range_depth: compute_depths(&gr_parents),
-        }
+        Self { positions }
     }
 
-    fn key(&self, target: NameTargetId) -> (u8, usize, u32) {
+    fn key(&self, target: NameTargetId) -> (usize, (u8, u32)) {
+        (
+            self.positions.get(&target).copied().unwrap_or(usize::MAX),
+            Self::kind_key(target),
+        )
+    }
+
+    fn kind_key(target: NameTargetId) -> (u8, u32) {
         match target {
-            NameTargetId::Project => (0, 0, 0),
-            NameTargetId::Installation(id) => (1, 0, u32::from(id)),
-            NameTargetId::BuildingPart(id) => {
-                (2, self.building_depth.get(&id).copied().unwrap_or(0), id)
-            }
-            NameTargetId::Area(id) => (3, 0, id),
-            NameTargetId::Line(id) => (4, 0, id),
-            NameTargetId::GroupRange(id) => {
-                (5, self.group_range_depth.get(&id).copied().unwrap_or(0), id)
-            }
-            NameTargetId::Device(id) => (6, 0, id),
-            NameTargetId::Function(id) => (7, 0, id),
-            NameTargetId::GroupAddress(id) => (8, 0, id),
+            NameTargetId::Project => (0, 0),
+            NameTargetId::Installation(id) => (1, u32::from(id)),
+            NameTargetId::BuildingPart(id) => (2, id),
+            NameTargetId::Area(id) => (3, id),
+            NameTargetId::Line(id) => (4, id),
+            NameTargetId::GroupRange(id) => (5, id),
+            NameTargetId::Device(id) => (6, id),
+            NameTargetId::Function(id) => (7, id),
+            NameTargetId::GroupAddress(id) => (8, id),
         }
     }
-}
-
-fn compute_depths(parents: &BTreeMap<u32, Option<u32>>) -> BTreeMap<u32, usize> {
-    let mut depths = BTreeMap::new();
-    for &id in parents.keys() {
-        let mut depth = 0usize;
-        let mut current = id;
-        let mut seen = BTreeSet::new();
-        seen.insert(current);
-        while let Some(Some(parent)) = parents.get(&current) {
-            if !seen.insert(*parent) {
-                break;
-            }
-            depth += 1;
-            current = *parent;
-        }
-        depths.insert(id, depth);
-    }
-    depths
 }
 
 fn build_dependency_graph(project: &Project) -> BTreeMap<NameTargetId, BTreeSet<NameTargetId>> {
@@ -868,10 +857,41 @@ impl DuplicateScopeIndex {
     }
 }
 
+/// Counts the exact JSON payload without allocating serialized rows or conflict vectors.
+struct PreviewBudget(usize);
+
+impl PreviewBudget {
+    fn charge(&mut self, value: &impl Serialize) -> Result<(), MissingNameApplyError> {
+        serde_json::to_writer(self, value).map_err(|_| MissingNameApplyError::Budget)
+    }
+
+    fn separator(&mut self, index: usize) -> Result<(), MissingNameApplyError> {
+        if index > 0 {
+            std::io::Write::write_all(self, b",").map_err(|_| MissingNameApplyError::Budget)?;
+        }
+        Ok(())
+    }
+}
+
+impl std::io::Write for PreviewBudget {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0 = self
+            .0
+            .checked_sub(bytes.len())
+            .ok_or_else(|| std::io::Error::other("missing-name preview budget exceeded"))?;
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
 fn collect_duplicate_warnings(
     project: &Project,
     resolved: &[ResolvedEntry],
-) -> Vec<DuplicateNameWarning> {
+    budget: &mut PreviewBudget,
+) -> Result<Vec<DuplicateNameWarning>, MissingNameApplyError> {
     let scope_index = DuplicateScopeIndex::build(project);
     let mut existing_by_scope: BTreeMap<DuplicateNameScope, Vec<(NameTargetId, String)>> =
         BTreeMap::new();
@@ -895,17 +915,34 @@ fn collect_duplicate_warnings(
     for (entry, scopes) in resolved.iter().zip(entry_scopes) {
         for scope in scopes {
             let mut conflicts = BTreeSet::new();
+            let mut add_conflict = |conflict| -> Result<(), MissingNameApplyError> {
+                if !conflicts.contains(&conflict) {
+                    if conflicts.is_empty() {
+                        budget.separator(warnings.len())?;
+                        budget.charge(&DuplicateNameWarning {
+                            target: entry.target,
+                            proposed_name: entry.after.clone(),
+                            scope: scope.clone(),
+                            conflicts_with: Vec::new(),
+                        })?;
+                    }
+                    budget.separator(conflicts.len())?;
+                    budget.charge(&conflict)?;
+                    conflicts.insert(conflict);
+                }
+                Ok(())
+            };
             if let Some(siblings) = existing_by_scope.get(&scope) {
                 for (sib_id, sib_name) in siblings {
                     if *sib_id != entry.target && sib_name == &entry.after {
-                        conflicts.insert(DuplicateConflictSource::ExistingSibling(*sib_id));
+                        add_conflict(DuplicateConflictSource::ExistingSibling(*sib_id))?;
                     }
                 }
             }
             if let Some(batch_siblings) = batch_by_scope.get(&scope) {
                 for (peer_id, peer_name) in batch_siblings {
                     if *peer_id != entry.target && *peer_name == entry.after.as_str() {
-                        conflicts.insert(DuplicateConflictSource::BatchSibling(*peer_id));
+                        add_conflict(DuplicateConflictSource::BatchSibling(*peer_id))?;
                     }
                 }
             }
@@ -920,7 +957,7 @@ fn collect_duplicate_warnings(
         }
     }
 
-    warnings
+    Ok(warnings)
 }
 
 fn index_existing_names(

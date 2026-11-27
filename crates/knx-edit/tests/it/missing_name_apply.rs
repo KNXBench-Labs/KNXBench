@@ -1845,3 +1845,175 @@ fn parent_order_index_backfills_missing_parent_pointers_from_children_links() {
         ]
     );
 }
+
+#[test]
+fn preview_budget_counts_complete_warning_payload_and_json_escaping() {
+    let mut state = full_q9_fixture();
+    let template = state.project.installations[0].group_addresses[0].clone();
+    let name = "\"\\".repeat(256);
+    let entries: Vec<_> = (1..=8)
+        .map(|id| MissingNameEntry {
+            target: NameTargetId::GroupAddress(id),
+            name: name.clone(),
+        })
+        .collect();
+    state.project.installations[0].group_addresses = (1..=9)
+        .map(|id| {
+            let mut ga = template.clone();
+            ga.id = GroupAddressId(id);
+            ga.range = None;
+            ga.name = if id == 9 { name.clone() } else { String::new() };
+            ga
+        })
+        .collect();
+    let intent = MissingNameApplyIntent { entries };
+    let baseline = preview_missing_name_apply(&state, &rev(), intent.clone()).unwrap();
+    assert_eq!(baseline.preview().warnings.len(), 8);
+    for warning in &baseline.preview().warnings {
+        assert_eq!(warning.proposed_name, name);
+        assert_eq!(warning.conflicts_with.len(), 8);
+        assert!(warning
+            .conflicts_with
+            .contains(&DuplicateConflictSource::ExistingSibling(
+                NameTargetId::GroupAddress(9)
+            )));
+        assert_eq!(
+            warning
+                .conflicts_with
+                .iter()
+                .filter(|conflict| matches!(conflict, DuplicateConflictSource::BatchSibling(_)))
+                .count(),
+            7
+        );
+    }
+
+    // Whitespace is valid imported blank text. Fill the remaining serialized byte
+    // budget exactly; names alone remain below the limit because warnings count.
+    let baseline_bytes = serde_json::to_vec(baseline.preview()).unwrap().len();
+    state.project.installations[0].group_addresses[0].name =
+        " ".repeat(MAX_MISSING_NAME_PREVIEW_BYTES - baseline_bytes);
+    let original = state.clone();
+    let at_limit = preview_missing_name_apply(&state, &rev(), intent.clone()).unwrap();
+    assert_eq!(
+        serde_json::to_vec(at_limit.preview()).unwrap().len(),
+        MAX_MISSING_NAME_PREVIEW_BYTES
+    );
+    assert_eq!(at_limit.preview().warnings, baseline.preview().warnings);
+    assert_eq!(state, original);
+
+    state.project.installations[0].group_addresses[0]
+        .name
+        .push(' ');
+    assert!(matches!(
+        preview_missing_name_apply(&state, &rev(), intent),
+        Err(MissingNameApplyError::Budget)
+    ));
+}
+
+#[test]
+fn preview_budget_refuses_quadratic_batch_conflicts_without_losing_warnings() {
+    let mut state = full_q9_fixture();
+    let template = state.project.installations[0].group_addresses[0].clone();
+    state.project.installations[0].group_addresses = (1..=256)
+        .map(|id| {
+            let mut ga = template.clone();
+            ga.id = GroupAddressId(id);
+            ga.range = None;
+            ga.name.clear();
+            ga
+        })
+        .collect();
+    let original = state.clone();
+    let entries = (1..=256)
+        .map(|id| MissingNameEntry {
+            target: NameTargetId::GroupAddress(id),
+            name: "Same".into(),
+        })
+        .collect();
+    assert!(matches!(
+        preview_missing_name_apply(&state, &rev(), MissingNameApplyIntent { entries }),
+        Err(MissingNameApplyError::Budget)
+    ));
+    assert_eq!(state, original);
+}
+
+#[test]
+fn parent_order_uses_all_invalidation_edges_despite_conflicting_parent_pointers() {
+    let mut state = full_q9_fixture();
+    let inst = &mut state.project.installations[0];
+    let range_template = inst.group_ranges[0].clone();
+    inst.buildings = [1, 2, 3, 10, 20, 30]
+        .into_iter()
+        .map(|id| {
+            let mut bp = part(
+                id,
+                "",
+                BuildingPartType::BuildingPart,
+                if id == 1 { Some(2) } else { None },
+            );
+            bp.children = match id {
+                10 => vec![BuildingPartId(20)],
+                20 => vec![BuildingPartId(30)],
+                30 => vec![BuildingPartId(1)],
+                _ => vec![],
+            };
+            bp
+        })
+        .collect();
+    inst.group_ranges = [1, 2, 10, 20, 30]
+        .into_iter()
+        .map(|id| {
+            let mut range = range_template.clone();
+            range.id = GroupRangeId(id);
+            range.name.clear();
+            range.parent = if id == 1 { Some(GroupRangeId(2)) } else { None };
+            range.children = match id {
+                10 => vec![GroupRangeId(20)],
+                20 => vec![GroupRangeId(30)],
+                30 => vec![GroupRangeId(1)],
+                _ => vec![],
+            };
+            range
+        })
+        .collect();
+
+    let entries: Vec<_> = [1, 30, 20, 10, 2]
+        .into_iter()
+        .flat_map(|id| [NameTargetId::BuildingPart(id), NameTargetId::GroupRange(id)])
+        .map(|target| MissingNameEntry {
+            target,
+            name: format!("Name {target:?}"),
+        })
+        .collect();
+    let original = state.clone();
+    let plan = preview_missing_name_apply(
+        &state,
+        &rev(),
+        MissingNameApplyIntent {
+            entries: entries.clone(),
+        },
+    )
+    .unwrap();
+    let order: Vec<_> = plan.preview().rows.iter().map(|row| row.target).collect();
+    for kind in [
+        NameTargetId::BuildingPart as fn(u32) -> NameTargetId,
+        NameTargetId::GroupRange,
+    ] {
+        for (parent, child) in [(10, 20), (20, 30), (30, 1), (2, 1)] {
+            let position = |id| order.iter().position(|&target| target == kind(id)).unwrap();
+            assert!(position(parent) < position(child), "{order:?}");
+            assert!(invalidated_dependents(&state.project, &[kind(parent)]).contains(&kind(child)));
+        }
+    }
+
+    let reversed = preview_missing_name_apply(
+        &state,
+        &rev(),
+        MissingNameApplyIntent {
+            entries: entries.into_iter().rev().collect(),
+        },
+    )
+    .unwrap();
+    assert_eq!(plan.preview(), reversed.preview());
+    assert_eq!(state, original);
+}

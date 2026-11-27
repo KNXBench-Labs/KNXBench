@@ -1,6 +1,6 @@
 # Implementation delivery history
 
-## Evidence-based name recipes (27 November 2026; WP-51.2a candidate)
+## Evidence-based name recipes (27 November 2026; WP-51.2a published)
 
 Published slices 51.1a–51.1c provide validated reversible name commands and
 read-only discovery/provenance. The new `knx-edit::missing_name_recipes` module
@@ -10,7 +10,9 @@ missing, contradictory or structurally ambiguous inputs are reported, never
 invented or applied. Provenance identifies contributing text, not merely consulted
 context. Regression coverage includes malformed ancestry/ownership, exact fallback
 contributors, preserved nonblank names and project/evidence immutability.
-Final independent review and scoped package gate are pending. No wizard UI,
+Published on main as `2867d28da` after independent APPROVE and a 14/14
+change-scoped package gate (4,203 Rust passes, 146 ignored; corpus 92/92),
+frozen inputs and untouched/checked user data; live remote readback matched. No wizard UI,
 selected-parent editing, revision-bound preview, confirmation/Apply or persistence
 workflow is added; WP-51 remains partial. See [WP-51](open-work/WP-51-empty-project-object-name-wizard.md).
 

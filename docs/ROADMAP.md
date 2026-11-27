@@ -6,8 +6,8 @@ Slices 51.1a–51.1c are published: reversible validated name commands, the Q9
 model audit, explicit provenance and read-only missing-name discovery. Slice
 51.2a adds a read-only recipe foundation for all nine Q9 types, using existing
 project text and explicitly associated evidence; absent or ambiguous context
-requires manual input. Independent review and scoped package acceptance of the
-final candidate remain required before publication.
+requires manual input. Published as `2867d28da` after independent APPROVE and
+a 14/14 change-scoped package gate with frozen inputs and verified remote readback.
 Selected/edited parent dependencies, preview revision binding, explicit atomic
 Apply and the wizard UI remain future work. This slice does not authorize another
 successor. See [WP-51](open-work/WP-51-empty-project-object-name-wizard.md).

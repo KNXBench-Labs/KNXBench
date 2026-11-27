@@ -2,7 +2,7 @@
 
 Owner request: 24 November 2026, approved naming-wizard interview decisions
 Q1, Q2 and Q4–Q17; Q18 requests this independent work package.
-Status: Partial in progress — slices 51.1a–51.1c published; slice 51.2a read-only recipe foundation implemented in candidate, pending final independent review/package gate/delivery. Remaining 51.2, 51.3–51.4 and Wizard not complete.
+Status: Partial in progress — slices 51.1a–51.1c published; slice 51.2a read-only recipe foundation published as `2867d28da` after independent APPROVE and 14/14 scoped gate. Remaining 51.2, 51.3–51.4 and Wizard not complete.
 Slice 51.1a covers validated, reversible name-only domain commands for Project (`RenameProject` / `RestoreProjectName`) and Project Function (`RenameFunction` / `RestoreFunctionName`), unambiguous Function ID resolution, native working-history snapshot replay/roundtrip coverage, and diagnostic allowlist wiring. Slice 51.1b adds validated structural renames and exact Restore*Name inverses for Installation, all 11 supported BuildingPart kinds, Area, Line and GroupRange. Slice 51.1c records the verified Q9 source/model/name constraints audit and adds the structured provenance data model and deterministic, strictly read-only missing-name detection across all Q9 entity types in `knx-edit::missing_names` (backed by shared `knx_core::names::is_blank_name`). Slice 51.1c did not include recipes or wizard/Apply paths; the bounded 51.2a successor below adds recipes only.
 Blocked by: None (WP-51 and WP-52 are independent).
 
@@ -121,7 +121,7 @@ none is an individually complete product slice, and the Wizard is not complete.
 | --- | --- | --- |
 | 51.1a | Validated, reversible name-only domain commands for Project (`RenameProject`/`RestoreProjectName`) and Project Function (`RenameFunction`/`RestoreFunctionName`), unambiguous Function identity checks, native working-history replay and focused regression tests | Published before 51.1b (publication record at `746778942`; backend foundation only) |
 | 51.1b | Validated structural name-only commands and exact restore inverses; unique installation name resolution; core identity/admission/no-op/batch regressions and native history replay across every supported building kind | Published (`3d335ab7e` / `b57106993`; backend foundation only) |
-| 51.1c (remaining 51.1) | Audit Q9 source/model/name constraints beyond the implemented command paths; define provenance and deterministic missing-name detection without mutating import data | Implemented in candidate; focused diagnostics recorded below; coordinator review, scoped gate and delivery pending |
+| 51.1c (remaining 51.1) | Audit Q9 source/model/name constraints beyond the implemented command paths; define provenance and deterministic missing-name detection without mutating import data | Published as `9c8c4e039`; independent review and 16/16 scoped gate accepted; publication recorded in snapshot archive |
 | 51.2 | Implement all recipes, ambiguity/manual cases, parent dependency invalidation, bounded scan/count/page semantics and preview binding; reuse candidate stack, `Command::Batch`, stale-snapshot guards and durable native write-before-publish | Planned (not started) |
 | 51.3 | Implement entry timing, Later/manual reopen, grouped editable selection, source/context/errors, duplicate warnings, 256 cap and explicit confirmation; reuse Overlay; keyboard/focus, narrow displays and all supported translations; update all Q2 device consumers | Planned (not started) |
 | 51.4 | Integrate native/session-only persistence, save/reopen and Undo, failure/conflict paths and end-to-end acceptance across every supported entity; update affected user/status/limitations docs only with verified results | Planned (not started) |
@@ -163,7 +163,10 @@ GA semantics fail closed instead of producing invented names. Description fallba
 must retain only sources that actually supplied the returned name.
 The focused candidate suite and independent review cover exact recipes, all address
 formats, structural refusal causes, fallback provenance and unchanged inputs.
-Final review and package-gate acceptance are still pending. No UI, selection/draft
+Independent final review APPROVE; published as `2867d28da` after 14/14 scoped
+package-gate stages passed (4,203 Rust passes, 146 ignored; corpus 92/92),
+frozen inputs and no touched/unchecked user data. Live remote readback matched.
+No UI, selection/draft
 lifecycle, cross-page collision validation, revision-bound preview, confirmation,
 Apply, save/reopen or native undo workflow is claimed for 51.2a. An Automatic
 proposal is not a write authorization or a revision-bound apply plan.
@@ -205,9 +208,8 @@ objects to pass end-to-end acceptance; backend completion alone is insufficient.
 
 ## Open decisions
 
-None at owner level: the naming interview frontier is closed. Slices 51.1a and
-51.1b are published. Slice 51.1c (remaining 51.1) is implemented in candidate
-pending coordinator review, scoped gate and delivery; 51.2–51.4 and the Wizard
+None at owner level: the naming interview frontier is closed. Slices 51.1a–51.1c and
+the read-only 51.2a foundation are published. Remaining 51.2–51.4 and the Wizard
 remain incomplete. Source-derived details still to establish within
 this plan:
 exact descriptive-text/product-resolution access for every type, validated command

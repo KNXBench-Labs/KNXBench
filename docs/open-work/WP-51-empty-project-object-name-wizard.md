@@ -2,8 +2,8 @@
 
 Owner request: 24 November 2026, approved naming-wizard interview decisions
 Q1, Q2 and Q4–Q17; Q18 requests this independent work package.
-Status: Partial in progress — slices 51.1a and 51.1b published; slice 51.1c (remaining 51.1) Q9 audit, provenance model and read-only missing-name detection implemented in candidate, pending coordinator review/gate/delivery; 51.2–51.4 and Wizard not complete.
-Slice 51.1a covers validated, reversible name-only domain commands for Project (`RenameProject` / `RestoreProjectName`) and Project Function (`RenameFunction` / `RestoreFunctionName`), unambiguous Function ID resolution, native working-history snapshot replay/roundtrip coverage, and diagnostic allowlist wiring. Slice 51.1b adds validated structural renames and exact Restore*Name inverses for Installation, all 11 supported BuildingPart kinds, Area, Line and GroupRange. Slice 51.1c records the verified Q9 source/model/name constraints audit and adds the structured provenance data model and deterministic, strictly read-only missing-name detection across all Q9 entity types in `knx-edit::missing_names` (backed by shared `knx_core::names::is_blank_name`). No wizard UI, 51.2 recipes, preview/apply wiring or import mutation is included.
+Status: Partial in progress — slices 51.1a–51.1c published; slice 51.2a read-only recipe foundation implemented in candidate, pending final independent review/package gate/delivery. Remaining 51.2, 51.3–51.4 and Wizard not complete.
+Slice 51.1a covers validated, reversible name-only domain commands for Project (`RenameProject` / `RestoreProjectName`) and Project Function (`RenameFunction` / `RestoreFunctionName`), unambiguous Function ID resolution, native working-history snapshot replay/roundtrip coverage, and diagnostic allowlist wiring. Slice 51.1b adds validated structural renames and exact Restore*Name inverses for Installation, all 11 supported BuildingPart kinds, Area, Line and GroupRange. Slice 51.1c records the verified Q9 source/model/name constraints audit and adds the structured provenance data model and deterministic, strictly read-only missing-name detection across all Q9 entity types in `knx-edit::missing_names` (backed by shared `knx_core::names::is_blank_name`). Slice 51.1c did not include recipes or wizard/Apply paths; the bounded 51.2a successor below adds recipes only.
 Blocked by: None (WP-51 and WP-52 are independent).
 
 ## Source report and evidence limits
@@ -152,6 +152,21 @@ Verified source/model/name constraints across all 9 Q9 categories without mutati
 - **Focused diagnostics**: Offline locked Cargo checks with scratch XDG dirs passed: `knx-core --lib names::` (5 passed), `knx-edit --test missing_names --test offline_boundary` (7 passed: all 9 Q9 types + 11 building kinds, Q5 preservation + Q9 exclusions, duplicate/zero identities + cyclic/missing/ambiguous parents, Q17 incomplete-scan total suppression + pagination, determinism + immutability, Q6 provenance JSON roundtrip), `xtask check-layering`, `xtask check-headers`, and `tools/check_local_info.py`. Two mutant proofs (Q5 `\u{feff}` blank filter and Q17 incomplete-scan total leakage) failed the focused tests and were restored byte-identical. These are focused candidate diagnostics, not full package acceptance.
 
 ## Acceptance matrix (planned, unchecked)
+
+Slice 51.2a implements the read-only recipe foundation in
+`knx-edit::missing_name_recipes`: immutable proposal pages for all nine Q9 target
+categories, including all 11 building kinds, with explicit contributing-source
+provenance and manual gaps/refusals. Existing named ancestors may contribute;
+proposed or edited parent names are not consumed. Dangling/cyclic ancestry,
+ambiguous identity/installation/line ownership, contradictory evidence and DPT-only
+GA semantics fail closed instead of producing invented names. Description fallbacks
+must retain only sources that actually supplied the returned name.
+The focused candidate suite and independent review cover exact recipes, all address
+formats, structural refusal causes, fallback provenance and unchanged inputs.
+Final review and package-gate acceptance are still pending. No UI, selection/draft
+lifecycle, cross-page collision validation, revision-bound preview, confirmation,
+Apply, save/reopen or native undo workflow is claimed for 51.2a. An Automatic
+proposal is not a write authorization or a revision-bound apply plan.
 
 Each row requires recorded evidence at implementation time, using fictional
 fixtures and simulated/offline workflows. No row has been executed for intake.

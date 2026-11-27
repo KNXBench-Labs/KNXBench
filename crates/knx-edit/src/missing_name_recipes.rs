@@ -3,7 +3,7 @@
 use std::collections::BTreeSet;
 
 use knx_core::names::{is_blank_name, validate_edited_name};
-use knx_core::{BuildingPartId, DeviceId, FunctionDetails, GroupAddress, Project};
+use knx_core::{BuildingPartId, DeviceId, FunctionDetails, GroupAddress, Installation, Project};
 
 use crate::missing_names::*;
 
@@ -96,6 +96,9 @@ pub fn propose_missing_names(
                     _ => {}
                 }
             }
+            if !recipe.blocked {
+                recipe.certify_context(candidate.target);
+            }
             let proposed = if recipe.blocked {
                 None
             } else {
@@ -164,6 +167,11 @@ struct Recipe<'a> {
 }
 
 impl Recipe<'_> {
+    fn certify_context(&mut self, target: NameTargetId) {
+        if let Err((kind, detail)) = structural_context(self.project, target) {
+            self.refuse(kind, detail);
+        }
+    }
     fn missing(&mut self, kind: EvidenceSourceKind, detail: &str) {
         self.gaps.push(EvidenceGap::Missing {
             kind,
@@ -224,53 +232,23 @@ impl Recipe<'_> {
     }
     /// Resolve the entire actual chain, requiring unique identity and installation ownership.
     fn location(&mut self, id: BuildingPartId) -> Option<String> {
-        let mut next = Some(id);
-        let mut seen = BTreeSet::new();
+        let chain = match ancestry(self.project, NameTargetId::BuildingPart(id.0)) {
+            Ok((_, chain)) => chain,
+            Err(detail) => {
+                self.refuse(EvidenceSourceKind::BuildingLocationPath, detail);
+                return None;
+            }
+        };
         let mut names = Vec::new();
-        let mut owner = None;
         let mut blank = false;
-        while let Some(id) = next {
-            if !seen.insert(id) {
-                self.refuse(
-                    EvidenceSourceKind::BuildingLocationPath,
-                    "cyclic location path",
-                );
-                return None;
-            }
-            let parts: Vec<_> = self
-                .project
-                .installations
-                .iter()
-                .flat_map(|i| {
-                    i.buildings
-                        .iter()
-                        .filter(move |b| b.id == id)
-                        .map(move |b| (i, b))
-                })
-                .collect();
-            let [(installation, part)] = parts.as_slice() else {
-                self.refuse(
-                    EvidenceSourceKind::BuildingLocationPath,
-                    "missing or ambiguous location path",
-                );
-                return None;
+        for target in chain {
+            let NameTargetId::BuildingPart(id) = target else {
+                unreachable!()
             };
-            if self
-                .project
-                .installations
-                .iter()
-                .filter(|i| i.id == installation.id)
-                .count()
-                != 1
-                || owner.is_some_and(|previous| previous != installation.id)
-            {
-                self.refuse(
-                    EvidenceSourceKind::BuildingLocationPath,
-                    "ambiguous location ownership",
-                );
-                return None;
-            }
-            owner = Some(installation.id);
+            let (_, part) = unique_owned(self.project, |i| {
+                i.buildings.iter().filter(move |b| b.id.0 == id)
+            })
+            .ok()?;
             if is_blank_name(&part.name) {
                 blank = true;
                 self.missing(
@@ -278,8 +256,7 @@ impl Recipe<'_> {
                     "location parent has no existing name",
                 );
             }
-            names.push((NameTargetId::BuildingPart(id.0), part.name.clone()));
-            next = part.parent;
+            names.push((target, part.name.clone()));
         }
         if blank {
             return None;
@@ -420,6 +397,7 @@ impl Recipe<'_> {
                     .filter(|b| b.devices.contains(&device.id))
                     .map(|b| b.id)
                     .collect();
+                let location_sources_start = self.sources.len();
                 let location = match placements.as_slice() {
                     [] => {
                         self.missing(E::BuildingLocationPath, "device has no location");
@@ -441,6 +419,7 @@ impl Recipe<'_> {
                             .map_or_else(|| product.clone(), |path| format!("{path} – {product}")),
                     )
                 } else {
+                    self.sources.truncate(location_sources_start);
                     self.text(
                         E::DeviceDescription,
                         c.target,
@@ -484,6 +463,7 @@ impl Recipe<'_> {
                     .map(move |g| (i, g))
             })
             .next()?;
+        let context_sources_start = self.sources.len();
         let mut contexts = Vec::new();
         let mut memberships = 0;
         for function in &self.project.functions {
@@ -554,6 +534,7 @@ impl Recipe<'_> {
         if !contexts.is_empty() {
             self.text(E::FunctionContext, target, contexts)
         } else {
+            self.sources.truncate(context_sources_start);
             self.missing(
                 E::FunctionContext,
                 "no complete function/role/location context",
@@ -565,6 +546,183 @@ impl Recipe<'_> {
             )
         }
     }
+}
+
+/// Resolve a globally unique entity and its uniquely identified installation.
+fn unique_owned<'a, T: 'a, I: Iterator<Item = &'a T>>(
+    project: &'a Project,
+    entities: impl Fn(&'a Installation) -> I,
+) -> Result<(&'a Installation, &'a T), &'static str> {
+    let mut matches = project
+        .installations
+        .iter()
+        .flat_map(|i| entities(i).map(move |v| (i, v)));
+    let value = matches.next().ok_or("dangling structural dependency")?;
+    if matches.next().is_some() {
+        return Err("ambiguous structural dependency identity");
+    }
+    if project
+        .installations
+        .iter()
+        .filter(|i| i.id == value.0.id)
+        .count()
+        != 1
+    {
+        return Err("ambiguous installation ownership");
+    }
+    Ok(value)
+}
+
+/// Walk only the relevant parent chain, iteratively and at most once per identity.
+fn ancestry(
+    project: &Project,
+    start: NameTargetId,
+) -> Result<(u8, Vec<NameTargetId>), &'static str> {
+    use NameTargetId as T;
+    let mut next = Some(start);
+    let mut seen = BTreeSet::new();
+    let mut chain = Vec::new();
+    let mut owner = None;
+    while let Some(target) = next {
+        if !seen.insert(target) {
+            return Err("cyclic structural ancestry");
+        }
+        let (installation, parent) = match target {
+            T::BuildingPart(id) => {
+                let (i, b) = unique_owned(project, |i| {
+                    i.buildings.iter().filter(move |b| b.id.0 == id)
+                })?;
+                (i.id.0, b.parent.map(|id| T::BuildingPart(id.0)))
+            }
+            T::GroupRange(id) => {
+                let (i, r) = unique_owned(project, |i| {
+                    i.group_ranges.iter().filter(move |r| r.id.0 == id)
+                })?;
+                (i.id.0, r.parent.map(|id| T::GroupRange(id.0)))
+            }
+            _ => unreachable!("ancestry accepts only buildings and group ranges"),
+        };
+        if owner.is_some_and(|owner| owner != installation) {
+            return Err("structural ancestor belongs to another installation");
+        }
+        owner = Some(installation);
+        chain.push(target);
+        next = parent;
+    }
+    Ok((owner.expect("nonempty ancestry"), chain))
+}
+
+fn line_owner(project: &Project, id: u32) -> Result<u8, &'static str> {
+    let (installation, line) = unique_owned(project, |i| {
+        i.topology.lines.iter().filter(move |l| l.id.0 == id)
+    })?;
+    let mut areas = project.installations.iter().flat_map(|i| {
+        i.topology.areas.iter().flat_map(move |a| {
+            a.lines
+                .iter()
+                .filter(move |l| **l == line.id)
+                .map(move |_| (i, a))
+        })
+    });
+    let (area_installation, area) = areas.next().ok_or("line has no unique owning area")?;
+    if areas.next().is_some() {
+        return Err("ambiguous line ownership by areas");
+    }
+    let (owner, _) = unique_owned(project, |i| {
+        i.topology.areas.iter().filter(|a| a.id == area.id)
+    })?;
+    if owner.id != installation.id || area_installation.id != installation.id {
+        return Err("line and area belong to different installations");
+    }
+    Ok(installation.id.0)
+}
+
+/// Certify dependencies even when named ancestors are absent from the discovery page.
+fn structural_context(
+    project: &Project,
+    target: NameTargetId,
+) -> Result<(), (EvidenceSourceKind, &'static str)> {
+    use EvidenceSourceKind as E;
+    use NameTargetId as T;
+    let mut kind = if matches!(target, T::Function(_) | T::Device(_)) {
+        E::BuildingLocationPath
+    } else if matches!(target, T::Line(_)) {
+        E::TopologyAddress
+    } else {
+        E::ParentName
+    };
+    let mut check = || -> Result<(), &'static str> {
+        match target {
+            T::BuildingPart(_) | T::GroupRange(_) => {
+                ancestry(project, target)?;
+            }
+            T::Area(id) => {
+                unique_owned(project, |i| {
+                    i.topology.areas.iter().filter(move |a| a.id.0 == id)
+                })?;
+            }
+            T::Line(id) => {
+                line_owner(project, id)?;
+            }
+            T::GroupAddress(id) => {
+                let (i, ga) = unique_owned(project, |i| {
+                    i.group_addresses.iter().filter(move |g| g.id.0 == id)
+                })?;
+                if let Some(range) = ga.range {
+                    let (owner, _) = ancestry(project, T::GroupRange(range.0))?;
+                    if owner != i.id.0 {
+                        return Err("group address range belongs to another installation");
+                    }
+                }
+            }
+            T::Function(id) => {
+                let function = project
+                    .functions
+                    .iter()
+                    .find(|f| f.id.0 == id)
+                    .ok_or("missing function")?;
+                ancestry(project, T::BuildingPart(function.location.0))?;
+            }
+            T::Device(id) => {
+                let mut owner = None;
+                for i in &project.installations {
+                    for b in i
+                        .buildings
+                        .iter()
+                        .filter(|b| b.devices.iter().any(|d| d.0 == id))
+                    {
+                        kind = E::BuildingLocationPath;
+                        let (location_owner, _) = ancestry(project, T::BuildingPart(b.id.0))?;
+                        if owner.is_some_and(|owner| owner != location_owner) {
+                            return Err(
+                                "device location and line belong to different installations",
+                            );
+                        }
+                        owner = Some(location_owner);
+                    }
+                    for l in i
+                        .topology
+                        .lines
+                        .iter()
+                        .filter(|l| l.devices.iter().any(|d| d.0 == id))
+                    {
+                        kind = E::ParentName;
+                        let line_owner = line_owner(project, l.id.0)?;
+                        if owner.is_some_and(|owner| owner != line_owner) {
+                            return Err(
+                                "device location and line belong to different installations",
+                            );
+                        }
+                        owner = Some(line_owner);
+                    }
+                }
+            }
+            T::Project | T::Installation(_) => {}
+        }
+        Ok(())
+    };
+    let result = check();
+    result.map_err(|detail| (kind, detail))
 }
 
 fn building_kind_label(kind: BuildingPartKind) -> &'static str {

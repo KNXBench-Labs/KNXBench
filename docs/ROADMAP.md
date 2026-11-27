@@ -1,13 +1,16 @@
 # Roadmap
 
-## Empty-name wizard backend (26 November 2026; WP-51 partial)
+## Empty-name wizard backend (27 November 2026; WP-51 partial)
 
-After published 51.1a (Project and Function), the authorized 51.1b candidate adds
-validated structural rename commands and exact legacy-name undo for installations,
-all building kinds, areas, lines and group ranges, with core/native-history
-regressions. Coordinator review, scoped gate and delivery remain pending.
-Detection, provenance, recipes and UI remain future work; no additional successor
-is authorized by this slice. See [WP-51](open-work/WP-51-empty-project-object-name-wizard.md).
+Slices 51.1a–51.1c are published: reversible validated name commands, the Q9
+model audit, explicit provenance and read-only missing-name discovery. Slice
+51.2a adds a read-only recipe foundation for all nine Q9 types, using existing
+project text and explicitly associated evidence; absent or ambiguous context
+requires manual input. Independent review and scoped package acceptance of the
+final candidate remain required before publication.
+Selected/edited parent dependencies, preview revision binding, explicit atomic
+Apply and the wizard UI remain future work. This slice does not authorize another
+successor. See [WP-51](open-work/WP-51-empty-project-object-name-wizard.md).
 
 ## Empty-column preferences (23 November 2026; published as PR #141)
 

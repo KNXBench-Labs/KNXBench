@@ -663,3 +663,287 @@ fn invalid_topology_addresses_and_structural_parent_references_are_manual() {
         EvidenceSourceKind::ParentName,
     );
 }
+
+#[test]
+fn review_function_location_cycle_must_refuse() {
+    let mut p = fixture();
+    p.installations[0].buildings[0].parent = Some(BuildingPartId(101));
+    sole_refusal(
+        &row(&p, &[], NameTargetId::Function(1)),
+        EvidenceSourceKind::BuildingLocationPath,
+    );
+}
+
+#[test]
+fn review_function_location_dangling_ancestor_must_refuse() {
+    let mut p = fixture();
+    p.installations[0].buildings[0].parent = Some(BuildingPartId(999));
+    sole_refusal(
+        &row(&p, &[], NameTargetId::Function(1)),
+        EvidenceSourceKind::BuildingLocationPath,
+    );
+}
+
+#[test]
+fn review_function_ambiguous_installation_must_refuse() {
+    let mut p = fixture();
+    let mut other = p.installations[0].clone();
+    other.buildings.clear();
+    other.topology.areas.clear();
+    other.topology.lines.clear();
+    other.group_ranges.clear();
+    other.group_addresses.clear();
+    p.installations.push(other);
+    sole_refusal(
+        &row(&p, &[], NameTargetId::Function(1)),
+        EvidenceSourceKind::BuildingLocationPath,
+    );
+}
+
+#[test]
+fn review_ga_cyclic_range_ancestor_must_refuse() {
+    let mut p = fixture();
+    p.functions[1].members.clear();
+    p.installations[0].group_ranges[0].parent = Some(GroupRangeId(1));
+    sole_refusal(
+        &row(&p, &[], NameTargetId::GroupAddress(1)),
+        EvidenceSourceKind::ParentName,
+    );
+}
+
+#[test]
+fn review_building_dangling_ancestor_must_refuse() {
+    let mut p = fixture();
+    p.installations[0].buildings[1].name.clear();
+    p.installations[0].buildings[0].parent = Some(BuildingPartId(999));
+    sole_refusal(
+        &row(&p, &[], NameTargetId::BuildingPart(101)),
+        EvidenceSourceKind::ParentName,
+    );
+}
+
+#[test]
+fn review_device_ambiguous_topology_ancestor_must_refuse() {
+    let mut p = fixture();
+    let mut a = p.installations[0].topology.areas[0].clone();
+    a.id = AreaId(2);
+    p.installations[0].topology.areas.push(a);
+    sole_refusal(
+        &row(&p, &evidence(), NameTargetId::Device(1)),
+        EvidenceSourceKind::ParentName,
+    );
+}
+
+#[test]
+fn review_fallback_provenance_only_contributors() {
+    let p = fixture();
+    let r = row(&p, &[], NameTargetId::Device(1));
+    assert!(r.provenance.gaps.iter().any(|gap| matches!(
+        gap,
+        EvidenceGap::Missing {
+            kind: EvidenceSourceKind::ProductDesignation,
+            ..
+        }
+    )));
+    assert_eq!(r.proposed_name.as_deref(), Some("Device description"));
+    assert_eq!(r.provenance.origin, NameOrigin::Automatic);
+    assert_eq!(
+        r.provenance.sources,
+        vec![EvidenceContribution {
+            kind: EvidenceSourceKind::DeviceDescription,
+            source_target: Some(NameTargetId::Device(1)),
+            value: "Device description".into(),
+        }]
+    );
+}
+
+#[test]
+fn ga_fallback_has_only_contributing_sources_and_preserves_gaps() {
+    for missing in 0..3 {
+        let mut p = fixture();
+        let missing_kind = match missing {
+            0 => {
+                p.functions[1].members[0].role = None;
+                EvidenceSourceKind::FunctionMemberContext
+            }
+            1 => {
+                p.functions[1].details.name.clear();
+                EvidenceSourceKind::FunctionContext
+            }
+            _ => {
+                p.installations[0].buildings[1].name.clear();
+                EvidenceSourceKind::ParentName
+            }
+        };
+        let before = p.clone();
+        let r = row(&p, &[], NameTargetId::GroupAddress(1));
+        assert_eq!(p, before);
+        assert_eq!(r.proposed_name.as_deref(), Some("GA description"));
+        assert_eq!(r.provenance.origin, NameOrigin::Automatic);
+        assert_eq!(
+            r.provenance.sources,
+            vec![EvidenceContribution {
+                kind: EvidenceSourceKind::GroupAddressDescription,
+                source_target: Some(NameTargetId::GroupAddress(1)),
+                value: "GA description".into(),
+            }]
+        );
+        assert!(r.provenance.gaps.iter().any(|gap| matches!(
+            gap,
+            EvidenceGap::Missing { kind, .. } if *kind == missing_kind
+        )));
+        assert!(r.provenance.gaps.iter().any(|gap| matches!(
+            gap,
+            EvidenceGap::Missing {
+                kind: EvidenceSourceKind::FunctionContext,
+                ..
+            }
+        )));
+    }
+}
+
+#[test]
+fn complete_ga_context_keeps_exact_contributing_sources() {
+    let p = fixture();
+    let before = p.clone();
+    let r = row(&p, &[], NameTargetId::GroupAddress(1));
+    assert_eq!(p, before);
+    assert_eq!(
+        r.proposed_name.as_deref(),
+        Some("House / Kitchen – Light – SwitchOnOff")
+    );
+    assert_eq!(r.provenance.origin, NameOrigin::Automatic);
+    assert!(r.provenance.gaps.is_empty());
+    assert_eq!(
+        r.provenance.sources,
+        vec![
+            (
+                EvidenceSourceKind::ParentName,
+                NameTargetId::BuildingPart(100),
+                "House"
+            ),
+            (
+                EvidenceSourceKind::ParentName,
+                NameTargetId::BuildingPart(101),
+                "Kitchen"
+            ),
+            (
+                EvidenceSourceKind::BuildingLocationPath,
+                NameTargetId::BuildingPart(101),
+                "House / Kitchen"
+            ),
+            (
+                EvidenceSourceKind::FunctionMemberContext,
+                NameTargetId::Function(2),
+                "SwitchOnOff"
+            ),
+            (
+                EvidenceSourceKind::FunctionContext,
+                NameTargetId::Function(2),
+                "Light"
+            ),
+            (
+                EvidenceSourceKind::FunctionContext,
+                NameTargetId::GroupAddress(1),
+                "House / Kitchen – Light – SwitchOnOff"
+            ),
+        ]
+        .into_iter()
+        .map(|(kind, target, value)| EvidenceContribution {
+            kind,
+            source_target: Some(target),
+            value: value.into(),
+        })
+        .collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn structural_checks_ignore_unrelated_invalid_named_contexts() {
+    let mut p = fixture();
+    let mut unrelated = part(900, "Unrelated", BuildingPartType::Building);
+    unrelated.parent = Some(BuildingPartId(900));
+    p.installations[0].buildings.push(unrelated);
+    let mut unrelated = p.installations[0].group_ranges[0].clone();
+    unrelated.id = GroupRangeId(900);
+    unrelated.name = "Unrelated".into();
+    unrelated.parent = Some(unrelated.id);
+    p.installations[0].group_ranges.push(unrelated);
+    exact(&p, &[], NameTargetId::Function(1), "Function description");
+    exact(
+        &p,
+        &evidence(),
+        NameTargetId::Device(1),
+        "House / Kitchen – Actuator",
+    );
+    p.functions[1].members.clear();
+    exact(&p, &[], NameTargetId::GroupAddress(1), "GA description");
+}
+
+#[test]
+fn named_range_ancestors_require_unique_identity_and_same_installation() {
+    for case in 0..3 {
+        let mut p = fixture();
+        p.functions[1].members.clear();
+        let mut parent = p.installations[0].group_ranges[0].clone();
+        parent.id = GroupRangeId(2);
+        parent.name = "Named ancestor".into();
+        p.installations[0].group_ranges[0].parent = Some(parent.id);
+        match case {
+            0 => parent.parent = Some(GroupRangeId(999)),
+            1 => p.installations[0].group_ranges.push(parent.clone()),
+            _ => {
+                let mut other = p.installations[0].clone();
+                other.id = InstallationId(1);
+                other.buildings.clear();
+                other.topology.areas.clear();
+                other.topology.lines.clear();
+                other.group_addresses.clear();
+                other.group_ranges = vec![parent];
+                p.installations.push(other);
+                sole_refusal(
+                    &row(&p, &[], NameTargetId::GroupAddress(1)),
+                    EvidenceSourceKind::ParentName,
+                );
+                continue;
+            }
+        }
+        p.installations[0].group_ranges.push(parent);
+        sole_refusal(
+            &row(&p, &[], NameTargetId::GroupAddress(1)),
+            EvidenceSourceKind::ParentName,
+        );
+    }
+}
+
+#[test]
+fn duplicate_named_topology_area_identity_blocks_device() {
+    let mut p = fixture();
+    let mut duplicate = p.installations[0].topology.areas[0].clone();
+    duplicate.name = "Other area".into();
+    duplicate.lines.clear();
+    p.installations[0].topology.areas.push(duplicate);
+    sole_refusal(
+        &row(&p, &evidence(), NameTargetId::Device(1)),
+        EvidenceSourceKind::ParentName,
+    );
+}
+
+#[test]
+fn device_location_and_topology_must_share_installation_in_either_order() {
+    for reverse in [false, true] {
+        let mut p = fixture();
+        let mut other = p.installations[0].clone();
+        other.id = InstallationId(1);
+        other.buildings.clear();
+        other.group_ranges.clear();
+        other.group_addresses.clear();
+        p.installations[0].topology.areas.clear();
+        p.installations[0].topology.lines.clear();
+        p.installations.push(other);
+        if reverse {
+            p.installations.reverse();
+        }
+        manual(&row(&p, &evidence(), NameTargetId::Device(1)));
+    }
+}

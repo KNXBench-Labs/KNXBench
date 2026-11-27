@@ -2,15 +2,15 @@
 
 ## Empty-name wizard backend (27 November 2026; WP-51 partial)
 
-Slices 51.1a–51.1c are published: reversible validated name commands, the Q9
-model audit, explicit provenance and read-only missing-name discovery. Slice
-51.2a adds a read-only recipe foundation for all nine Q9 types, using existing
-project text and explicitly associated evidence; absent or ambiguous context
-requires manual input. Published as `2867d28da` after independent APPROVE and
-a 14/14 change-scoped package gate with frozen inputs and verified remote readback.
-Selected/edited parent dependencies, preview revision binding, explicit atomic
-Apply and the wizard UI remain future work. This slice does not authorize another
-successor. See [WP-51](open-work/WP-51-empty-project-object-name-wizard.md).
+Slices 51.1a–51.1c and 51.2a–51.2b are published: reversible validated name
+commands, Q9 audit, explicit provenance, read-only detection and recipes, and
+offline preview, parent-dependency invalidation, confirmation tokens and atomic
+`Command::Batch` apply in `knx-edit`. Slice 51.2b is published as `0aa842ee1`
+after independent cross-vendor APPROVE, 2/2 targeted runtime mutant kills and a
+14/14 change-scoped package gate with frozen inputs and verified remote readback.
+Server/API preview wiring, durable native persistence integration and the wizard
+UI remain future work. This slice does not authorize another successor. See
+[WP-51](open-work/WP-51-empty-project-object-name-wizard.md).
 
 ## Empty-column preferences (23 November 2026; published as PR #141)
 

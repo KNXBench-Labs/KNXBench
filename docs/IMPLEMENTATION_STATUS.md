@@ -1,5 +1,21 @@
 # Implementation delivery history
 
+## Missing-name preview and atomic apply (27 November 2026; WP-51.2b published)
+
+Building on published slices 51.1a–51.1c and 51.2a, the new
+`knx-edit::missing_name_apply` module adds offline preview generation,
+parent-dependency invalidation via the shared dependency graph (preserving manual
+child edits), non-blocking duplicate-name warnings, bounded preview payload
+accounting, revision-bound confirmation tokens, the 256-item batch cap (257+
+rejected cleanly), stale-snapshot conflict rejection and single-entry atomic
+`Command::Batch` apply on `CommandStack`, covered by 17 focused integration tests
+and 2/2 targeted runtime mutant kills. Published on main as `0aa842ee1` after
+independent cross-vendor APPROVE and a 14/14 change-scoped package gate (4,220
+Rust passes, 146 ignored; corpus 92/92), frozen inputs and untouched/checked user
+data; live remote readback matched. No server/API routes, durable native
+persistence wiring, wizard UI or save/reopen workflow is added; WP-51 remains
+partial. See [WP-51](open-work/WP-51-empty-project-object-name-wizard.md).
+
 ## Evidence-based name recipes (27 November 2026; WP-51.2a published)
 
 Published slices 51.1a–51.1c provide validated reversible name commands and

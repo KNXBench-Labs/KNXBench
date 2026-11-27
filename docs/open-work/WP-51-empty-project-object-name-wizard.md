@@ -2,7 +2,7 @@
 
 Owner request: 24 November 2026, approved naming-wizard interview decisions
 Q1, Q2 and Q4–Q17; Q18 requests this independent work package.
-Status: Partial in progress — slices 51.1a–51.1c published; slice 51.2a read-only recipe foundation published as `2867d28da` after independent APPROVE and 14/14 scoped gate. Remaining 51.2, 51.3–51.4 and Wizard not complete.
+Status: Partial in progress — slices 51.1a–51.1c and 51.2a–51.2b published (`0aa842ee1` after independent APPROVE and 14/14 scoped gate); server/API wiring, 51.3–51.4 and Wizard not complete.
 Slice 51.1a covers validated, reversible name-only domain commands for Project (`RenameProject` / `RestoreProjectName`) and Project Function (`RenameFunction` / `RestoreFunctionName`), unambiguous Function ID resolution, native working-history snapshot replay/roundtrip coverage, and diagnostic allowlist wiring. Slice 51.1b adds validated structural renames and exact Restore*Name inverses for Installation, all 11 supported BuildingPart kinds, Area, Line and GroupRange. Slice 51.1c records the verified Q9 source/model/name constraints audit and adds the structured provenance data model and deterministic, strictly read-only missing-name detection across all Q9 entity types in `knx-edit::missing_names` (backed by shared `knx_core::names::is_blank_name`). Slice 51.1c did not include recipes or wizard/Apply paths; the bounded 51.2a successor below adds recipes only.
 Blocked by: None (WP-51 and WP-52 are independent).
 
@@ -122,7 +122,7 @@ none is an individually complete product slice, and the Wizard is not complete.
 | 51.1a | Validated, reversible name-only domain commands for Project (`RenameProject`/`RestoreProjectName`) and Project Function (`RenameFunction`/`RestoreFunctionName`), unambiguous Function identity checks, native working-history replay and focused regression tests | Published before 51.1b (publication record at `746778942`; backend foundation only) |
 | 51.1b | Validated structural name-only commands and exact restore inverses; unique installation name resolution; core identity/admission/no-op/batch regressions and native history replay across every supported building kind | Published (`3d335ab7e` / `b57106993`; backend foundation only) |
 | 51.1c (remaining 51.1) | Audit Q9 source/model/name constraints beyond the implemented command paths; define provenance and deterministic missing-name detection without mutating import data | Published as `9c8c4e039`; independent review and 16/16 scoped gate accepted; publication recorded in snapshot archive |
-| 51.2 | Implement all recipes, ambiguity/manual cases, parent dependency invalidation, bounded scan/count/page semantics and preview binding; reuse candidate stack, `Command::Batch`, stale-snapshot guards and durable native write-before-publish | Planned (not started) |
+| 51.2 | Implement all recipes, ambiguity/manual cases, parent dependency invalidation, bounded scan/count/page semantics and preview binding; reuse candidate stack, `Command::Batch`, stale-snapshot guards and durable native write-before-publish | Partial: 51.2a read-only recipes (`2867d28da`) and 51.2b offline preview, parent dependency invalidation, confirmation token and atomic `Command::Batch` apply (`0aa842ee1`, independent APPROVE, 14/14 scoped gate) published in `knx-edit`; server/API plumbing and durable native persistence wiring remain open |
 | 51.3 | Implement entry timing, Later/manual reopen, grouped editable selection, source/context/errors, duplicate warnings, 256 cap and explicit confirmation; reuse Overlay; keyboard/focus, narrow displays and all supported translations; update all Q2 device consumers | Planned (not started) |
 | 51.4 | Integrate native/session-only persistence, save/reopen and Undo, failure/conflict paths and end-to-end acceptance across every supported entity; update affected user/status/limitations docs only with verified results | Planned (not started) |
 
@@ -171,6 +171,26 @@ lifecycle, cross-page collision validation, revision-bound preview, confirmation
 Apply, save/reopen or native undo workflow is claimed for 51.2a. An Automatic
 proposal is not a write authorization or a revision-bound apply plan.
 
+Slice 51.2b implements the offline preview, parent-dependency invalidation,
+confirmation-token and atomic `Command::Batch` apply layer in
+`knx-edit::missing_name_apply` (`crates/knx-edit/src/missing_name_apply.rs`) with
+17 focused integration tests (`crates/knx-edit/tests/it/missing_name_apply.rs`):
+parent-before-child evaluation via the shared dependency graph (preventing
+unselected proposed parents from leaking into child recipes while preserving
+manual child edits), non-blocking duplicate-name warnings without automatic
+suffixing, bounded preview payload accounting (`PreviewBudget` including full
+warning payloads and JSON escaping), revision-bound confirmation tokens, the
+256-item batch cap (rejecting 257+ with zero writes), stale-snapshot conflict
+rejection (`HistoryError::Stale`), and single-entry atomic undoable apply on
+`CommandStack`. Independent cross-vendor final review returned APPROVE (zero
+findings); two targeted runtime mutants (warning payload budget charging and
+`BuildingPart.children` dependency-graph edge) were killed (exit 101) and
+restored in an isolated archive. Published as `0aa842ee1` after 14/14 scoped
+package-gate stages passed (4,220 Rust passes, 146 ignored; corpus 92/92),
+frozen inputs and no touched/unchecked user data; live remote readback matched.
+No server/API routes, durable native write-before-publish wiring, wizard UI or
+end-to-end save/reopen workflow is claimed for 51.2b.
+
 Each row requires recorded evidence at implementation time, using fictional
 fixtures and simulated/offline workflows. No row has been executed for intake.
 
@@ -208,10 +228,11 @@ objects to pass end-to-end acceptance; backend completion alone is insufficient.
 
 ## Open decisions
 
-None at owner level: the naming interview frontier is closed. Slices 51.1a–51.1c and
-the read-only 51.2a foundation are published. Remaining 51.2–51.4 and the Wizard
-remain incomplete. Source-derived details still to establish within
-this plan:
+None at owner level: the naming interview frontier is closed. Slices 51.1a–51.1c
+and 51.2a–51.2b (offline recipes, preview, invalidation and atomic batch apply in
+`knx-edit`) are published. Remaining server/API plumbing, durable persistence
+wiring, 51.3–51.4 and the Wizard remain incomplete. Source-derived details still
+to establish within this plan:
 exact descriptive-text/product-resolution access for every type, validated command
 coverage and history serialization, address/span formatting, scan/page budgets
 and completeness signals, preview invalidation/API plumbing, manual-draft

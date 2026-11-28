@@ -3460,6 +3460,7 @@ export const messages = {
   "missingNames.applied.one": "{count} object was named.",
   "missingNames.applied.other": "{count} objects were named.",
   "missingNames.close": "Close",
+  "missingNames.later": "Later",
   "missingNames.back": "Back to editing",
   "missingNames.preview": "Show preview",
   "missingNames.confirmIdle": "Apply names",

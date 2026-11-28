@@ -81,6 +81,8 @@ export default function MissingNamesWizard(props: {
   /** The server says the shown tree is old: the caller re-reads it. */
   onStale: () => void;
   onClose: () => void;
+  /** Auto-opened: offer "Later" beside Close (the same dismissal). */
+  later?: boolean;
 }) {
   const t = useTranslate();
   const format = useGroupAddressFormat();
@@ -373,6 +375,7 @@ export default function MissingNamesWizard(props: {
     {applied !== null && <p role="status" className="missing-names-done">{t("missingNames.applied", { count: applied })}</p>}
     <footer className="missing-names-actions">
       <button type="button" disabled={busy} onClick={props.onClose}>{t("missingNames.close")}</button>
+      {props.later && <button type="button" data-missing-later disabled={busy} onClick={props.onClose}>{t("missingNames.later")}</button>}
       {preview && applied === null && <button type="button" disabled={busy} onClick={retire}>{t("missingNames.back")}</button>}
       {!preview && applied === null && <button type="button" data-missing-preview disabled={!canPreview}
         onClick={() => void showPreview()}>{t("missingNames.preview")}</button>}

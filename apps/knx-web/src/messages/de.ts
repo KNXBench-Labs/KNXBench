@@ -3348,6 +3348,7 @@ export const messages: Record<MessageKey, string> = {
   "missingNames.applied.one": "{count} Objekt wurde benannt.",
   "missingNames.applied.other": "{count} Objekte wurden benannt.",
   "missingNames.close": "Schließen",
+  "missingNames.later": "Später",
   "missingNames.back": "Zurück zum Bearbeiten",
   "missingNames.preview": "Vorschau anzeigen",
   "missingNames.confirmIdle": "Namen anwenden",

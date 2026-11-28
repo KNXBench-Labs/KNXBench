@@ -57,8 +57,8 @@ beforeEach(() => {
 });
 afterEach(() => { act(() => root.unmount()); host.remove(); vi.unstubAllGlobals(); resetSettingsForTests(); resetUiLanguageForTests(); });
 
-async function render(tree: ProjectTree = TREE) {
-  await act(async () => root.render(<MissingNamesWizard tree={tree} onTreeUpdate={updated} onStale={stale} onClose={closed} />));
+async function render(tree: ProjectTree = TREE, later?: boolean) {
+  await act(async () => root.render(<MissingNamesWizard tree={tree} onTreeUpdate={updated} onStale={stale} onClose={closed} later={later} />));
 }
 const panel = () => document.querySelector(".missing-names-panel") as HTMLElement;
 const button = (selector: string) => panel().querySelector<HTMLButtonElement>(selector)!;
@@ -245,6 +245,25 @@ describe("MissingNamesWizard", () => {
     await click(button("[data-missing-preview]"));
     await act(async () => { panel().dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); });
     expect(closed).toHaveBeenCalled();
+    expect(client.applyMissingNames).not.toHaveBeenCalled();
+    act(() => root.unmount());
+    root = createRoot(host);
+    expect(client.cancelMissingNames).toHaveBeenCalledWith("shown-token");
+  });
+
+  it("shows Later only when the later prop is set", async () => {
+    await render();
+    expect(panel().querySelector("[data-missing-later]")).toBeNull();
+    await render(TREE, true);
+    expect(button("[data-missing-later]").textContent).toBe("Later");
+  });
+
+  it("closes on Later and cancels the shown preview", async () => {
+    await render(TREE, true);
+    await click(entryBox("group_address"));
+    await click(button("[data-missing-preview]"));
+    await click(button("[data-missing-later]"));
+    expect(closed).toHaveBeenCalledTimes(1);
     expect(client.applyMissingNames).not.toHaveBeenCalled();
     act(() => root.unmount());
     root = createRoot(host);

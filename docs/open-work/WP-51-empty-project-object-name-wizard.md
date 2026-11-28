@@ -226,7 +226,12 @@ open or a save/load is running. The Later button appears only for the automatic
 opening; manual reopen from the File menu or command palette is unchanged
 (`features/missingNames/autoOpen.ts`, `useMissingNamesAutoOpen`, wired in
 `finishLoadedProject`). Verification is vitest only (hook and App tests); no
-real-browser run. Open: Q17 read-only (the UI has no read-only signal; the
+real-browser run. Known gap: the auto-open gate sees browser-rendered modals
+(`aria-modal`), the report dialog and App's own file pickers, but not native
+file dialogs opened by other components (group-address CSV, project diff,
+unresolved-program notice, plugin data) in the desktop app, so a late scan could
+open the wizard behind one; the fix needs a shared counter in `filePicker.ts`.
+Open: Q17 read-only (the UI has no read-only signal; the
 predicate `shouldAutoOpen` has a reserved `readOnly` input that is not fed), Q2
 device consumers, narrow-display browser check and 51.4. The 51.3 row stays
 partial and no acceptance-matrix row is checked.

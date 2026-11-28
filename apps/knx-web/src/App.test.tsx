@@ -5103,6 +5103,76 @@ describe("App — automatic missing-name wizard (WP-51.3b)", () => {
       expect(panel()).toBeNull();
     } finally { await act(async () => root.unmount()); }
   });
+
+  // Deferred scans answering while a modal surface App does not flag itself is up.
+  async function pendingScan() {
+    let answer!: (scan: MissingNameScan) => void;
+    const root = await openProject(() => new Promise((resolve) => { answer = resolve; }));
+    return { root, answer: (scan: MissingNameScan) => answer(scan) };
+  }
+
+  it("stays closed when the report dialog opened before the scan answered", async () => {
+    const { root, answer } = await pendingScan();
+    try {
+      await act(async () => host!.querySelector<HTMLButtonElement>("[data-report-problem-open=menu]")!.click());
+      expect(document.querySelector(".report-problem")).not.toBeNull();
+      await act(async () => answer(candidates));
+      expect(panel()).toBeNull();
+      expect(missingNamesScanMock).toHaveBeenCalledTimes(1);
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("stays closed when the catalogue job dialog opened before the scan answered", async () => {
+    const spies = [vi.spyOn(catalogueJobsApi, "admission").mockResolvedValue(activityAdmission),
+      vi.spyOn(catalogueJobsApi, "create").mockResolvedValue(activityCatalogueStatus()),
+      vi.spyOn(catalogueJobsApi, "upload").mockReturnValue(new Promise(() => {})),
+      vi.spyOn(catalogueJobsApi, "status").mockResolvedValue(activityCatalogueStatus())];
+    const { root, answer } = await pendingScan();
+    try {
+      await act(async () => findButton(enMessages["workbench.catalog"]).click());
+      const input = host!.querySelector<HTMLInputElement>('.catalog-workspace input[type="file"]')!;
+      await act(async () => {
+        Object.defineProperty(input, "files", { value: [new File(["x"], "x.knxprod")], configurable: true });
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      await act(async () => findButton(enMessages["catalogJob.start"]).click());
+      await act(async () => host!.querySelector<HTMLButtonElement>(".catalogue-job-root button")!.click());
+      expect(document.querySelector(".catalogue-job-dialog")).not.toBeNull();
+      await act(async () => answer(candidates));
+      expect(panel()).toBeNull();
+      expect(missingNamesScanMock).toHaveBeenCalledTimes(1);
+    } finally { await act(async () => root.unmount()); spies.forEach((spy) => spy.mockRestore()); }
+  });
+
+  it("stays closed while the Save As picker is open, which leaves no trace in the DOM", async () => {
+    let pick!: (path: string | null) => void;
+    filePickerMock.pickSavePath.mockImplementationOnce(() => new Promise((resolve) => { pick = resolve; }));
+    const { root, answer } = await pendingScan();
+    try {
+      await act(async () => findButton(enMessages["toolbar.saveAs"]).click());
+      expect(filePickerMock.pickSavePath).toHaveBeenCalledTimes(1);
+      expect(document.querySelector('[aria-modal="true"]')).toBeNull();
+      await act(async () => answer(candidates));
+      expect(panel()).toBeNull();
+      await act(async () => pick(null));
+      expect(panel()).toBeNull();
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("opens automatically after a manual open was closed before the scan answered", async () => {
+    const { root, answer } = await pendingScan();
+    try {
+      await act(async () => findButton(enMessages["missingNames.palette"]).click());
+      expect(panel()).not.toBeNull();
+      expect(later()).toBeNull();
+      await act(async () => findButton(enMessages["missingNames.close"]).click());
+      expect(panel()).toBeNull();
+      // The manual round trip did not use up the session's automatic open.
+      await act(async () => answer(candidates));
+      expect(panel()).not.toBeNull();
+      expect(later()).not.toBeNull();
+    } finally { await act(async () => root.unmount()); }
+  });
 });
 
 describe("App — project notes workspace", () => {

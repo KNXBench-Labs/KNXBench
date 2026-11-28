@@ -85,6 +85,18 @@ describe("useMissingNamesAutoOpen", () => {
     expect(open).not.toHaveBeenCalled();
   });
 
+  it("does not consume the session's automatic open when a modal blocks the answer", async () => {
+    let answer!: (scan: MissingNameScan) => void;
+    scan.mockReturnValueOnce(new Promise((resolve) => { answer = resolve; }));
+    await run();
+    gate = { overlayOpen: true, saving: false };
+    await act(async () => answer(withCandidate));
+    expect(open).not.toHaveBeenCalled();
+    gate = { overlayOpen: false, saving: false };
+    await run();
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
   it("does not open while saving", async () => {
     gate = { overlayOpen: false, saving: true };
     await run();

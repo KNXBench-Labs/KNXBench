@@ -22,7 +22,8 @@ describe("autoOpen", () => {
     expect(shouldAutoOpen({ ...base, openedFor: tracker.openedFor() })).toBe(false);
     expect(shouldAutoOpen({ ...base, key: "srv|2", openedFor: tracker.openedFor() })).toBe(true);
   });
-  it("is not marked by manual use", () => {
+  // Manual opens never reach the tracker; App.test.tsx proves that end to end.
+  it("starts unmarked, so a session's first automatic check may open", () => {
     const tracker = createAutoOpenTracker();
     expect(tracker.openedFor()).toBeNull();
     expect(shouldAutoOpen({ ...base, openedFor: tracker.openedFor() })).toBe(true);

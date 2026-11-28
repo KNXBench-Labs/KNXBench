@@ -1188,16 +1188,23 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     };
   }, [loading]);
 
+  // Counts App's file pickers in flight; the missing-name auto-open must not appear behind one.
+  const filePickersOpenRef = useRef(0);
+  async function withFilePicker<T>(pick: () => Promise<T>): Promise<T> {
+    filePickersOpenRef.current += 1;
+    try { return await pick(); } finally { filePickersOpenRef.current -= 1; }
+  }
+
   async function pickProject() {
     if (loadingRef.current) return;
-    const path = await pickOpenPath(etsProjectFilter);
+    const path = await withFilePicker(() => pickOpenPath(etsProjectFilter));
     if (!path) return;
     await loadOrAsk(path, "import");
   }
 
   async function openNativeProject() {
     if (loadingRef.current) return;
-    const path = await pickOpenPath(knxdbFilter);
+    const path = await withFilePicker(() => pickOpenPath(knxdbFilter));
     if (!path) return;
     await loadOrAsk(path, "open");
   }
@@ -1292,7 +1299,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       serverIncarnation: snapshotLifetimeRef.current.serverIncarnation,
       revision: snapshotLifetimeRef.current.revision,
     };
-    const path = await pickSavePath(knxdbFilter, "project.knxdb");
+    const path = await withFilePicker(() => pickSavePath(knxdbFilter, "project.knxdb"));
     const unchanged = () => {
       const latestSnapshot = snapshotLifetimeRef.current;
       return pickerScope === projectActivityScope.current && projectSnapshot.serverIncarnation === latestSnapshot.serverIncarnation &&
@@ -1522,11 +1529,16 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   });
 
   // Q4: one place decides what blocks the automatic missing-name wizard.
+  // Besides App's own flags it counts any rendered modal (Overlay, the catalogue
+  // job and report dialogs, the server-mount picker, a maximized flow) and a
+  // file picker in flight, since a native dialog leaves no trace in the DOM.
   function missingNamesAutoOpenGate() {
     const overlayOpen = settingsOpen || historyOpen || pluginDataOpen || missingNamesOpen || storedBusAccessOpen
       || helpOpen || aboutOpen || quitConfirmOpen || paletteOpen || searchOpen || achievementsOpen || newProjectOpen
       || guide.open !== null || nativeExportReviewed !== null || passwordPrompt !== null || replaceConfirm !== null
-      || overwritePrompt !== null || noteDraftGuard !== null || deviceWizard !== null || autosave.secondsRemaining !== null;
+      || overwritePrompt !== null || noteDraftGuard !== null || deviceWizard !== null || autosave.secondsRemaining !== null
+      || reportRequest !== null || filePickersOpenRef.current > 0
+      || document.querySelector('[aria-modal="true"]') !== null;
     const saving = quitSaving || loadingRef.current || activity.getSnapshot().some((entry) =>
       (entry.identity.kind === "save" || entry.identity.kind === "autosave") && !activityTerminal(entry.state));
     return { overlayOpen, saving };

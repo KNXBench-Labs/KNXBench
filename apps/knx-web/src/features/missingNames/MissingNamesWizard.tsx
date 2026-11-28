@@ -5,6 +5,8 @@
  * and only the shown preview can be applied. Totals appear only for a
  * complete scan, duplicates are only warned about, and more than
  * `MAX_MISSING_NAME_SELECTION` entries are never submitted (Q13, Q17).
+ * A response that arrives after a project change or after closing is
+ * discarded, and a preview token it brings is cancelled on the server.
  * Read-only projects: the web UI has no read-only signal (the server sends
  * no flag), so the wizard relies on the server refusing the apply.
  */
@@ -22,8 +24,9 @@ import {
   type NameTargetKind,
 } from "./client";
 import {
-  applyReevaluation, draftParents, duplicateKeys, groupByKind, isParentKind, isSelectable, mergePage, nameProblem,
-  occurrenceKey, selectedDrafts, selectedEntries, setName, setSelected, type Draft, type Drafts,
+  applyReevaluation, draftParents, duplicateKeys, groupByKind, isParentKind, isSelectable, keepReproposals, mergePage,
+  nameProblem, occurrenceKey, selectedDrafts, selectedEntries, setName, setSelected, type Draft, type Drafts,
+  type Reproposals,
 } from "./drafts";
 import "./missingNames.css";
 
@@ -84,6 +87,7 @@ export default function MissingNamesWizard(props: {
   const [scan, setScan] = useState<MissingNameScan | null>(null);
   const [drafts, setDrafts] = useState<Drafts>(new Map());
   const [changedParents, setChangedParents] = useState<ReadonlyMap<string, NameTargetId>>(new Map());
+  const [reproposals, setReproposals] = useState<Reproposals>(new Map());
   const [preview, setPreview] = useState<MissingNamePreview | null>(null);
   const [outdated, setOutdated] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -91,6 +95,8 @@ export default function MissingNamesWizard(props: {
   const [notice, setNotice] = useState<string | null>(null);
   const [applied, setApplied] = useState<number | null>(null);
   const tokenRef = useRef<string | null>(null);
+  // Bumped by a project change and by closing: a response of an older epoch is discarded.
+  const epochRef = useRef(0);
   const binding = treeBinding(props.tree);
 
   function retire() {
@@ -104,12 +110,16 @@ export default function MissingNamesWizard(props: {
     if (firstBinding.current) { firstBinding.current = false; return; }
     if (scan && binding && sameBinding(scan.binding, binding)) return;
     if (applied !== null) return;
+    epochRef.current += 1;
     retire();
     setOutdated(true);
     setProblem({ lead: t("missingNames.stale"), detail: null });
   }, [binding?.serverIncarnation, binding?.projectIncarnation, binding?.snapshotRevision]);
   // Closing the dialog forgets the preview on the server too.
-  useEffect(() => () => { if (tokenRef.current !== null) cancelMissingNames(tokenRef.current); }, []);
+  useEffect(() => () => {
+    epochRef.current += 1;
+    if (tokenRef.current !== null) cancelMissingNames(tokenRef.current);
+  }, []);
   useEffect(() => { void loadPage(0, true); }, []);
 
   function explain(error: unknown, fallback: "missingNames.failed" | "missingNames.scanFailed"): Problem {
@@ -132,8 +142,8 @@ export default function MissingNamesWizard(props: {
       // A page of another snapshot invalidates every draft of the old one.
       const reset = fresh || !scan || !sameBinding(scan.binding, page.binding);
       if (reset && !fresh) setProblem({ lead: t("missingNames.stale"), detail: null });
-      setDrafts((current) => mergePage(reset ? new Map() : current, page.items));
-      if (reset) setChangedParents(new Map());
+      setDrafts((current) => reset ? mergePage(new Map(), page.items) : mergePage(current, page.items, reproposals));
+      if (reset) { setChangedParents(new Map()); setReproposals(new Map()); }
       setScan(page);
       setOutdated(false);
     } catch (error) {
@@ -163,13 +173,17 @@ export default function MissingNamesWizard(props: {
     if (!scan || busy || changedParents.size === 0) return;
     retire();
     setBusy(true); setProblem(null); setNotice(null);
+    const epoch = epochRef.current;
     try {
       const result = await reevaluateMissingNames(scan.binding, [...changedParents.values()], draftParents(drafts));
+      if (epoch !== epochRef.current) return;
       setDrafts((current) => applyReevaluation(current, result));
+      // Children on pages not loaded yet take their re-proposal when their page arrives.
+      setReproposals((current) => keepReproposals(current, result));
       setChangedParents(new Map());
       setNotice(t("missingNames.reevaluated", { count: result.invalidated_targets.length }));
     } catch (error) {
-      setProblem(explain(error, "missingNames.failed"));
+      if (epoch === epochRef.current) setProblem(explain(error, "missingNames.failed"));
     } finally {
       setBusy(false);
     }
@@ -186,12 +200,15 @@ export default function MissingNamesWizard(props: {
     if (!scan || !canPreview) return;
     retire();
     setBusy(true); setProblem(null); setNotice(null);
+    const epoch = epochRef.current;
     try {
       const plan = await previewMissingNames(scan.binding, selectedEntries(drafts));
+      // The project changed or the dialog closed meanwhile: this plan was never shown.
+      if (epoch !== epochRef.current) { cancelMissingNames(plan.token); return; }
       tokenRef.current = plan.token;
       setPreview(plan);
     } catch (error) {
-      setProblem(explain(error, "missingNames.failed"));
+      if (epoch === epochRef.current) setProblem(explain(error, "missingNames.failed"));
     } finally {
       setBusy(false);
     }

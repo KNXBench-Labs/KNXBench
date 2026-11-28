@@ -2,8 +2,8 @@
 import { describe, expect, it } from "vitest";
 import { targetKey } from "./client";
 import {
-  applyReevaluation, draftParents, duplicateKeys, groupByKind, isSelectable, mergePage, nameProblem, occurrenceKey,
-  selectedEntries, setName, setSelected,
+  applyReevaluation, draftParents, duplicateKeys, groupByKind, isSelectable, keepReproposals, mergePage, nameProblem,
+  occurrenceKey, selectedEntries, setName, setSelected,
 } from "./drafts";
 import { proposal } from "./missingNames.test-fixtures";
 
@@ -74,6 +74,19 @@ describe("missing-name drafts", () => {
     expect(drafts.get("line:3")?.proposal.proposed_name).toBe("Hall 1.3");
     expect(drafts.has("line:99")).toBe(false);
     expect(setName(drafts, "line:2", "x").get("line:2")?.recheck).toBeNull();
+  });
+
+  it("seeds a child first seen on a later page from its kept re-proposal", () => {
+    let kept = keepReproposals(new Map(), { invalidated_targets: [line.candidate.target, { kind: "line", id: 3 } as const],
+      proposals: [proposal("line", 2, "Hall 1.2"), proposal("line", 3, "Hall 1.3")] });
+    kept = keepReproposals(kept, { invalidated_targets: [{ kind: "line", id: 3 }], proposals: [] });
+    expect([...kept.keys()]).toEqual(["line:2"]);
+    const drafts = mergePage(new Map(), [line, proposal("line", 3, "1.3"), area], kept);
+    expect(drafts.get("line:2")).toMatchObject({ name: "Hall 1.2", recheck: "updated", edited: false });
+    expect(drafts.get("line:2")?.proposal.proposed_name).toBe("Hall 1.2");
+    expect(drafts.get("line:3")).toMatchObject({ name: "1.3", recheck: null });
+    const edited = setName(drafts, "line:2", "Mine");
+    expect(mergePage(edited, [line], kept).get("line:2")?.name).toBe("Mine");
   });
 
   it("groups page items by kind in project order and keys occurrences apart", () => {

@@ -26,6 +26,11 @@ const closed = vi.fn();
 const stale = vi.fn();
 const BINDING = { serverIncarnation: "srv", projectIncarnation: 3, snapshotRevision: 7 };
 const TREE = { ...renameTree(), server_incarnation: "srv", project_incarnation: 3, snapshot_revision: 7 } as ProjectTree;
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((settle) => { resolve = settle; });
+  return { promise, resolve };
+}
 const refusal = (status: number, kind: string, message: string) => Object.assign(new Error(message), { status, kind });
 
 function scan(items: readonly MissingNameProposal[], options: Partial<{ complete: boolean; offset: number; hasMore: boolean;
@@ -162,6 +167,22 @@ describe("MissingNamesWizard", () => {
     expect(button("[data-missing-preview]").disabled).toBe(false);
   });
 
+  it("re-proposes a dependent child on a page loaded only after Re-evaluate", async () => {
+    client.scanMissingNames.mockResolvedValueOnce(scan([proposal("area", 1, "Area 1")], { hasMore: true }));
+    client.reevaluateMissingNames.mockResolvedValue({ invalidated_targets: [target("group_address", 20)],
+      proposals: [proposal("group_address", 20, "Area 9 Light")] });
+    await render();
+    await type(nameInput("area"), "Area 9");
+    await click(button("[data-missing-reevaluate]"));
+    client.scanMissingNames.mockResolvedValueOnce(scan([proposal("group_address", 20, "Light")], { offset: 1 }));
+    await click([...panel().querySelectorAll<HTMLButtonElement>(".missing-names-pages button")].at(-1)!);
+    expect(nameInput("group_address").value).toBe("Area 9 Light");
+    expect(panel().querySelector("[data-recheck=updated]")).not.toBeNull();
+    await click(entryBox("group_address"));
+    await click(button("[data-missing-preview]"));
+    expect(client.previewMissingNames).toHaveBeenCalledWith(BINDING, [{ target: target("group_address", 20), name: "Area 9 Light" }]);
+  });
+
   it("shows the provenance and gaps of the re-evaluated proposal", async () => {
     client.reevaluateMissingNames.mockResolvedValue({ invalidated_targets: [target("group_address", 10)],
       proposals: [proposal("group_address", 10, null, { gaps: [{ gap: "unselected_parent", parent: target("area", 1) }] })] });
@@ -228,6 +249,35 @@ describe("MissingNamesWizard", () => {
     act(() => root.unmount());
     root = createRoot(host);
     expect(client.cancelMissingNames).toHaveBeenCalledWith("shown-token");
+  });
+
+  it("discards and cancels a preview that answers after the project changed", async () => {
+    const pending = deferred<typeof PREVIEW>();
+    client.previewMissingNames.mockReturnValueOnce(pending.promise);
+    await render();
+    await click(entryBox("group_address"));
+    await click(button("[data-missing-preview]"));
+    await render({ ...TREE, snapshot_revision: 8 });
+    await act(async () => pending.resolve(PREVIEW));
+    expect(panel().querySelector("[data-preview-row]")).toBeNull();
+    expect(button("[data-missing-confirm]").disabled).toBe(true);
+    expect(client.cancelMissingNames).toHaveBeenCalledWith("shown-token");
+    expect(panel().querySelector("[role=alert]")?.textContent).toContain("The project changed");
+    expect(client.applyMissingNames).not.toHaveBeenCalled();
+  });
+
+  it("cancels a preview that answers after the dialog closed", async () => {
+    const pending = deferred<typeof PREVIEW>();
+    client.previewMissingNames.mockReturnValueOnce(pending.promise);
+    await render();
+    await click(entryBox("group_address"));
+    await click(button("[data-missing-preview]"));
+    act(() => root.unmount());
+    root = createRoot(host);
+    expect(client.cancelMissingNames).not.toHaveBeenCalled();
+    await act(async () => pending.resolve(PREVIEW));
+    expect(client.cancelMissingNames).toHaveBeenCalledWith("shown-token");
+    expect(client.applyMissingNames).not.toHaveBeenCalled();
   });
 
   it("retires the preview when a name is edited", async () => {

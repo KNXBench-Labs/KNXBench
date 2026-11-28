@@ -4,7 +4,8 @@
  * one scan binding. Selection never auto-splits or trims to the cap: the
  * view refuses to submit more than `MAX_MISSING_NAME_SELECTION` (Q17).
  * Duplicate names are only warned about, never suffixed (Q13). A parent
- * change re-proposes unedited children and keeps manual edits (Q16).
+ * change re-proposes unedited children and keeps manual edits (Q16); a
+ * child on a page loaded only later starts from its re-proposal.
  */
 import {
   codePoints, isBlankName, NAME_TARGET_KINDS, targetKey, type MissingNameEntry, type MissingNameProposal,
@@ -23,6 +24,8 @@ export type Draft = Readonly<{
 }>;
 export type Drafts = ReadonlyMap<string, Draft>;
 export type NameProblem = "blank" | "tooLong";
+/** Re-evaluated proposals by target key, kept for children whose page is not loaded yet. */
+export type Reproposals = ReadonlyMap<string, MissingNameProposal>;
 
 /** Kinds whose name feeds child suggestions (`build_dependency_graph`); only they trigger reevaluation. */
 export const PARENT_KINDS: ReadonlySet<NameTargetKind> = new Set(["project", "installation", "building_part", "area",
@@ -35,12 +38,20 @@ export function isSelectable(proposal: MissingNameProposal): boolean {
   return proposal.candidate.identity_status.status === "unique";
 }
 
-/** Adds drafts for newly seen page items and keeps every existing draft untouched. */
-export function mergePage(drafts: Drafts, items: readonly MissingNameProposal[]): Drafts {
+/**
+ * Adds drafts for newly seen page items and keeps every existing draft untouched.
+ * A new item with a re-proposal starts from it, not from the scan's outdated suggestion.
+ */
+export function mergePage(drafts: Drafts, items: readonly MissingNameProposal[],
+  reproposals: Reproposals = new Map()): Drafts {
   const next = new Map(drafts);
-  for (const proposal of items) {
-    const key = targetKey(proposal.candidate.target);
-    if (!next.has(key)) next.set(key, { proposal, name: proposal.proposed_name ?? "", edited: false, selected: false, recheck: null });
+  for (const item of items) {
+    const key = targetKey(item.candidate.target);
+    if (next.has(key)) continue;
+    const reproposed = reproposals.get(key);
+    const proposal = reproposed ?? item;
+    next.set(key, { proposal, name: proposal.proposed_name ?? "", edited: false, selected: false,
+      recheck: reproposed ? "updated" : null });
   }
   return next;
 }
@@ -111,6 +122,14 @@ export function applyReevaluation(drafts: Drafts, result: MissingNameReevaluatio
       ? { ...draft, proposal, recheck: "kept" }
       : { ...draft, proposal, name: proposal.proposed_name ?? "", recheck: "updated" });
   }
+  return next;
+}
+
+/** Remembers a reevaluation's proposals for later pages; the latest reevaluation of a target wins. */
+export function keepReproposals(reproposals: Reproposals, result: MissingNameReevaluation): Reproposals {
+  const next = new Map(reproposals);
+  for (const target of result.invalidated_targets) next.delete(targetKey(target));
+  for (const proposal of result.proposals) next.set(targetKey(proposal.candidate.target), proposal);
   return next;
 }
 

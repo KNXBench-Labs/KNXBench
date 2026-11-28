@@ -1272,18 +1272,39 @@ async fn external_knxdb_concurrent_conflict_and_readonly_failure_publish_nothing
     .await;
     assert_eq!(status, StatusCode::OK);
 
+    // Populate undo/redo state: one apply, then one undo -> (0, 1).
+    let (_, seed_scan) = request(&app2, "POST", "/api/missing-names/scan", json!({})).await;
+    let (_, seed_preview) = request(
+        &app2,
+        "POST",
+        "/api/missing-names/preview",
+        preview_body(&seed_scan, "Earlier"),
+    )
+    .await;
+    let (status, _) = request(
+        &app2,
+        "POST",
+        "/api/missing-names/apply",
+        json!({"token": seed_preview["token"], "confirmed": true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        request(&app2, "POST", "/api/undo", Value::Null).await.0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        state2.command_stack.lock().unwrap().history_lengths(),
+        (0, 1)
+    );
+
     let (_, scan2) = request(&app2, "POST", "/api/missing-names/scan", json!({})).await;
     assert_eq!(scan2["readOnly"], false);
     let (_, preview2) = request(
         &app2,
         "POST",
         "/api/missing-names/preview",
-        json!({
-            "serverIncarnation": scan2["serverIncarnation"],
-            "projectIncarnation": scan2["projectIncarnation"],
-            "snapshotRevision": scan2["snapshotRevision"],
-            "entries": [{"target": {"kind": "project"}, "name": "Readonly Fail"}]
-        }),
+        preview_body(&scan2, "Readonly Fail"),
     )
     .await;
     assert_eq!(preview2["readOnly"], false);
@@ -1292,6 +1313,13 @@ async fn external_knxdb_concurrent_conflict_and_readonly_failure_publish_nothing
     let bytes_before = std::fs::read(&ro_native).unwrap();
     std::fs::set_permissions(&ro_native, std::fs::Permissions::from_mode(0o444)).unwrap();
     let before2 = state2.project.lock().unwrap().clone();
+    let (preview_status, preview_err) = request(
+        &app2,
+        "POST",
+        "/api/missing-names/preview",
+        preview_body(&scan2, "Other"),
+    )
+    .await;
     let (status, ro_err) = request(
         &app2,
         "POST",
@@ -1302,15 +1330,48 @@ async fn external_knxdb_concurrent_conflict_and_readonly_failure_publish_nothing
     let bytes_after = std::fs::read(&ro_native).unwrap();
     // Restore writable permissions so tempdir cleanup always succeeds.
     let _ = std::fs::set_permissions(&ro_native, std::fs::Permissions::from_mode(0o644));
+    assert_eq!(
+        preview_status,
+        StatusCode::CONFLICT,
+        "preview: {preview_err}"
+    );
+    assert_eq!(preview_err["kind"], "missingNameReadOnly");
     assert_eq!(status, StatusCode::CONFLICT, "ro_err: {ro_err}");
     assert_eq!(ro_err["kind"], "missingNameReadOnly");
     assert_eq!(state2.project.lock().unwrap().clone(), before2);
     assert_eq!(
         state2.command_stack.lock().unwrap().history_lengths(),
-        (0, 0)
+        (0, 1)
     );
     assert_eq!(bytes_after, bytes_before);
     assert_eq!(disk_generation(&ro_native), generation_before);
+
+    // The refusals did not consume the token: it still applies once writable again.
+    let (status, applied) = request(
+        &app2,
+        "POST",
+        "/api/missing-names/apply",
+        json!({"token": preview2["token"], "confirmed": true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "apply after restore: {applied}");
+    assert_eq!(
+        state2.project.lock().unwrap().as_ref().unwrap().info.name,
+        "Readonly Fail"
+    );
+    assert_eq!(
+        state2.command_stack.lock().unwrap().history_lengths(),
+        (1, 0)
+    );
+}
+
+fn preview_body(scan: &Value, name: &str) -> Value {
+    json!({
+        "serverIncarnation": scan["serverIncarnation"],
+        "projectIncarnation": scan["projectIncarnation"],
+        "snapshotRevision": scan["snapshotRevision"],
+        "entries": [{"target": {"kind": "project"}, "name": name}]
+    })
 }
 
 fn disk_generation(native: &std::path::Path) -> i64 {
@@ -1323,8 +1384,8 @@ fn disk_generation(native: &std::path::Path) -> i64 {
     .unwrap()
 }
 
-/// Opens `name` in a fresh state, saves it as `.knxdb` and makes the file read-only.
-async fn read_only_native(
+/// Opens `name` in a fresh state and saves it as a writable `.knxdb`.
+async fn saved_native(
     name: &str,
 ) -> (
     tempfile::TempDir,
@@ -1342,63 +1403,149 @@ async fn read_only_native(
     )
     .await;
     assert_eq!(status, StatusCode::OK);
-    std::fs::set_permissions(&native, std::fs::Permissions::from_mode(0o444)).unwrap();
     (dir, state, app, native)
 }
 
 #[tokio::test]
 async fn read_only_native_project_scans_but_refuses_preview_and_apply() {
-    let (_dir, state, app, native) = read_only_native("locked.knxdb").await;
-    let generation_before = {
-        let _ = std::fs::set_permissions(&native, std::fs::Permissions::from_mode(0o644));
-        let generation = disk_generation(&native);
-        std::fs::set_permissions(&native, std::fs::Permissions::from_mode(0o444)).unwrap();
-        generation
-    };
+    let (_dir, state, app, native) = saved_native("locked.knxdb").await;
+    let (_, seed_scan) = request(&app, "POST", "/api/missing-names/scan", json!({})).await;
+    let (_, seed) = request(
+        &app,
+        "POST",
+        "/api/missing-names/preview",
+        preview_body(&seed_scan, "Earlier"),
+    )
+    .await;
+    let body = json!({"token": seed["token"], "confirmed": true});
+    assert_eq!(
+        request(&app, "POST", "/api/missing-names/apply", body)
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        request(&app, "POST", "/api/undo", Value::Null).await.0,
+        StatusCode::OK
+    );
+
+    // Valid preview token issued while writable; then the file becomes read-only.
+    let (_, scan0) = request(&app, "POST", "/api/missing-names/scan", json!({})).await;
+    let (_, token_preview) = request(
+        &app,
+        "POST",
+        "/api/missing-names/preview",
+        preview_body(&scan0, "Kept"),
+    )
+    .await;
+    let generation_before = disk_generation(&native);
     let bytes_before = std::fs::read(&native).unwrap();
     let before = state.project.lock().unwrap().clone();
+    std::fs::set_permissions(&native, std::fs::Permissions::from_mode(0o444)).unwrap();
 
-    // Scan and review stay possible and report the read-only project.
     let (status, scan) = request(&app, "POST", "/api/missing-names/scan", json!({})).await;
     assert_eq!(status, StatusCode::OK, "scan: {scan}");
     assert_eq!(scan["readOnly"], true);
     assert_eq!(scan["persistence"], "native-working-history");
     assert!(!scan["items"].as_array().unwrap().is_empty());
 
-    let (status, refused) = request(
+    let (preview_status, refused_preview) = request(
         &app,
         "POST",
         "/api/missing-names/preview",
-        json!({
-            "serverIncarnation": scan["serverIncarnation"],
-            "projectIncarnation": scan["projectIncarnation"],
-            "snapshotRevision": scan["snapshotRevision"],
-            "entries": [{"target": {"kind": "project"}, "name": "Never"}]
-        }),
+        preview_body(&scan, "Never"),
     )
     .await;
-    assert_eq!(status, StatusCode::CONFLICT, "preview: {refused}");
-    assert_eq!(refused["kind"], "missingNameReadOnly");
+    let (apply_status, refused_apply) = request(
+        &app,
+        "POST",
+        "/api/missing-names/apply",
+        json!({"token": token_preview["token"], "confirmed": true}),
+    )
+    .await;
+    let bytes_after = std::fs::read(&native).unwrap();
+    let _ = std::fs::set_permissions(&native, std::fs::Permissions::from_mode(0o644));
+    assert_eq!(preview_status, StatusCode::CONFLICT, "{refused_preview}");
+    assert_eq!(refused_preview["kind"], "missingNameReadOnly");
+    assert_eq!(apply_status, StatusCode::CONFLICT, "{refused_apply}");
+    assert_eq!(refused_apply["kind"], "missingNameReadOnly");
+    assert_eq!(state.project.lock().unwrap().clone(), before);
+    assert_eq!(
+        state.command_stack.lock().unwrap().history_lengths(),
+        (0, 1)
+    );
+    assert_eq!(bytes_after, bytes_before);
+    assert_eq!(disk_generation(&native), generation_before);
 
-    // No token was issued, so a forged apply is refused read-only, not stale.
-    let (status, refused) = request(
+    // The original token survived both refusals.
+    let (status, applied) = request(
+        &app,
+        "POST",
+        "/api/missing-names/apply",
+        json!({"token": token_preview["token"], "confirmed": true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "apply after restore: {applied}");
+    assert_eq!(
+        state.project.lock().unwrap().as_ref().unwrap().info.name,
+        "Kept"
+    );
+    assert_eq!(
+        state.command_stack.lock().unwrap().history_lengths(),
+        (1, 0)
+    );
+}
+
+#[tokio::test]
+async fn symlinked_native_project_with_read_only_target_directory_is_read_only() {
+    let (dir, seed_state, seed_app) = state_with_project(full_q9_project());
+    let target_dir = dir.path().join("target-dir");
+    let link_dir = dir.path().join("link-dir");
+    std::fs::create_dir(&target_dir).unwrap();
+    std::fs::create_dir(&link_dir).unwrap();
+    let real = target_dir.join("real.knxdb");
+    let (status, saved) = request(
+        &seed_app,
+        "POST",
+        "/api/project/save-as",
+        json!({"path": real}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "save-as: {saved}");
+    drop(seed_state);
+    let link = link_dir.join("link.knxdb");
+    std::os::unix::fs::symlink(&real, &link).unwrap();
+    let state = Arc::new(knx_server::AppState::new(dir.path().to_path_buf()));
+    let app = knx_server::app(state.clone(), None);
+    let (status, opened) = request(&app, "POST", "/api/project/open", json!({"path": link})).await;
+    assert_eq!(status, StatusCode::OK, "open via symlink: {opened}");
+    std::fs::set_permissions(&target_dir, std::fs::Permissions::from_mode(0o555)).unwrap();
+
+    let (_, scan) = request(&app, "POST", "/api/missing-names/scan", json!({})).await;
+    let (preview_status, preview) = request(
+        &app,
+        "POST",
+        "/api/missing-names/preview",
+        preview_body(&scan, "Never"),
+    )
+    .await;
+    let (apply_status, apply) = request(
         &app,
         "POST",
         "/api/missing-names/apply",
         json!({"token": "forged", "confirmed": true}),
     )
     .await;
-    assert_eq!(status, StatusCode::CONFLICT, "apply: {refused}");
-    assert_eq!(refused["kind"], "missingNameReadOnly");
-
-    assert_eq!(state.project.lock().unwrap().clone(), before);
+    let _ = std::fs::set_permissions(&target_dir, std::fs::Permissions::from_mode(0o755));
+    assert_eq!(scan["readOnly"], true, "scan: {scan}");
+    assert_eq!(preview_status, StatusCode::CONFLICT, "{preview}");
+    assert_eq!(preview["kind"], "missingNameReadOnly");
+    assert_eq!(apply_status, StatusCode::CONFLICT, "{apply}");
+    assert_eq!(apply["kind"], "missingNameReadOnly");
     assert_eq!(
-        state.command_stack.lock().unwrap().history_lengths(),
-        (0, 0)
+        state.project.lock().unwrap().as_ref().unwrap().info.name,
+        ""
     );
-    assert_eq!(std::fs::read(&native).unwrap(), bytes_before);
-    let _ = std::fs::set_permissions(&native, std::fs::Permissions::from_mode(0o644));
-    assert_eq!(disk_generation(&native), generation_before);
 }
 
 #[tokio::test]

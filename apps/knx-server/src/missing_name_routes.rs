@@ -153,14 +153,18 @@ fn persistence_label(has_store_path: bool) -> &'static str {
 
 /// Q17: a project is read-only when its native `.knxdb` file (or the directory that
 /// holds its working history) is not writable; a session-only project never is.
+/// SQLite follows symlinks and creates its journal next to the resolved file, so the
+/// resolved target and its resolved parent are checked (the literal path if it cannot
+/// be resolved).
 fn native_read_only(path: Option<&std::path::Path>) -> bool {
     let Some(path) = path else { return false };
     let writable =
         |target: &std::path::Path| rustix::fs::access(target, rustix::fs::Access::WRITE_OK).is_ok();
-    let directory = path
+    let resolved = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let directory = resolved
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty());
-    !writable(path) || directory.is_some_and(|parent| !writable(parent))
+    !writable(&resolved) || directory.is_some_and(|parent| !writable(parent))
 }
 
 fn read_only() -> ApiError {

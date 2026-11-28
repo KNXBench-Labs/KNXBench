@@ -36,6 +36,7 @@ function ctx(): CommandContext {
     openCatalog: record("openCatalog"),
     openPluginData: record("openPluginData"),
     openProjectHistory: () => {},
+    openMissingNames: () => {},
     openDevices: () => {},
     openNotes: () => {},
     openStoredBusAccess: () => {},

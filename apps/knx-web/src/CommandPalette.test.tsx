@@ -56,6 +56,7 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     openCatalog: () => {},
     openPluginData: () => {},
     openProjectHistory: () => {},
+    openMissingNames: () => {},
     openDevices: () => {},
     openNotes: () => {},
     openStoredBusAccess: () => {},

@@ -19,6 +19,8 @@ export interface CommandContext {
   openHelp: () => void;
   openCatalog: () => void;
   openProjectHistory: () => void;
+  /** WP-51: the missing-name wizard (needs an open project). */
+  openMissingNames: () => void;
   /** ADR-0136: plug-in data adoption from a source archive (needs an open project). */
   openPluginData: () => void;
   openDevices: () => void;
@@ -122,6 +124,12 @@ export const COMMANDS: PaletteCommand[] = [
     labelKey: "projectHistory.title",
     isEnabled: (ctx) => ctx.tree !== null,
     run: (ctx) => ctx.openProjectHistory(),
+  },
+  {
+    id: "fill-missing-names",
+    labelKey: "missingNames.palette",
+    isEnabled: (ctx) => ctx.tree !== null,
+    run: (ctx) => ctx.openMissingNames(),
   },
   {
     id: "adopt-plugin-data",

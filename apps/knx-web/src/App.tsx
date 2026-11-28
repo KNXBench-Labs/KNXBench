@@ -11,6 +11,7 @@ import { FileMenuContent, FileMenuItem, FileMenuSummary, FileSubmenu } from "./F
 import NavigationSection from "./NavigationSection";
 import ProjectExplorer from "./ProjectExplorer";
 import ProjectHistoryDialog from "./ProjectHistoryDialog";
+import MissingNamesWizard from "./features/missingNames/MissingNamesWizard";
 import NativeExportDialog from "./NativeExportDialog";
 import RenameWorkbench from "./RenameWorkbench";
 import { useCrtInteractions } from "./useCrtInteractions";
@@ -398,6 +399,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   }
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pluginDataOpen, setPluginDataOpen] = useState(false);
+  const [missingNamesOpen, setMissingNamesOpen] = useState(false);
   const [storedBusAccessOpen, setStoredBusAccessOpen] = useState(false);
   const [nativeExportReviewed, setNativeExportReviewed] = useState<ProjectTree | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -1518,6 +1520,14 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     if (!tree || loading) return;
     setPaletteOpen(false); setSearchOpen(false); setHistoryOpen(true);
   }
+  function openMissingNames() {
+    if (!tree || loading) return;
+    setPaletteOpen(false); setSearchOpen(false); setMissingNamesOpen(true);
+  }
+  // The wizard reports an outdated snapshot; re-read the open project so it can rescan.
+  function missingNamesStale() {
+    void api.currentProject().then(handleTreeUpdate, reportError);
+  }
   function historyChanged(newTree: ProjectTree, restored: boolean) {
     if (restored) {
       const latest = treeRef.current;
@@ -1549,6 +1559,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     openHelp: () => requestHelpTopic(DEFAULT_HELP_TOPIC_ID),
     openCatalog: () => openCatalog(null),
     openProjectHistory,
+    openMissingNames,
     openPluginData: () => { if (tree) { setPaletteOpen(false); setPluginDataOpen(true); } },
     openDevices,
     openNotes,
@@ -1697,6 +1708,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       </FileSubmenu>
       <FileSubmenu id="history" label={t("fileMenu.history")}>
       <FileMenuItem onClick={openProjectHistory} disabled={!tree || loading}>{t("projectHistory.title")}</FileMenuItem>
+      <FileMenuItem onClick={openMissingNames} disabled={!tree || loading}>{t("missingNames.palette")}</FileMenuItem>
       <ProjectDiffPanel tree={tree} onError={reportError} onClearErrors={clearErrors} />
       </FileSubmenu>
       <FileSubmenu id="help" label={t("fileMenu.help")}>
@@ -1871,6 +1883,8 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       {paletteOpen && <CommandPalette ctx={ctx} onClose={() => setPaletteOpen(false)} />}
       {tree && storedBusAccessOpen && <StoredBusAccessDialog onClose={() => setStoredBusAccessOpen(false)} />}
       {tree && historyOpen && <ProjectHistoryDialog tree={tree} onTreeUpdate={historyChanged} onClose={() => setHistoryOpen(false)} />}
+      {tree && missingNamesOpen && <MissingNamesWizard tree={tree} onTreeUpdate={(next) => void handleTreeUpdate(next)}
+        onStale={missingNamesStale} onClose={() => setMissingNamesOpen(false)} />}
       {tree && pluginDataOpen && <PluginDataDialog tree={tree} deviceId={null} onTreeUpdate={handleTreeUpdate}
         onOpenHistory={openProjectHistory} onClose={() => setPluginDataOpen(false)} />}
       {nativeExportReviewed && <NativeExportDialog reviewed={nativeExportReviewed} current={tree} onClose={() => setNativeExportReviewed(null)} />}

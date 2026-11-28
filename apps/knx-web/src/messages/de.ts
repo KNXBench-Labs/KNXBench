@@ -3269,6 +3269,7 @@ export const messages: Record<MessageKey, string> = {
   "nameRecipe.confirm.one": "{count} Namen umbenennen",
   "nameRecipe.confirm.other": "{count} Namen umbenennen",
   "missingNames.title": "Unbenannte Objekte benennen",
+  "missingNames.palette": "Fehlende Namen ergänzen…",
   "missingNames.subtitle": "Findet Objekte ohne Namen und schlägt Namen aus dem Projekt vor. Namen prüfen, bearbeiten und auswählen, dann Vorschau ansehen und anwenden.",
   "missingNames.sessionOnly": "Dieses Projekt hat noch keine KNXBench-Datei: Die neuen Namen bleiben in dieser Sitzung, bis Sie das Projekt speichern.",
   "missingNames.scanning": "Suche nach unbenannten Objekten …",

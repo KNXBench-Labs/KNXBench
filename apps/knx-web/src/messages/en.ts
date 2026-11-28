@@ -3381,6 +3381,7 @@ export const messages = {
   "nameRecipe.confirm.one": "Rename {count} name",
   "nameRecipe.confirm.other": "Rename {count} names",
   "missingNames.title": "Name unnamed objects",
+  "missingNames.palette": "Fill missing names…",
   "missingNames.subtitle": "Finds objects without a name and proposes names from the project. Check, edit and select the names, then preview and apply them.",
   "missingNames.sessionOnly": "This project has no KNXBench file yet: the new names stay in this session until you save the project.",
   "missingNames.scanning": "Looking for unnamed objects…",

@@ -45,6 +45,7 @@ function noopCtx(overrides: Partial<CommandContext> = {}): CommandContext {
     openCatalog: () => {},
     openPluginData: () => {},
     openProjectHistory: () => {},
+    openMissingNames: () => {},
     openDevices: () => {},
     openNotes: () => {},
     openStoredBusAccess: () => {},
@@ -79,6 +80,16 @@ describe("command enablement", () => {
     expect(command!.isEnabled(noopCtx())).toBe(false);
     let opened = false;
     const ctx = { ...noopCtx({ tree: fakeTree(false, false) }), openProjectHistory: () => { opened = true; } };
+    expect(command!.isEnabled(ctx)).toBe(true);
+    command!.run(ctx);
+    expect(opened).toBe(true);
+  });
+  it("offers Fill missing names only with an open project and opens the wizard", () => {
+    const command = COMMANDS.find((entry) => entry.id === "fill-missing-names");
+    expect(command, "the missing-name wizard needs a palette entry").toBeDefined();
+    expect(command!.isEnabled(noopCtx())).toBe(false);
+    let opened = false;
+    const ctx = { ...noopCtx({ tree: fakeTree(false, false) }), openMissingNames: () => { opened = true; } };
     expect(command!.isEnabled(ctx)).toBe(true);
     command!.run(ctx);
     expect(opened).toBe(true);
@@ -157,7 +168,7 @@ describe("command enablement", () => {
 
   it("lists every command in palette order, with an unconditionally enabled first entry", () => {
     expect(COMMANDS.map((c) => c.id)).toEqual([
-      "new-project", "open-project", "open-native", "save", "save-as", "undo", "redo", "project-history", "adopt-plugin-data", "search",
+      "new-project", "open-project", "open-native", "save", "save-as", "undo", "redo", "project-history", "fill-missing-names", "adopt-plugin-data", "search",
       "open-log", "open-bus-monitor", "open-settings", "open-diagnostics-window",
       "open-catalog", "open-devices", "open-notes", "stored-bus-access", "add-device", "report-problem", "show-introduction", "open-achievements", "open-help",
     ]);
@@ -229,6 +240,7 @@ describe("command enablement", () => {
       tree: null,
       openCatalog: () => opened.push("catalog"),
       openProjectHistory: () => {},
+    openMissingNames: () => {},
       openDevices: () => {},
       openNotes: () => {},
       addDevice: () => opened.push("add-device"),

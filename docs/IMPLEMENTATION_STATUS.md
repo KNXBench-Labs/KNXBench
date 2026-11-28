@@ -1,5 +1,16 @@
 # Implementation delivery history
 
+## Missing-name wizard dialog and manual entry (28 November 2026; WP-51.3a candidate)
+
+The web UI adds the missing-name wizard dialog (scan pages, editable selection,
+preview, explicit Apply within the 256 cap) and a manual “Fill missing names”
+entry in the File menu and command palette, enabled with an open project;
+English and German texts. Verified by vitest and TypeScript checks only, no
+real-browser run. Automatic opening after import/open, Later, Q2 device-name
+consumers, the Q17 read-only rule (no UI or server read-only signal exists) and
+51.4 persistence acceptance remain open; WP-51 remains partial. See
+[WP-51](open-work/WP-51-empty-project-object-name-wizard.md).
+
 ## Missing-name server API and native apply (28 November 2026; WP-51.2c published)
 
 `knx-app` now exposes facades for missing-name scan, recipes and apply, and

@@ -172,6 +172,11 @@ vi.mock("./features/rtf/client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./features/rtf/client")>()),
   createInstructionClient: () => instructionClientMock,
 }));
+const missingNamesScanMock = vi.hoisted(() => vi.fn(() => new Promise(() => {})));
+vi.mock("./features/missingNames/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./features/missingNames/client")>()),
+  scanMissingNames: missingNamesScanMock,
+}));
 vi.mock("./features/notes/client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./features/notes/client")>()),
   createNotesClient: () => notesClientMock,
@@ -1941,7 +1946,7 @@ describe("App — the File menu by keyboard alone", () => {
         "Monitoring export…",
         "Export documentation…",
       ],
-      ["Project history", "Compare with…"],
+      ["Project history", "Fill missing names…", "Compare with…"],
       [
         // DIAG-03: the one report entry; the device support report became a shortcut into it.
         "Report problem…",
@@ -5014,6 +5019,22 @@ describe("App project-history restore publication", () => {
       expect(host!.querySelector(".dashboard")).not.toBeNull();
       expect(host!.querySelector(".devices-count-link")?.textContent).toBe("0");
       expect(apiMock.restoreProjectVersion).toHaveBeenCalledTimes(1);
+    } finally { await act(async () => root.unmount()); }
+  });
+});
+
+describe("App — Fill missing names entry", () => {
+  it("opens the missing-name wizard from the File menu once a project is open", async () => {
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxdb");
+    apiMock.openProject.mockResolvedValue(treeFromProcess(baseTree(), "names-parent", 3));
+    const root = await renderApp();
+    try {
+      expect(findButton(enMessages["missingNames.palette"]).disabled).toBe(true);
+      await act(async () => host!.querySelector<HTMLButtonElement>('[aria-labelledby="welcome-native-title"]')!.click());
+      expect(document.querySelector(".missing-names-panel")).toBeNull();
+      await act(async () => findButton(enMessages["missingNames.palette"]).click());
+      expect(document.querySelector(".missing-names-panel")).not.toBeNull();
+      expect(missingNamesScanMock).toHaveBeenCalled();
     } finally { await act(async () => root.unmount()); }
   });
 });

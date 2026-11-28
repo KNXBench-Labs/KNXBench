@@ -124,6 +124,7 @@ describe("ONBOARDING_TASKS", () => {
       openCatalog: record("openCatalog"),
       openPluginData: record("openPluginData"),
       openProjectHistory: () => {},
+      openMissingNames: () => {},
       openDevices: () => {},
       openNotes: () => {},
       openStoredBusAccess: () => {},

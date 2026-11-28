@@ -12,6 +12,8 @@ import NavigationSection from "./NavigationSection";
 import ProjectExplorer from "./ProjectExplorer";
 import ProjectHistoryDialog from "./ProjectHistoryDialog";
 import MissingNamesWizard from "./features/missingNames/MissingNamesWizard";
+import { useMissingNamesAutoOpen } from "./features/missingNames/useMissingNamesAutoOpen";
+import { autoOpenKey } from "./features/missingNames/autoOpen";
 import NativeExportDialog from "./NativeExportDialog";
 import RenameWorkbench from "./RenameWorkbench";
 import { useCrtInteractions } from "./useCrtInteractions";
@@ -25,7 +27,7 @@ import StructureWorkspace, { type StructureView } from "./StructureWorkspace";
 import CatalogBrowser from "./CatalogBrowser";
 import { ActivityProvider, useActivityController } from "./ActivityContext";
 import ActivityFooter from "./ActivityFooter";
-import { projectActivityContext, type ActivityHandle } from "./activityController";
+import { activityTerminal, projectActivityContext, type ActivityHandle } from "./activityController";
 import { collectDevices, projectContextKey } from "./treeUtils";
 import { observeCatalogueActivity } from "./catalogueActivity";
 import { CatalogueJobsProvider, CatalogueJobsRootNotice, useCatalogueJobs } from "./CatalogueJobsContext";
@@ -400,6 +402,8 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pluginDataOpen, setPluginDataOpen] = useState(false);
   const [missingNamesOpen, setMissingNamesOpen] = useState(false);
+  // Q4: the automatic open carries a Later button; a manual open does not.
+  const [missingNamesAutoOpened, setMissingNamesAutoOpened] = useState(false);
   const [storedBusAccessOpen, setStoredBusAccessOpen] = useState(false);
   const [nativeExportReviewed, setNativeExportReviewed] = useState<ProjectTree | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -1046,6 +1050,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     setLoadSnapshot(null);
     pushFun(path === null ? t("loadProgress.recovered") : t("loadProgress.succeeded", { source: fileNameOf(path) }));
     emitAchievementEvent({ type: "projectOpened" });
+    checkMissingNames(loadedTree);
     if (imported) {
       emitAchievementEvent({
         type: "etsImported",
@@ -1516,13 +1521,28 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     onSaveFailed: () => pushError(t("autosave.failed"), { serverText: false }),
   });
 
+  // Q4: one place decides what blocks the automatic missing-name wizard.
+  function missingNamesAutoOpenGate() {
+    const overlayOpen = settingsOpen || historyOpen || pluginDataOpen || missingNamesOpen || storedBusAccessOpen
+      || helpOpen || aboutOpen || quitConfirmOpen || paletteOpen || searchOpen || achievementsOpen || newProjectOpen
+      || guide.open !== null || nativeExportReviewed !== null || passwordPrompt !== null || replaceConfirm !== null
+      || overwritePrompt !== null || noteDraftGuard !== null || deviceWizard !== null || autosave.secondsRemaining !== null;
+    const saving = quitSaving || loadingRef.current || activity.getSnapshot().some((entry) =>
+      (entry.identity.kind === "save" || entry.identity.kind === "autosave") && !activityTerminal(entry.state));
+    return { overlayOpen, saving };
+  }
+  const checkMissingNames = useMissingNamesAutoOpen({
+    currentKey: () => treeRef.current ? autoOpenKey(treeRef.current) : null,
+    gate: missingNamesAutoOpenGate,
+    open: () => { setMissingNamesAutoOpened(true); setMissingNamesOpen(true); },
+  });
   function openProjectHistory() {
     if (!tree || loading) return;
     setPaletteOpen(false); setSearchOpen(false); setHistoryOpen(true);
   }
   function openMissingNames() {
     if (!tree || loading) return;
-    setPaletteOpen(false); setSearchOpen(false); setMissingNamesOpen(true);
+    setPaletteOpen(false); setSearchOpen(false); setMissingNamesAutoOpened(false); setMissingNamesOpen(true);
   }
   // The wizard reports an outdated snapshot; re-read the open project so it can rescan.
   function missingNamesStale() {
@@ -1884,7 +1904,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
       {tree && storedBusAccessOpen && <StoredBusAccessDialog onClose={() => setStoredBusAccessOpen(false)} />}
       {tree && historyOpen && <ProjectHistoryDialog tree={tree} onTreeUpdate={historyChanged} onClose={() => setHistoryOpen(false)} />}
       {tree && missingNamesOpen && <MissingNamesWizard tree={tree} onTreeUpdate={(next) => void handleTreeUpdate(next)}
-        onStale={missingNamesStale} onClose={() => setMissingNamesOpen(false)} />}
+        onStale={missingNamesStale} later={missingNamesAutoOpened} onClose={() => setMissingNamesOpen(false)} />}
       {tree && pluginDataOpen && <PluginDataDialog tree={tree} deviceId={null} onTreeUpdate={handleTreeUpdate}
         onOpenHistory={openProjectHistory} onClose={() => setPluginDataOpen(false)} />}
       {nativeExportReviewed && <NativeExportDialog reviewed={nativeExportReviewed} current={tree} onClose={() => setNativeExportReviewed(null)} />}

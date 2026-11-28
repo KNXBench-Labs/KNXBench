@@ -20,6 +20,7 @@ import type { DeviceNode } from "./bindings/DeviceNode";
 import type { DeviceDetail } from "./bindings/DeviceDetail";
 import type { LogEntry } from "./api";
 import type { BoundDeviceComparison } from "./deviceComparisons";
+import type { MissingNameScan } from "./features/missingNames/client";
 const comparisonAdoption = vi.hoisted(() => ({ previewComparisonAdoption: vi.fn(), applyComparisonAdoption: vi.fn() }));
 vi.mock("./comparisonAdoptionApi", async (original) => ({ ...await original<typeof import("./comparisonAdoptionApi")>(), ...comparisonAdoption }));
 import { messages as enMessages } from "./messages/en";
@@ -5035,6 +5036,71 @@ describe("App — Fill missing names entry", () => {
       await act(async () => findButton(enMessages["missingNames.palette"]).click());
       expect(document.querySelector(".missing-names-panel")).not.toBeNull();
       expect(missingNamesScanMock).toHaveBeenCalled();
+    } finally { await act(async () => root.unmount()); }
+  });
+});
+
+describe("App — automatic missing-name wizard (WP-51.3b)", () => {
+  const candidates = { items: [{ target: { kind: "device", id: 1 } }] } as unknown as MissingNameScan;
+  const none = { items: [] } as unknown as MissingNameScan;
+  const panel = () => document.querySelector(".missing-names-panel");
+  const later = () => document.querySelector<HTMLButtonElement>("[data-missing-later]");
+  // Drop queued answers a closed wizard never asked for, so they cannot leak into the next test.
+  afterEach(() => {
+    missingNamesScanMock.mockReset();
+    missingNamesScanMock.mockImplementation(() => new Promise(() => {}));
+  });
+  async function openProject(scan: () => Promise<MissingNameScan>) {
+    filePickerMock.pickOpenPath.mockResolvedValue("/project.knxdb");
+    apiMock.openProject.mockResolvedValue({ ...treeFromProcess(baseTree(), "auto-parent", 3), project_incarnation: 1 });
+    // First the automatic check, then the wizard's own scan; a failed one leaves the wizard idle.
+    missingNamesScanMock.mockImplementationOnce(scan)
+      .mockImplementationOnce(() => Promise.reject(new Error("wizard scan")));
+    const root = await renderApp();
+    await act(async () => host!.querySelector<HTMLButtonElement>('[aria-labelledby="welcome-native-title"]')!.click());
+    return root;
+  }
+
+  it("opens with Later after a project with candidates loads, once per project session", async () => {
+    const root = await openProject(async () => candidates);
+    try {
+      expect(missingNamesScanMock).toHaveBeenCalledWith({ offset: 0, limit: 1 });
+      expect(panel()).not.toBeNull();
+      await act(async () => later()!.click());
+      expect(panel()).toBeNull();
+      // A manual reopen shows no Later and does not re-arm the automatic open.
+      await act(async () => findButton(enMessages["missingNames.palette"]).click());
+      expect(panel()).not.toBeNull();
+      expect(later()).toBeNull();
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("stays closed when the project has no candidate", async () => {
+    const root = await openProject(async () => none);
+    try {
+      expect(missingNamesScanMock).toHaveBeenCalledTimes(1);
+      expect(panel()).toBeNull();
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("stays closed and silent when the scan fails", async () => {
+    const root = await openProject(async () => { throw new Error("scan offline"); });
+    try {
+      expect(panel()).toBeNull();
+      expect(document.body.textContent).not.toContain("scan offline");
+    } finally { await act(async () => root.unmount()); }
+  });
+
+  it("stays closed when another overlay opened before the scan answered", async () => {
+    let answer!: (scan: MissingNameScan) => void;
+    const root = await openProject(() => new Promise((resolve) => { answer = resolve; }));
+    try {
+      await act(async () => {
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }));
+      });
+      expect(host!.querySelector(".search-panel")).not.toBeNull();
+      await act(async () => answer(candidates));
+      expect(panel()).toBeNull();
     } finally { await act(async () => root.unmount()); }
   });
 });

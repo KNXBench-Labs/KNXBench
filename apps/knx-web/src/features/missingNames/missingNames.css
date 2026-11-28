@@ -1,0 +1,68 @@
+/* WP-51.3a: the missing-name wizard dialog (`MissingNamesWizard.tsx`). */
+.search-panel.missing-names-panel {
+  width: min(900px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  align-self: flex-start;
+  box-sizing: border-box;
+  overflow: auto;
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+  color: var(--knx-foreground);
+}
+.missing-names-heading h2 { margin: 0; font-size: 1.35rem; overflow-wrap: anywhere; }
+.missing-names-heading p { margin: 8px 0 0; color: var(--knx-muted); line-height: 1.5; }
+.missing-names-session { margin: 0; padding: 10px 14px; border-radius: var(--knx-radius-card);
+  border: 1px solid var(--knx-border); line-height: 1.5; }
+.missing-names-scan { display: grid; gap: 12px; min-width: 0; }
+.missing-names-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.missing-names-summary h3 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
+.missing-names-summary button { margin-left: auto; }
+.missing-names-badge { padding: 2px 8px; border-radius: 999px; border: 1px solid var(--knx-border);
+  color: var(--knx-muted); font-size: 0.85em; }
+.missing-names-group h4 { margin: 0 0 6px; font-size: 0.95rem; }
+.missing-names-group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.missing-names-entry { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px;
+  border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); }
+.missing-names-entry > input[type="checkbox"] { margin-top: 6px; }
+.missing-names-entry-body { display: grid; gap: 4px; min-width: 0; flex: 1; }
+.missing-names-name { width: 100%; min-width: 0; box-sizing: border-box; }
+.missing-names-meta { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--knx-muted);
+  font-size: 0.85em; overflow-wrap: anywhere; }
+.missing-names-id { font-variant-numeric: tabular-nums; }
+.missing-names-gaps { margin: 0; padding-left: 18px; color: var(--knx-muted); font-size: 0.85em; }
+.missing-names-note { margin: 0; color: var(--knx-muted); font-size: 0.85em; }
+.missing-names-warning { margin: 0; font-size: 0.85em; color: var(--knx-warning-color, var(--knx-foreground)); }
+.missing-names-entry .field-error,
+.missing-names-scan .field-error { margin: 0; }
+.missing-names-pages { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.missing-names-reevaluate { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.missing-names-reevaluate p,
+.missing-names-selected { margin: 0; color: var(--knx-muted); line-height: 1.5; }
+.missing-names-problem { padding: 12px 14px; border-radius: var(--knx-radius-card); border: 1px solid var(--knx-error-color);
+  line-height: 1.5; overflow-wrap: anywhere; }
+.missing-names-problem strong { color: var(--knx-error-color); }
+.missing-names-problem p { margin: 8px 0; }
+.missing-names-problem small { color: var(--knx-muted); }
+.missing-names-preview h3 { margin: 0 0 8px; font-size: 1rem; }
+.missing-names-preview-rows { list-style: none; margin: 0; padding: 0; max-height: 40vh; overflow: auto;
+  border: 1px solid var(--knx-border); border-radius: var(--knx-radius-card); }
+.missing-names-preview-rows li { display: grid; grid-template-columns: minmax(8em, 1fr) minmax(0, 1fr) auto minmax(0, 1.5fr);
+  gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--knx-border); overflow-wrap: anywhere; }
+.missing-names-unnamed { color: var(--knx-muted); font-style: italic; }
+.missing-names-warnings h4 { margin: 12px 0 4px; font-size: 0.95rem; }
+.missing-names-warnings ul { margin: 0; padding-left: 18px; }
+.missing-names-hint,
+.missing-names-done { color: var(--knx-muted); line-height: 1.5; }
+.missing-names-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.missing-names-actions button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+/* The one button that changes the project looks like it: `primary-action`. */
+@media (max-width: 560px) {
+  .search-panel.missing-names-panel { padding: 16px; }
+  .missing-names-summary button { margin-left: 0; }
+  .missing-names-preview-rows li { grid-template-columns: minmax(0, 1fr); }
+  .missing-names-preview-rows li > [aria-hidden="true"] { display: none; }
+  .missing-names-actions { justify-content: stretch; }
+  .missing-names-actions button { flex: 1 1 140px; }
+}

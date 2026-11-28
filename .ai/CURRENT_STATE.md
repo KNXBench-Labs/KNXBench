@@ -30,6 +30,8 @@ Release freeze: released by claude-release-alpha23 (`v0.1.0-alpha.23` at `81c6bc
 - WP-37 open-work doc + LEDGER updated on `work/wp37-modules-docs-20261118`; PR open, merge next. No bus/hardware/release/deploy.
 ## Retained boundaries (STANDING; observed 2026-11-02 20:47 CET)
 - Long-standing STANDING acceptance/reference sections live in `.ai/archive/` per `.ai/archive/README.md`; root intentionally stale/dirty, foreign tracks preserved, private bytes stay private.
+## WP-51.2c server API and native apply (PARKED; observed 2026-11-28)
+- Published on `origin/main` as `c6c6cfbcf` (fast-forward from `019961da9`): `knx-app` facades, server routes, native write-before-publish apply, HTTP tests. Independent re-review APPROVE; change-scoped package gate green (4,234 Rust, corpus 92/92). Next: 51.3 wizard UI needs an explicit owner Go; WP-52 has no implementation Go.
 ## WP-51 missing-name detection successor (STANDING; owner WP-51.1c coordinator; observed 2026-11-26)
 - Bounded slice 51.1c on `work/wp51-1c-missing-name-detection-20261126` from verified `origin/main` base `b57106993`. Scope: Q9 nine-category audit, shared `is_blank_name` predicate in `knx-core`, typed serde-tagged Q6 provenance model and deterministic read-only missing-name detection (`knx-edit::missing_names`), plus bundled `knx-edit` integration tests (`tests/it/main.rs`). No wizard UI, recipes, apply/write paths, or WP-52 implementation.
 - Independent Claude reviews approved both the feature commit (`21ef93b7b`, five non-blocking MINORs recorded for follow-up hardening) and the formatting/test-bundle delta (`9c8c4e039`, zero findings, 7/7 focused `knx-edit` integration tests green).

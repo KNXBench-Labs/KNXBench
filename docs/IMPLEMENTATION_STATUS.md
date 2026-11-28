@@ -1,5 +1,16 @@
 # Implementation delivery history
 
+## Missing-name server API and native apply (28 November 2026; WP-51.2c published)
+
+`knx-app` now exposes facades for missing-name scan, recipes and apply, and
+`knx-server` serves them through `missing_name_routes.rs`. Apply persists
+natively with write-before-publish semantics on the existing undo stack, and
+product-hardware conflicts stay manual. Covered by HTTP integration tests; the
+change-scoped package gate passed (4,234 Rust passes, 146 ignored; corpus
+92/92) after independent re-review APPROVE. Published as `c6c6cfbcf`. No wizard
+UI, acceptance matrix or bus access is added; WP-51 remains partial. See
+[WP-51](open-work/WP-51-empty-project-object-name-wizard.md).
+
 ## Missing-name preview and atomic apply (27 November 2026; WP-51.2b published)
 
 Building on published slices 51.1a–51.1c and 51.2a, the new

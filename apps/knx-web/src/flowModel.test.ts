@@ -11,6 +11,7 @@ import {
   currentBadges,
   expireSlots,
   nextExpiryAt,
+  labelSnapshotDevices,
   provideContext,
   type FlowModel,
   type FlowRowInput,
@@ -79,14 +80,16 @@ describe("flow reducer — participants", () => {
     expect(model.nodes.has("d:4")).toBe(false);
   });
 
-  it("labels project devices through the resolver, defaulting to the raw name", () => {
+  it("labels snapshot devices before the model, keeping it cloneable and the raw name by default", () => {
     const devices = [device(1, IA(1, 1, 1), "Switch"), device(2, IA(1, 1, 2), " ")];
     const groups = [group(LIGHT, [member(1, { direction: "Send" }), member(2)])];
     const raw = ready("1", devices, groups);
     admitRows(raw, [row(1)], 1000);
     expect(raw.nodes.get("d:2")).toMatchObject({ kind: "device", label: " " });
-    const model = createFlowModel(IDENTITY, undefined, (d) => (d.name.trim() === "" ? `Unnamed ${d.id}` : d.name));
-    provideContext(model, "1", snapshot("1", devices, groups), 0);
+    const model = createFlowModel(IDENTITY);
+    const label = (d: { id: number; name: string }) => (d.name.trim() === "" ? `Unnamed ${d.id}` : d.name);
+    provideContext(model, "1", labelSnapshotDevices(snapshot("1", devices, groups), label), 0);
+    expect(() => structuredClone(model)).not.toThrow();
     admitRows(model, [row(1)], 1000);
     expect(model.nodes.get("d:1")).toMatchObject({ label: "Switch" });
     expect(model.nodes.get("d:2")).toMatchObject({ kind: "device", label: "Unnamed 2" });

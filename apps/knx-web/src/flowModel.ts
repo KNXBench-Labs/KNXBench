@@ -191,19 +191,15 @@ export interface FlowModel {
   leader: string | null;
   /** Fresh admitted rows, oldest first, bounded by `maxEvents`. */
   events: FlowEvent[];
-  /** The shown label of a project device (display only, e.g. the unnamed fallback). */
-  deviceLabel: (device: { id: number; name: string }) => string;
 }
 
 export function createFlowModel(
   identity: { serverIncarnation: string; sessionId: number },
   limits: FlowModelLimits = DEFAULT_FLOW_LIMITS,
-  deviceLabel: (device: { id: number; name: string }) => string = (device) => device.name,
 ): FlowModel {
   return {
     identity,
     limits,
-    deviceLabel,
     highWaterSeq: -1,
     contexts: new Map(),
     pending: [],
@@ -254,6 +250,17 @@ function participants(snapshot: FlowSnapshot, projectScope?: string): FlowContex
  * of another session, server or generation is refused (`false`); a context
  * that is already known is kept. Queued rows are admitted in sequence order.
  */
+/**
+ * The snapshot with each device name replaced by its shown label (e.g. the unnamed
+ * fallback). Display only; resolved before the model so the model stays plain,
+ * cloneable data.
+ */
+export function labelSnapshotDevices(
+  snapshot: FlowSnapshot, label: (device: { id: number; name: string }) => string,
+): FlowSnapshot {
+  return { ...snapshot, devices: snapshot.devices.map((device) => ({ ...device, name: label({ id: device.deviceId, name: device.name }) })) };
+}
+
 export function provideContext(model: FlowModel, generation: string, snapshot: FlowSnapshot | null, nowMs: number, projectScope?: string): boolean {
   if (snapshot !== null) {
     const { serverIncarnation, sessionId } = model.identity;
@@ -333,10 +340,10 @@ function ensureNode(model: FlowModel, node: FlowNode): boolean {
   return true;
 }
 
-function deviceNode(context: ParticipantContext, deviceId: number, label: FlowModel["deviceLabel"]): FlowNode {
+function deviceNode(context: ParticipantContext, deviceId: number): FlowNode {
   const device = context.devicesById.get(deviceId);
   return device
-    ? { id: `d:${deviceId}`, kind: "device", label: label({ id: deviceId, name: device.name }), deviceId }
+    ? { id: `d:${deviceId}`, kind: "device", label: device.name, deviceId }
     : { id: `d:${deviceId}`, kind: "unknownDevice", label: `#${deviceId}`, deviceId };
 }
 
@@ -363,9 +370,7 @@ interface Resolution {
   gaLabel: string;
 }
 
-function resolve(
-  entry: QueuedRow, context: ParticipantContext | { kind: "raw"; reason: RawReason }, label: FlowModel["deviceLabel"],
-): Resolution {
+function resolve(entry: QueuedRow, context: ParticipantContext | { kind: "raw"; reason: RawReason }): Resolution {
   const { row, sourceRaw, destinationRaw } = entry;
   const gaLabel = groupLabel(context, destinationRaw, row.destination);
   const groupNode: FlowNode = { id: `g:${destinationRaw}`, kind: "group", label: gaLabel, gaRaw: destinationRaw, ambiguous: false };
@@ -382,7 +387,7 @@ function resolve(
   let source: FlowNode;
   let sourceLabel = row.source;
   if (holders.length === 1) {
-    source = { ...deviceNode(context, holders[0], label), address: row.source };
+    source = { ...deviceNode(context, holders[0]), address: row.source };
     sourceLabel = `${source.label} (${row.source})`;
   } else if (holders.length > 1) {
     source = { id: `ia:${sourceRaw}`, kind: "ambiguousSource", label: row.source, address: row.source, candidates: [...holders] };
@@ -396,7 +401,7 @@ function resolve(
   const excluded = new Set(holders);
   const ids = [...new Set(groups[0].members.filter((m) => m.active && !excluded.has(m.deviceId)).map((m) => m.deviceId))];
   ids.sort((a, b) => a - b);
-  const targets = ids.map((id) => deviceNode(context, id, label));
+  const targets = ids.map((id) => deviceNode(context, id));
   return { source, sourceLabel, targets: targets.length > 0 ? targets : [{ ...groupNode, ambiguous: false }], group: groups[0], gaLabel };
 }
 
@@ -494,7 +499,7 @@ const VALUE_SERVICES = new Set(["GroupValueWrite", "GroupValueResponse"]);
 function apply(model: FlowModel, entry: QueuedRow, context: FlowContext, nowMs: number): void {
   if (context.kind === "pending") throw new Error("flow: a queued row was applied before its context was known");
   model.counters.admitted += 1;
-  const { source, sourceLabel, targets, group, gaLabel } = resolve(entry, context, model.deviceLabel);
+  const { source, sourceLabel, targets, group, gaLabel } = resolve(entry, context);
   const sourceKept = ensureNode(model, { ...source, generation: entry.generation });
   const keptTargets = targets.filter((target) => ensureNode(model, { ...target, generation: entry.generation }));
   if (sourceKept) {

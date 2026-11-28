@@ -10,6 +10,7 @@ import {
   createFlowModel,
   expireSlots,
   nextExpiryAt,
+  labelSnapshotDevices,
   provideContext,
   type FlowModel,
   type FlowRowInput,
@@ -59,7 +60,7 @@ export function useFlowFeed(
   const admit = useCallback((identity: FlowIdentity, rows: readonly FlowRowInput[]) => {
     let model = modelRef.current;
     if (model === null || !sameSession(model, identity)) {
-      model = createFlowModel(identity, undefined, (device) => labelRef.current?.(device) ?? device.name);
+      model = createFlowModel(identity);
       modelRef.current = model;
     }
     const owner = model;
@@ -73,7 +74,9 @@ export function useFlowFeed(
         .then(() => fetchRef.current(identity.sessionId, generation))
         .then(
           (snapshot) => {
-            if (!provideContext(owner, generation, snapshot, flowNow(), requestedScope)) provideContext(owner, generation, null, flowNow());
+            const label = labelRef.current;
+            const shown = label ? labelSnapshotDevices(snapshot, label) : snapshot;
+            if (!provideContext(owner, generation, shown, flowNow(), requestedScope)) provideContext(owner, generation, null, flowNow());
             bump();
           },
           () => {

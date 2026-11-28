@@ -2,7 +2,7 @@
 
 Owner request: 24 November 2026, approved naming-wizard interview decisions
 Q1, Q2 and Q4–Q17; Q18 requests this independent work package.
-Status: Partial in progress — slices 51.1a–51.1c and 51.2a–51.2c published (`c6c6cfbcf` after independent re-review APPROVE and a green change-scoped package gate); 51.3a (web wizard dialog and manual entry) is published (`a3af339e1`); 51.3b (automatic opening and Later) is implemented on a work branch, pending review and gate; the rest of 51.3, 51.4 and the Wizard as a whole are not complete.
+Status: Partial in progress — slices 51.1a–51.1c and 51.2a–51.2c published (`c6c6cfbcf` after independent re-review APPROVE and a green change-scoped package gate); 51.3a (web wizard dialog and manual entry) is published (`a3af339e1`); 51.3b (automatic opening and Later) is published on `main` (`13e5cb946`..`688eb5aeb`); 51.3c (Q17 read-only rule) is implemented on a work branch, pending review; the rest of 51.3, 51.4 and the Wizard as a whole are not complete.
 Slice 51.1a covers validated, reversible name-only domain commands for Project (`RenameProject` / `RestoreProjectName`) and Project Function (`RenameFunction` / `RestoreFunctionName`), unambiguous Function ID resolution, native working-history snapshot replay/roundtrip coverage, and diagnostic allowlist wiring. Slice 51.1b adds validated structural renames and exact Restore*Name inverses for Installation, all 11 supported BuildingPart kinds, Area, Line and GroupRange. Slice 51.1c records the verified Q9 source/model/name constraints audit and adds the structured provenance data model and deterministic, strictly read-only missing-name detection across all Q9 entity types in `knx-edit::missing_names` (backed by shared `knx_core::names::is_blank_name`). Slice 51.1c did not include recipes or wizard/Apply paths; the bounded 51.2a successor below adds recipes only.
 Blocked by: None (WP-51 and WP-52 are independent).
 
@@ -123,7 +123,7 @@ none is an individually complete product slice, and the Wizard is not complete.
 | 51.1b | Validated structural name-only commands and exact restore inverses; unique installation name resolution; core identity/admission/no-op/batch regressions and native history replay across every supported building kind | Published (`3d335ab7e` / `b57106993`; backend foundation only) |
 | 51.1c (remaining 51.1) | Audit Q9 source/model/name constraints beyond the implemented command paths; define provenance and deterministic missing-name detection without mutating import data | Published as `9c8c4e039`; independent review and 16/16 scoped gate accepted; publication recorded in snapshot archive |
 | 51.2 | Implement all recipes, ambiguity/manual cases, parent dependency invalidation, bounded scan/count/page semantics and preview binding; reuse candidate stack, `Command::Batch`, stale-snapshot guards and durable native write-before-publish | Partial: 51.2a read-only recipes (`2867d28da`) and 51.2b offline preview, parent dependency invalidation, confirmation token and atomic `Command::Batch` apply (`0aa842ee1`, independent APPROVE, 14/14 scoped gate) published in `knx-edit`; server/API plumbing and durable native persistence wiring remain open |
-| 51.3 | Implement entry timing, Later/manual reopen, grouped editable selection, source/context/errors, duplicate warnings, 256 cap and explicit confirmation; reuse Overlay; keyboard/focus, narrow displays and all supported translations; update all Q2 device consumers | Partial: 51.3a (published `a3af339e1`) adds the web wizard dialog (scan, editable selection, preview, explicit Apply, 256 cap, en/de) and a manual “Fill missing names” entry in the File menu and command palette. 51.3b (work-branch candidate) adds Q4 automatic opening after import/open and a Later button, vitest only. Q2 device consumers, the Q17 read-only rule, narrow-display/real-browser checks and 51.4 remain open |
+| 51.3 | Implement entry timing, Later/manual reopen, grouped editable selection, source/context/errors, duplicate warnings, 256 cap and explicit confirmation; reuse Overlay; keyboard/focus, narrow displays and all supported translations; update all Q2 device consumers | Partial: 51.3a (published `a3af339e1`) adds the web wizard dialog (scan, editable selection, preview, explicit Apply, 256 cap, en/de) and a manual “Fill missing names” entry in the File menu and command palette. 51.3b (published on `main`, `13e5cb946`..`688eb5aeb`) adds Q4 automatic opening after import/open and a Later button, vitest only. 51.3c (work-branch candidate) adds the Q17 read-only rule (scan/preview `readOnly`, 409 `missingNameReadOnly` before any state change, no auto-open, review without Apply). Q2 device consumers, narrow-display/real-browser checks and 51.4 remain open |
 | 51.4 | Integrate native/session-only persistence, save/reopen and Undo, failure/conflict paths and end-to-end acceptance across every supported entity; update affected user/status/limitations docs only with verified results | Planned (not started) |
 
 ### 51.1b focused implementation diagnostics (26 November 2026)
@@ -216,8 +216,8 @@ read-only signal and the server has no read-only flag, so the Q17 read-only rule
 (no automatic prompt, inspection without Apply) is not implemented in the UI.
 The 51.3 row stays partial and no acceptance-matrix row is checked.
 
-**51.3b status: PARTIAL (28 November 2026, work-branch candidate, pending review
-and gate).** After a project open or import completes, the web UI opens the
+**51.3b status: PARTIAL (28 November 2026, published on `main` as
+`13e5cb946`..`688eb5aeb`).** After a project open or import completes, the web UI opens the
 wizard automatically at most once per project session (key
 `server_incarnation|project_incarnation`). The check uses a cheap scan
 (limit 1) and opens only when a candidate exists. It is silent on failure, and a
@@ -231,10 +231,32 @@ real-browser run. Known gap: the auto-open gate sees browser-rendered modals
 file dialogs opened by other components (group-address CSV, project diff,
 unresolved-program notice, plugin data) in the desktop app, so a late scan could
 open the wizard behind one; the fix needs a shared counter in `filePicker.ts`.
-Open: Q17 read-only (the UI has no read-only signal; the
-predicate `shouldAutoOpen` has a reserved `readOnly` input that is not fed), Q2
-device consumers, narrow-display browser check and 51.4. The 51.3 row stays
-partial and no acceptance-matrix row is checked.
+The Q17 read-only rule followed in 51.3c.
+
+**51.3c status: PARTIAL (28 November 2026, work-branch candidate, pending review).**
+Owner decision for Q17: a project is read-only when its native `.knxdb` file (or
+the directory holding it) is not writable for the server process; a session-only
+project is never read-only. The server checks this with `access(2)` on every
+request (`missing_name_routes.rs::native_read_only`), so a file made read-only
+after a scan or preview is still caught. Scan and preview responses carry
+`readOnly`. Preview and Apply refuse a read-only project up front with HTTP 409
+`missingNameReadOnly`, before a plan, token, command-stack entry, working-history
+write or publication exists; the earlier late 422 `missingNamePersistenceFailed`
+path no longer applies to this case. The web client admits the flag (absent means
+writable, a non-boolean is a contract error); the auto-open hook feeds the
+one-item scan's `readOnly` into `shouldAutoOpen`, so a read-only project never
+opens the wizard by itself; the manual wizard still scans and lets the user
+review and edit the selection, shows an English/German read-only note and keeps
+Preview and Apply disabled. Verification: HTTP integration tests (scan reports
+`readOnly`, preview and a forged apply return 409, project, `history_lengths()`
+`(0, 0)`, file bytes and on-disk history generation unchanged; a file made
+read-only after the preview refuses the apply the same way; session-only stays
+writable) and vitest (client, hook, wizard EN/DE). No real-browser run. Not
+covered: write permission granted or revoked through ACLs or a read-only mount is
+detected by `access(2)` but untested; the desktop app's native picker gap from
+51.3b is unchanged. Open: Q2 device consumers, narrow-display browser check and
+51.4. The 51.3 row stays partial and no acceptance-matrix row is checked: the
+read-only row also needs the real-browser and import-timing evidence.
 
 Each row requires recorded evidence at implementation time, using fictional
 fixtures and simulated/offline workflows. No row has been executed for intake.
@@ -276,8 +298,8 @@ objects to pass end-to-end acceptance; backend completion alone is insufficient.
 None at owner level: the naming interview frontier is closed. Slices 51.1a–51.1c
 and 51.2a–51.2c (offline recipes, preview, invalidation, atomic batch apply,
 server API and native write-before-publish apply) are published. 51.3a (web
-dialog and manual entry) is published and 51.3b (automatic opening, Later) is a
-branch candidate; the rest of 51.3, 51.4 and
+dialog and manual entry) and 51.3b (automatic opening, Later) are published and
+51.3c (Q17 read-only rule) is a branch candidate; the rest of 51.3, 51.4 and
 the Wizard as a whole remain incomplete. Source-derived details still
 to establish within this plan:
 exact descriptive-text/product-resolution access for every type, validated command

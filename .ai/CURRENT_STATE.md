@@ -30,9 +30,10 @@ Release freeze: released by claude-release-alpha23 (`v0.1.0-alpha.23` at `81c6bc
 - WP-37 open-work doc + LEDGER updated on `work/wp37-modules-docs-20261118`; PR open, merge next. No bus/hardware/release/deploy.
 ## Retained boundaries (STANDING; observed 2026-11-02 20:47 CET)
 - Long-standing STANDING acceptance/reference sections live in `.ai/archive/` per `.ai/archive/README.md`; root intentionally stale/dirty, foreign tracks preserved, private bytes stay private.
-## WP-51.3 missing-name wizard UI (IN PROGRESS; observed 2026-11-28 12:00)
-- 51.1–51.2c published (`c6c6cfbcf`); 51.3a web dialog and manual entry published as `a3af339e1`. 51.3b (once-per-session auto-open after open/import, Later button) implemented on `work/wp51-3b-auto-open-20261128` (`13e5cb946`, `9dfb39707`, docs commit follows); vitest only; known gap: native file dialogs of other components are invisible to the auto-open gate (needs shared counter in `filePicker.ts`); pending review and package gate, not published.
-- Open: Q17 read-only (no UI signal; `shouldAutoOpen` reserves `readOnly`), Q2 device consumers, narrow-display browser check, 51.4 acceptance. WP-52 has no implementation Go.
+## WP-51.3 missing-name wizard UI (IN PROGRESS; observed 2026-11-28 14:10)
+- 51.1–51.2c published (`c6c6cfbcf`); 51.3a published `a3af339e1`; 51.3b (auto-open, Later) published on `main` `13e5cb946`..`688eb5aeb`; known gap: native file dialogs of other components are invisible to the auto-open gate (needs shared counter in `filePicker.ts`).
+- 51.3c (Q17 read-only = native `.knxdb` not writable; session-only never) on `work/wp51-3c-readonly-20261128`: scan/preview `readOnly`, preview/apply 409 `missingNameReadOnly` before any state change, web no auto-open, review without Apply (EN/DE). Pending independent review; not merged.
+- Open: Q2 device consumers, narrow-display browser check, 51.4 acceptance. WP-52 has no implementation Go.
 ## WP-51 missing-name detection successor (STANDING; owner WP-51.1c coordinator; observed 2026-11-26)
 - Bounded slice 51.1c on `work/wp51-1c-missing-name-detection-20261126` from verified `origin/main` base `b57106993`. Scope: Q9 nine-category audit, shared `is_blank_name` predicate in `knx-core`, typed serde-tagged Q6 provenance model and deterministic read-only missing-name detection (`knx-edit::missing_names`), plus bundled `knx-edit` integration tests (`tests/it/main.rs`). No wizard UI, recipes, apply/write paths, or WP-52 implementation.
 - Independent Claude reviews approved both the feature commit (`21ef93b7b`, five non-blocking MINORs recorded for follow-up hardening) and the formatting/test-bundle delta (`9c8c4e039`, zero findings, 7/7 focused `knx-edit` integration tests green).

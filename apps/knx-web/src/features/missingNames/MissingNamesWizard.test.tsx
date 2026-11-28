@@ -148,6 +148,48 @@ describe("MissingNamesWizard", () => {
     expect(panel().querySelector("[data-missing-reevaluate]")).toBeNull();
   });
 
+  it("blocks the preview after a parent edit until Re-evaluate has run", async () => {
+    client.reevaluateMissingNames.mockResolvedValue({ invalidated_targets: [], proposals: [] });
+    await render();
+    await click(entryBox("group_address"));
+    expect(button("[data-missing-preview]").disabled).toBe(false);
+    await type(nameInput("area"), "Area 9");
+    expect(button("[data-missing-preview]").disabled).toBe(true);
+    expect(panel().textContent).toContain(en["missingNames.reevaluateHint"]);
+    await click(button("[data-missing-preview]"));
+    expect(client.previewMissingNames).not.toHaveBeenCalled();
+    await click(button("[data-missing-reevaluate]"));
+    expect(button("[data-missing-preview]").disabled).toBe(false);
+  });
+
+  it("shows the provenance and gaps of the re-evaluated proposal", async () => {
+    client.reevaluateMissingNames.mockResolvedValue({ invalidated_targets: [target("group_address", 10)],
+      proposals: [proposal("group_address", 10, null, { gaps: [{ gap: "unselected_parent", parent: target("area", 1) }] })] });
+    await render();
+    const entry = () => panel().querySelector('[data-missing-group="group_address"] li')!;
+    expect(entry().textContent).toContain("Proposed from the project");
+    expect(entry().querySelector(".missing-names-gaps")).toBeNull();
+    await type(nameInput("area"), "Area 9");
+    await click(button("[data-missing-reevaluate]"));
+    expect(entry().textContent).toContain("No proposal: type a name");
+    expect(entry().textContent).not.toContain("Proposed from the project");
+    expect(entry().querySelector(".missing-names-gaps")?.textContent).toContain("which is not selected");
+  });
+
+  it("cancels the shown preview when Apply answers stale", async () => {
+    client.applyMissingNames.mockRejectedValueOnce(refusal(409, "missingNameStale", "stale"));
+    await render();
+    await click(entryBox("group_address"));
+    await click(button("[data-missing-preview]"));
+    expect(client.cancelMissingNames).not.toHaveBeenCalled();
+    await click(button("[data-missing-confirm]"));
+    expect(client.cancelMissingNames).toHaveBeenCalledTimes(1);
+    expect(client.cancelMissingNames).toHaveBeenCalledWith("shown-token");
+    expect(stale).toHaveBeenCalled();
+    expect(panel().querySelector("[data-preview-row]")).toBeNull();
+    expect(updated).not.toHaveBeenCalled();
+  });
+
   it("reports a stale preview, tells the caller and applies nothing", async () => {
     client.previewMissingNames.mockRejectedValueOnce(refusal(409, "missingNameStale", "stale"));
     await render();
@@ -158,7 +200,7 @@ describe("MissingNamesWizard", () => {
     expect(button("[data-missing-preview]").disabled).toBe(true);
   });
 
-  it("shows a refusal and spends the preview", async () => {
+  it("shows a refusal and cancels the shown preview", async () => {
     client.applyMissingNames.mockRejectedValueOnce(refusal(409, "missingNameTargetNotBlank", "not blank"));
     await render();
     await click(entryBox("group_address"));
@@ -166,6 +208,7 @@ describe("MissingNamesWizard", () => {
     await click(button("[data-missing-confirm]"));
     expect(panel().querySelector("[role=alert]")?.textContent).toContain("got a name in the meantime");
     expect(panel().querySelector("[data-preview-row]")).toBeNull();
+    expect(client.cancelMissingNames).toHaveBeenCalledWith("shown-token");
     expect(updated).not.toHaveBeenCalled();
   });
 

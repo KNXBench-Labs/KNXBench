@@ -178,7 +178,9 @@ export default function MissingNamesWizard(props: {
   const chosen = selectedDrafts(drafts);
   const tooMany = chosen.length > MAX_MISSING_NAME_SELECTION;
   const invalid = chosen.filter((draft) => nameProblem(draft) !== null).length;
-  const canPreview = !!scan && !busy && !outdated && chosen.length > 0 && !tooMany && invalid === 0;
+  // A changed parent outdates dependent suggestions until Re-evaluate has run.
+  const canPreview = !!scan && !busy && !outdated && changedParents.size === 0 && chosen.length > 0 && !tooMany
+    && invalid === 0;
 
   async function showPreview() {
     if (!scan || !canPreview) return;
@@ -209,9 +211,8 @@ export default function MissingNamesWizard(props: {
         setProblem({ lead: projectSavingMessage(error) ?? "", detail: null });
         return;
       }
-      // Stale or refused: nothing was named. The old preview is spent.
-      tokenRef.current = null;
-      setPreview(null);
+      // Stale or refused: nothing was named. The server keeps a failed preview, so cancel it.
+      retire();
       setProblem(explain(error, "missingNames.failed"));
     } finally {
       setBusy(false);
@@ -250,6 +251,9 @@ export default function MissingNamesWizard(props: {
     const label = `${t(KIND_LABELS[item.candidate.kind])} ${key}`;
     const identity = item.candidate.identity_status;
     const selectable = isSelectable(item);
+    // Re-evaluate replaces the draft's proposal: show its provenance, not the scan's.
+    const current = draft?.proposal.candidate.occurrence_index === item.candidate.occurrence_index ? draft.proposal : item;
+    const { origin, sources, gaps } = current.provenance;
     const issue = draft?.selected ? nameProblem(draft) : null;
     return <li key={occurrenceKey(item)} className="missing-names-entry" data-missing-entry={occurrenceKey(item)}>
       <input type="checkbox" checked={draft?.selected ?? false} disabled={busy || !selectable}
@@ -257,7 +261,7 @@ export default function MissingNamesWizard(props: {
       <div className="missing-names-entry-body">
         <input className="missing-names-name" value={draft?.name ?? ""} disabled={busy || !selectable} data-missing-name={key}
           aria-label={t("missingNames.nameLabel", { label })} aria-invalid={issue !== null}
-          placeholder={item.proposed_name === null ? t("missingNames.manualPlaceholder") : undefined}
+          placeholder={current.proposed_name === null ? t("missingNames.manualPlaceholder") : undefined}
           onInput={(event) => editName(key, event.currentTarget.value)} />
         <p className="missing-names-meta">
           <span className="missing-names-id">{t("missingNames.stableId", { id: key })}
@@ -265,11 +269,11 @@ export default function MissingNamesWizard(props: {
           {contextParts(item).map((part) => <span key={part}>{part}</span>)}
         </p>
         <p className="missing-names-meta">
-          <span>{t(ORIGIN_LABELS[item.provenance.origin])}</span>
-          {item.provenance.sources.map((source, index) => <span key={index}>{`${source.kind}: ${source.value}`}</span>)}
+          <span>{t(ORIGIN_LABELS[origin])}</span>
+          {sources.map((source, index) => <span key={index}>{`${source.kind}: ${source.value}`}</span>)}
         </p>
-        {item.provenance.gaps.length > 0 && <ul className="missing-names-gaps">
-          {item.provenance.gaps.map((gap, index) => <li key={index}>{gapText(gap)}</li>)}</ul>}
+        {gaps.length > 0 && <ul className="missing-names-gaps">
+          {gaps.map((gap, index) => <li key={index}>{gapText(gap)}</li>)}</ul>}
         {identity.status === "duplicate_id" && <p className="missing-names-note">{t("missingNames.identity.duplicate", { count: identity.occurrences })}</p>}
         {identity.status === "invalid_zero_id" && <p className="missing-names-note">{t("missingNames.identity.zero")}</p>}
         {draft?.recheck === "updated" && <p className="missing-names-note" data-recheck="updated">{t("missingNames.recheck.updated")}</p>}

@@ -4,6 +4,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 
 use knx_core::names::{is_blank_name, validate_edited_name};
 use knx_core::{BuildingPartId, DeviceId, FunctionDetails, GroupAddress, Installation, Project};
+use serde::{Deserialize, Serialize};
 
 use crate::missing_names::*;
 
@@ -39,7 +40,7 @@ pub enum MissingNameEvidence {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MissingNameProposal {
     pub candidate: MissingNameCandidate,
     pub proposed_name: Option<String>,
@@ -49,7 +50,7 @@ pub struct MissingNameProposal {
     pub duplicate_label: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MissingNameProposals {
     /// Unmodified discovery counts, completeness and pagination contract.
     pub discovery: MissingNameScanResult,

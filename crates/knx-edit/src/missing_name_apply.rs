@@ -109,7 +109,7 @@ pub struct MissingNameApplyPreview {
 }
 
 /// Result of Q16 parent-change invalidation and non-mutating child proposal re-evaluation.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MissingNameReevaluation {
     pub invalidated_targets: Vec<NameTargetId>,
     pub proposals: Vec<MissingNameProposal>,

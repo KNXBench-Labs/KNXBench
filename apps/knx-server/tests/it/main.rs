@@ -65,6 +65,7 @@ mod http_legacy_device;
 mod http_legacy_install;
 mod http_load_progress;
 mod http_log_route;
+mod http_missing_names;
 mod http_modeled_metadata;
 mod http_monitor_export;
 mod http_name_recipe;

@@ -107,6 +107,7 @@ mod instruction_routes;
 mod load_progress;
 mod log_text;
 mod manufacturer_file_routes;
+mod missing_name_routes;
 mod name_recipe_routes;
 mod note_disposition_routes;
 mod note_routes;
@@ -254,6 +255,7 @@ pub fn app_with_auth(state: SharedState, static_dir: Option<PathBuf>, auth: Auth
     let guarded = Router::new()
         .merge(routes::project_routes())
         .merge(instruction_routes::router(state.clone()))
+        .merge(missing_name_routes::router(state.clone()))
         .merge(name_recipe_routes::router(state.clone()))
         .merge(note_routes::router(state.clone()))
         .merge(devconf_routes::router(state.clone()))

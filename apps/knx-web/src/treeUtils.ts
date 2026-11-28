@@ -59,10 +59,14 @@ export function collectInstallationDevices(
   return devices;
 }
 
-export function buildSearchIndex(tree: ProjectTree): SearchEntry[] {
+/** `labelDevice` supplies the shown device label (e.g. the unnamed fallback); the raw name by default. */
+export function buildSearchIndex(
+  tree: ProjectTree,
+  labelDevice: (device: DeviceNode) => string = (device) => device.name,
+): SearchEntry[] {
   const entries: SearchEntry[] = [];
   for (const device of collectDevices(tree).values()) {
-    entries.push({ kind: "device", id: device.id, label: device.name, address: device.address });
+    entries.push({ kind: "device", id: device.id, label: labelDevice(device), address: device.address });
   }
   for (const inst of tree.installations) {
     for (const ga of inst.group_addresses) {

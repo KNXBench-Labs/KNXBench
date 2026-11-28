@@ -12,7 +12,8 @@ import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
 import { gatewayRefusalMessage } from "./gatewayRefusal";
 import { planWarnings } from "./downloadVerification";
-import { useTranslate, type MessageKey } from "./i18n";
+import { useTranslate, type MessageKey, type Translate } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import { useProgrammingConsent } from "./useProgrammingConsent";
 import { projectContextKey } from "./treeUtils";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -59,8 +60,9 @@ const WRITTEN: Record<api.DeviceDownloadWritten, MessageKey> = {
   partially: "deviceDownload.batch.written.partially",
 };
 
-function label(row: { address: string | null; name: string }): string {
-  return row.address === null ? row.name : `${row.address} — ${row.name}`;
+function label(t: Translate, row: { deviceId: number; address: string | null; name: string }): string {
+  const name = deviceLabel(t, { id: row.deviceId, name: row.name });
+  return row.address === null ? name : `${row.address} — ${name}`;
 }
 
 /** The exclusion as a sentence; its server detail is shown verbatim. */
@@ -244,7 +246,7 @@ export default function DeviceDownloadBatch({ project, gateway, disabled, openRe
     const devices = selected;
     const mine = request.current;
     setError(null);
-    if (!(await consent.requestBatch(devices.map(label)))) return;
+    if (!(await consent.requestBatch(devices.map((row) => label(t, row))))) return;
     // The review was dropped (project edit, close) while the question was open.
     if (mine !== request.current) return;
     setStarting(true);
@@ -311,7 +313,7 @@ export default function DeviceDownloadBatch({ project, gateway, disabled, openRe
                         if (event.target.checked) next.delete(row.planId); else next.add(row.planId);
                         return next;
                       })} />
-                    <span><code>{row.address}</code> {row.name}</span>
+                    <span><code>{row.address}</code> {deviceLabel(t, { id: row.deviceId, name: row.name })}</span>
                   </label>
                   <span className="device-download-batch-facts">
                     {t(`deviceDownload.scope.${row.scope}` as const)} · {t(row.support === "verified"
@@ -343,7 +345,7 @@ export default function DeviceDownloadBatch({ project, gateway, disabled, openRe
                     </label>
                   )}
                 </> : <>
-                  <span><code>{row.address ?? "—"}</code> {row.name}</span>
+                  <span><code>{row.address ?? "—"}</code> {deviceLabel(t, { id: row.deviceId, name: row.name })}</span>
                   <span className="device-download-batch-reason">
                     {t("deviceDownload.batch.notInBatch")}: {reasonText(t, row.reason)}</span>
                 </>}
@@ -371,7 +373,7 @@ export default function DeviceDownloadBatch({ project, gateway, disabled, openRe
             {status.devices.map((row) => (
               <li key={row.deviceId} className="device-download-batch-row" data-batch-device={row.address ?? `id-${row.deviceId}`}
                 data-batch-state={row.state}>
-                <span><code>{row.address ?? "—"}</code> {row.name}</span>
+                <span><code>{row.address ?? "—"}</code> {deviceLabel(t, { id: row.deviceId, name: row.name })}</span>
                 <span className="device-download-batch-result">{stateText(t, row)}</span>
                 {stateDetails(t, row).map((detail, index) => (
                   <span key={index} className="device-download-batch-result" data-batch-detail>{detail}</span>))}

@@ -191,15 +191,19 @@ export interface FlowModel {
   leader: string | null;
   /** Fresh admitted rows, oldest first, bounded by `maxEvents`. */
   events: FlowEvent[];
+  /** The shown label of a project device (display only, e.g. the unnamed fallback). */
+  deviceLabel: (device: { id: number; name: string }) => string;
 }
 
 export function createFlowModel(
   identity: { serverIncarnation: string; sessionId: number },
   limits: FlowModelLimits = DEFAULT_FLOW_LIMITS,
+  deviceLabel: (device: { id: number; name: string }) => string = (device) => device.name,
 ): FlowModel {
   return {
     identity,
     limits,
+    deviceLabel,
     highWaterSeq: -1,
     contexts: new Map(),
     pending: [],
@@ -329,10 +333,10 @@ function ensureNode(model: FlowModel, node: FlowNode): boolean {
   return true;
 }
 
-function deviceNode(context: ParticipantContext, deviceId: number): FlowNode {
+function deviceNode(context: ParticipantContext, deviceId: number, label: FlowModel["deviceLabel"]): FlowNode {
   const device = context.devicesById.get(deviceId);
   return device
-    ? { id: `d:${deviceId}`, kind: "device", label: device.name, deviceId }
+    ? { id: `d:${deviceId}`, kind: "device", label: label({ id: deviceId, name: device.name }), deviceId }
     : { id: `d:${deviceId}`, kind: "unknownDevice", label: `#${deviceId}`, deviceId };
 }
 
@@ -359,7 +363,9 @@ interface Resolution {
   gaLabel: string;
 }
 
-function resolve(entry: QueuedRow, context: ParticipantContext | { kind: "raw"; reason: RawReason }): Resolution {
+function resolve(
+  entry: QueuedRow, context: ParticipantContext | { kind: "raw"; reason: RawReason }, label: FlowModel["deviceLabel"],
+): Resolution {
   const { row, sourceRaw, destinationRaw } = entry;
   const gaLabel = groupLabel(context, destinationRaw, row.destination);
   const groupNode: FlowNode = { id: `g:${destinationRaw}`, kind: "group", label: gaLabel, gaRaw: destinationRaw, ambiguous: false };
@@ -376,7 +382,7 @@ function resolve(entry: QueuedRow, context: ParticipantContext | { kind: "raw"; 
   let source: FlowNode;
   let sourceLabel = row.source;
   if (holders.length === 1) {
-    source = { ...deviceNode(context, holders[0]), address: row.source };
+    source = { ...deviceNode(context, holders[0], label), address: row.source };
     sourceLabel = `${source.label} (${row.source})`;
   } else if (holders.length > 1) {
     source = { id: `ia:${sourceRaw}`, kind: "ambiguousSource", label: row.source, address: row.source, candidates: [...holders] };
@@ -390,7 +396,7 @@ function resolve(entry: QueuedRow, context: ParticipantContext | { kind: "raw"; 
   const excluded = new Set(holders);
   const ids = [...new Set(groups[0].members.filter((m) => m.active && !excluded.has(m.deviceId)).map((m) => m.deviceId))];
   ids.sort((a, b) => a - b);
-  const targets = ids.map((id) => deviceNode(context, id));
+  const targets = ids.map((id) => deviceNode(context, id, label));
   return { source, sourceLabel, targets: targets.length > 0 ? targets : [{ ...groupNode, ambiguous: false }], group: groups[0], gaLabel };
 }
 
@@ -488,7 +494,7 @@ const VALUE_SERVICES = new Set(["GroupValueWrite", "GroupValueResponse"]);
 function apply(model: FlowModel, entry: QueuedRow, context: FlowContext, nowMs: number): void {
   if (context.kind === "pending") throw new Error("flow: a queued row was applied before its context was known");
   model.counters.admitted += 1;
-  const { source, sourceLabel, targets, group, gaLabel } = resolve(entry, context);
+  const { source, sourceLabel, targets, group, gaLabel } = resolve(entry, context, model.deviceLabel);
   const sourceKept = ensureNode(model, { ...source, generation: entry.generation });
   const keptTargets = targets.filter((target) => ensureNode(model, { ...target, generation: entry.generation }));
   if (sourceKept) {

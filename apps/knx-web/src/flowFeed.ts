@@ -44,10 +44,13 @@ const sameSession = (model: FlowModel, identity: FlowIdentity) =>
 export function useFlowFeed(
   fetchSnapshot: (sessionId: number, generation: string) => Promise<FlowSnapshot>,
   projectScope?: string,
+  deviceLabel?: (device: { id: number; name: string }) => string,
 ): FlowFeed {
   const modelRef = useRef<FlowModel | null>(null);
   const fetchRef = useRef(fetchSnapshot);
   fetchRef.current = fetchSnapshot;
+  const labelRef = useRef(deviceLabel);
+  labelRef.current = deviceLabel;
   const scopeRef = useRef(projectScope);
   scopeRef.current = projectScope;
   const [version, setVersion] = useState(0);
@@ -56,7 +59,7 @@ export function useFlowFeed(
   const admit = useCallback((identity: FlowIdentity, rows: readonly FlowRowInput[]) => {
     let model = modelRef.current;
     if (model === null || !sameSession(model, identity)) {
-      model = createFlowModel(identity);
+      model = createFlowModel(identity, undefined, (device) => labelRef.current?.(device) ?? device.name);
       modelRef.current = model;
     }
     const owner = model;

@@ -2,7 +2,9 @@
 import ResizableTable from "./ResizableTable";
 import { useEffect, useRef, useState } from "react";
 import * as api from "./api";
-import DeviceLink from "./DeviceLink";
+import DeviceLink, { useDeviceNavigation } from "./DeviceLink";
+import { isBlankName } from "./blankName";
+import { deviceLabel } from "./devicePresentation";
 import ComparisonTable from "./ComparisonTable";
 import "./deviceComparisons.css";
 import { emitAchievementEvent } from "./achievementEvents";
@@ -51,6 +53,13 @@ function isPlannable(device: api.DeviceReadinessRow): boolean {
 
 export default function DeviceInspectionPanel({ project }: { project: ProjectTree | null }) {
   const t = useTranslate();
+  const navigation = useDeviceNavigation();
+  /** The shown name; a blank one takes the fallback of its one project-address match. */
+  function readinessName(device: api.DeviceReadinessRow): string {
+    if (!isBlankName(device.name) || device.address === null) return device.name;
+    const matches = navigation?.addresses.get(device.address) ?? [];
+    return matches.length === 1 ? deviceLabel(t, matches[0]) : device.name;
+  }
   const [readiness, setReadiness] = useState<api.DeviceReadinessResponse | null>(null);
   const [readinessError, setReadinessError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -194,7 +203,7 @@ export default function DeviceInspectionPanel({ project }: { project: ProjectTre
                 <th>{t("deviceChecks.planSize")}</th>
               </tr></thead>
               <tbody>{readiness.devices.map((device, index) => <tr key={index}>
-                <td><DeviceLink address={device.address}>{device.name}</DeviceLink><small><code>{device.programRef || "—"}</code></small></td>
+                <td><DeviceLink address={device.address}>{isBlankName(device.name) ? undefined : device.name}</DeviceLink><small><code>{device.programRef || "—"}</code></small></td>
                 <td><code>{device.address ?? "—"}</code></td>
                 <td>{gradeLabel(t, device.readiness)}</td>
                 <td>{device.category && <code>{device.category}: </code>}{device.detail ?? t("deviceChecks.noEvidence")}</td>
@@ -216,7 +225,7 @@ export default function DeviceInspectionPanel({ project }: { project: ProjectTre
             <select className="device-checks-target" value={address} disabled={loading || comparing || eligible.length === 0}
               onChange={(event) => editAddress(event.target.value)}>
               <option value="">{t("deviceChecks.choose")}</option>
-              {eligible.map((device) => <option key={device.address} value={device.address ?? ""}>{device.address} — {device.name}</option>)}
+              {eligible.map((device) => <option key={device.address} value={device.address ?? ""}>{device.address} — {readinessName(device)}</option>)}
             </select>
           </label>
           <label>{t("deviceDownload.gateway")}

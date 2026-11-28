@@ -5,6 +5,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import { useFileMenuItemProps } from "./FileMenu";
 import { splitGatewayEndpoint, validateGatewayFields } from "./gatewayEndpoint";
 import { useTranslate } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import { validateIndividualAddress } from "./lineScanExclusions";
 import Overlay from "./Overlay";
 import { reportContext } from "./reportProblem";
@@ -76,7 +77,7 @@ function IdentityReadDialog({ project, close }: { project: ProjectTree | null; c
       <p>{t("identityRead.intro")}</p>
       <fieldset disabled={busy}>
         {project && <label>{t("support.device")}<select data-support-device value={deviceId ?? ""} onChange={(e) => { invalidate(); setDeviceId(e.target.value === "" ? null : Number(e.target.value)); }}>
-          <option value="">{t("identityRead.manual")}</option>{devices.map((d) => <option key={d.id} value={d.id}>{d.address ?? "—"} · {d.name}</option>)}
+          <option value="">{t("identityRead.manual")}</option>{devices.map((d) => <option key={d.id} value={d.id}>{d.address ?? "—"} · {deviceLabel(t, d)}</option>)}
         </select></label>}
         {deviceId === null && <label>{t("identityRead.address")}<input data-support-local-address value={address} maxLength={10}
           aria-invalid={address !== "" && !validateIndividualAddress(address)} onChange={(e) => { invalidate(); setAddress(e.target.value); }} placeholder="1.1.67" /></label>}

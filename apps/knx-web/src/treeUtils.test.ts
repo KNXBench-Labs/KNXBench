@@ -92,6 +92,18 @@ describe("buildSearchIndex", () => {
     expect(deviceEntries[0]).toEqual({ kind: "device", id: 1, label: "Dimmer", address: "1.1.1" });
   });
 
+  it("labels devices through the resolver and keeps the raw name by default", () => {
+    const blank = device(2, " ", "1.1.2");
+    const t = tree([
+      installation({
+        topology: [{ id: 1, name: "Area 1", address: 1, lines: [{ id: 1, name: "Line 1", address: 1, devices: [blank] }] }],
+      }),
+    ]);
+    const label = (entries: ReturnType<typeof buildSearchIndex>) => entries.find((e) => e.kind === "device")?.label;
+    expect(label(buildSearchIndex(t))).toBe(" ");
+    expect(label(buildSearchIndex(t, (d) => (d.name.trim() === "" ? `Unnamed ${d.id}` : d.name)))).toBe("Unnamed 2");
+  });
+
   it("builds a breadcrumb path for a nested building part", () => {
     const t = tree([
       installation({

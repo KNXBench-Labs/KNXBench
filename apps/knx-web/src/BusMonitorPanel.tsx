@@ -33,6 +33,7 @@ import {
 import { busObservationVersion, acceptsObservedSession, knownSerialSession, knownTcpSession, connectBusSession, disconnectBusSession, tcpStartErrorMessage, useBusConnection } from "./busConnection";
 import { ensureBusDiscovery, searchBusInterfaces, useBusDiscovery } from "./busDiscovery";
 import { useTranslate, type Translate } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import { groupAddressMatches, useGroupAddressFormat } from "./gaNotation";
 import { splitGatewayEndpoint, validateGatewayFields } from "./gatewayEndpoint";
 import { loadPreferredGateway } from "./gatewayPreference";
@@ -279,7 +280,8 @@ export default function BusMonitorPanel({ projectOpen, project, projectScope, on
   // U20: the flow view reads the same admitted batches as the table; this
   // feed never polls. It keeps running while the table tab is shown, so
   // switching views loses nothing.
-  const flowFeed = useFlowFeed((sessionId, generation) => api.fetchFlowSnapshot(sessionId, generation), projectScope);
+  const flowFeed = useFlowFeed((sessionId, generation) => api.fetchFlowSnapshot(sessionId, generation), projectScope,
+    (device) => deviceLabel(t, device));
   const [monitorView, setMonitorView] = useState<"table" | "flow">("table");
   const rows = capture.rows;
   const statistics = useMemo(() => calculateBusMonitorStatistics(rows), [rows]);

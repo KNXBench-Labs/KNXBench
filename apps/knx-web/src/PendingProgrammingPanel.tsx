@@ -4,6 +4,7 @@
 // "Download all…" opens the download tab's batch review (ADR-0172).
 import { useId, useMemo, useState } from "react";
 import { useTranslate } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import { useUiLanguage } from "./uiLanguage";
 import { createProgrammingChips } from "./ProgrammingChips";
 import { useOpenDownload, useOpenDownloadAll } from "./OpenDownloadButton";
@@ -33,13 +34,14 @@ export default function PendingProgrammingPanel({ summary, selectedDeviceId, onS
     </p>}
     {devices.length > 0 && <ul className="pending-programming-list" aria-label={t("pendingPanel.listLabel")}>
       {shown.map((device) => {
-        const label = device.address ? `${device.address} ${device.name}` : device.name;
+        const name = deviceLabel(t, device);
+        const label = device.address ? `${device.address} ${name}` : name;
         return <li key={device.id} className="pending-programming-row" data-device-id={device.id}>
           <button type="button" className="pending-programming-open" onClick={() => onSelect(device.id)}
             aria-current={device.id === selectedDeviceId ? "true" : undefined}>
             <span className="pending-programming-name">
               {device.address && <span className="pending-programming-address">{device.address}</span>}
-              <span title={device.name}>{device.name}</span>
+              <span title={name}>{name}</span>
             </span>
             {chips(device)}
           </button>

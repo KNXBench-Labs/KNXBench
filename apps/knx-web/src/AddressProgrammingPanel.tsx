@@ -14,6 +14,7 @@ import DeviceLink from "./DeviceLink";
 import { emitAchievementEvent } from "./achievementEvents";
 import { loadPreferredGateway } from "./gatewayPreference";
 import { useTranslate } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import { collectDevices } from "./treeUtils";
 import { useProgrammingConsent } from "./useProgrammingConsent";
 import type { ProjectTree } from "./bindings/ProjectTree";
@@ -239,7 +240,7 @@ export default function AddressProgrammingPanel({ project, onProjectChanged }: A
           <datalist id="address-programming-planned">
             {planned.map((device) => (
               <option key={device.id} value={device.address ?? ""}>
-                {device.name}
+                {deviceLabel(t, device)}
               </option>
             ))}
           </datalist>

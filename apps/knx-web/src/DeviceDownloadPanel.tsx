@@ -35,6 +35,7 @@ import { planWarnings } from "./downloadVerification";
 import { currentGuideStep, downloadGuide, type GuideMissing, type GuideStepId } from "./downloadGuide";
 import HelpTip from "./HelpTip";
 import { useTranslate, type MessageKey } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import { collectDevices, projectContextKey } from "./treeUtils";
 import DiagnosticExportButton from "./DiagnosticExportButton";
 import { ReportProblemButton } from "./ReportProblemEntry";
@@ -354,8 +355,8 @@ export default function DeviceDownloadPanel({
   const requested = useMemo(() => {
     if (!pendingRequest || project === null || projectContextKey(project) !== handoff.context) return null;
     const device = collectDevices(project).get(handoff.deviceId);
-    return device && device.address !== null ? { name: device.name, address: device.address } : null;
-  }, [pendingRequest, project, handoff]);
+    return device && device.address !== null ? { name: deviceLabel(t, device), address: device.address } : null;
+  }, [pendingRequest, project, handoff, t]);
 
   useEffect(() => {
     if (!running) return;
@@ -511,7 +512,7 @@ export default function DeviceDownloadPanel({
                   : ` (${t(mark.kind === "excluded" ? "deviceDownload.readiness.optionMarkExcluded" : "deviceDownload.readiness.optionMark")})`;
                 return (
                   <option key={device.id} value={device.id}>
-                    {`${device.address} — ${device.name}${suffix}`}
+                    {`${device.address} — ${deviceLabel(t, device)}${suffix}`}
                   </option>
                 );
               })}

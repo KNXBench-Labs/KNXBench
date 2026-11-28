@@ -72,6 +72,11 @@ it("lists only devices with a pending part, in the Devices table's address order
   expect(host.querySelector(".pending-programming-empty")).toBeNull();
 });
 
+it("shows the unnamed fallback for a blank device name", async () => {
+  await render(tree([device(7, "1.1.7", "  ", state(true, false, false, false))]));
+  expect(rowOf(7).querySelector(".pending-programming-name")!.textContent).toBe("1.1.7Unnamed device (ID 7)");
+});
+
 it("says nothing is pending, and never guesses for unreported devices", async () => {
   await render(tree([device(1, "1.1.1", "Clean", CLEAN), device(2, "1.1.2", "Old a"), device(3, "1.1.3", "Old b")]));
   expect(rows()).toHaveLength(0);

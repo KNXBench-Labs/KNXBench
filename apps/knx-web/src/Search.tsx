@@ -9,6 +9,7 @@ import { matchEntries } from "./searchMatch";
 import Overlay from "./Overlay";
 import { useActiveOptionScroll } from "./useActiveOptionScroll";
 import { useTranslate } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import { useGroupAddressFormat } from "./gaNotation";
 import type { MessageKey } from "./messages/en";
 
@@ -42,7 +43,7 @@ export default function Search(props: {
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
-  const index = useMemo(() => buildSearchIndex(tree), [tree]);
+  const index = useMemo(() => buildSearchIndex(tree, (device) => deviceLabel(t, device)), [tree, t]);
   const results = useMemo(() => matchEntries(index, query), [index, query]);
   const activeOptionRef = useActiveOptionScroll(highlight, results);
 

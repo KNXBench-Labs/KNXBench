@@ -78,7 +78,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
     return () => { disposed = true; };
   }, [active, tree, productLanguage, refresh]);
   const currentMetadata = metadata?.tree === tree && metadata.language === productLanguage ? metadata.rows : [];
-  const rows = useMemo(() => visibleDeviceRows(projectDeviceRows(tree, currentMetadata), query, sort, language, { pendingOnly, systemText, system2Text, system2Rank }),
+  const rows = useMemo(() => visibleDeviceRows(projectDeviceRows(tree, currentMetadata), query, sort, language, { pendingOnly, systemText, system2Text, system2Rank, label: (row) => deviceLabel(t, row) }),
     [tree, metadata, productLanguage, query, sort, language, pendingOnly, t, system2Result]);
   const visibleOrder = rows.map((row) => row.id);
   const total = useMemo(() => projectDeviceRows(tree, currentMetadata).length, [tree, metadata, productLanguage]);

@@ -30,7 +30,7 @@ export default function GroupAddressMatrix(props: GroupAddressWorkspaceViewProps
   const columns = props.matrix.columns.filter(column => selected.has(column.key));
   const needle = props.columnQuery.trim().toLowerCase();
   const choices = props.matrix.columns.filter(column =>
-    [column.key, column.deviceName ?? "", column.deviceAddress ?? "", column.objectName ?? "", String(column.objectNumber)].some(value => value.toLowerCase().includes(needle)),
+    [column.key, column.deviceName ?? "", column.deviceName === null ? "" : deviceLabel(t, { id: column.deviceId, name: column.deviceName }), column.deviceAddress ?? "", column.objectName ?? "", String(column.objectNumber)].some(value => value.toLowerCase().includes(needle)),
   );
   const columnDevice = (column: GroupAddressMatrixColumn) => column.deviceName === null
     ? t("addressTable.unknownDevice", { id: column.deviceId }) : deviceLabel(t, { id: column.deviceId, name: column.deviceName });

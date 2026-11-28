@@ -8,7 +8,7 @@ export default function GroupAddressObjectInventoryList(props: { inventory: Grou
   const t = useTranslate();
   const { inventory, query } = props;
   const devices = loadableDevices(inventory.devices).filter(device =>
-    query === "" || [device.name, device.address ?? ""].some(value => value.toLowerCase().includes(query)));
+    query === "" || [device.name, deviceLabel(t, device), device.address ?? ""].some(value => value.toLowerCase().includes(query)));
   return <div className="ga-inventory-devices" role="group" aria-label={t("gaWorkspace.inventoryDevices")}>
     <p className="ga-evidence-note">{t("gaWorkspace.inventoryDevices")}</p>
     <ul>{devices.map(device => {

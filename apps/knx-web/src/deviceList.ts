@@ -93,6 +93,8 @@ export interface DeviceRowOptions {
   system2Text?: (row: DeviceListRow) => string;
   /** Explicit tie-break for the programming sort; never changes what pending-only means. */
   system2Rank?: (row: DeviceListRow) => number;
+  /** Display label of a row (blank names show the unnamed fallback); searched next to the raw name. */
+  label?: (row: DeviceListRow) => string;
 }
 
 export function visibleDeviceRows(rows: DeviceListRow[], query: string, sort: DeviceSort, language: string,
@@ -101,7 +103,7 @@ export function visibleDeviceRows(rows: DeviceListRow[], query: string, sort: De
   const collator = new Intl.Collator(language, { numeric: true, sensitivity: "base" });
   const system = options.systemText ?? (() => "");
   const filtered = rows.filter((row) => !options.pendingOnly || pendingParts(row).length > 0).filter((row) => !needle || [
-    row.name, row.address, row.description, ...row.topology, ...row.building,
+    row.name, options.label?.(row), row.address, row.description, ...row.topology, ...row.building,
     row.catalog?.manufacturerName, row.catalog?.manufacturerId, row.catalog?.productText,
     row.catalog?.orderNumber, row.catalog?.productRef, system(row), declaredMask(row), options.system2Text?.(row),
   ].some((value) => value?.toLocaleLowerCase(language).includes(needle)));

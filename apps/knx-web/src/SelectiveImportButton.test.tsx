@@ -110,3 +110,20 @@ it("shows a blank source device as unnamed with its ID and keeps a named one unc
   expect(row(2)).toBe("1.1.2 · Unnamed device (ID 2) (ID 2)");
   expect(mixed.installations[0].devices[1].name).toBe("  ");
 });
+it.each([["en", "Unnamed", "ID 7"], ["de", "Unbenanntes", "ID 7"]])("search finds a blank-named source device by its fallback label (%s)", async (language, word, idText) => {
+  settingsStorage.setItem("uiLanguage", language);
+  resetUiLanguageForTests();
+  const blank = { ...source, installations: [{ ...source.installations[0], devices: [
+    { id: 7, name: "  ", address: "1.1.7", line: 3 }, { id: 1, name: "Imported switch", address: "1.1.1", line: 3 }] }] };
+  picker.pickOpenPath.mockResolvedValue("source.knxproj"); api.inspectImportSource.mockResolvedValue(blank);
+  await render(); await act(async () => document.querySelector<HTMLButtonElement>("button")!.click());
+  await click(language === "en" ? "Choose source project…" : "Quellprojekt auswählen…");
+  const shown = () => [...document.querySelectorAll("[data-import-device]")].map(e => e.getAttribute("data-import-device"));
+  const input = document.querySelector<HTMLInputElement>('input[type="search"]')!;
+  const type = async (value: string) => act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value); input.dispatchEvent(new Event("input", { bubbles: true })); });
+  expect(shown().sort()).toEqual(["1", "7"]);
+  await type(word); expect(shown()).toEqual(["7"]);
+  await type(idText); expect(shown()).toEqual(["7"]);
+  await type("imported"); expect(shown()).toEqual(["1"]);
+  await type("1.1.1"); expect(shown()).toEqual(["1"]);
+});

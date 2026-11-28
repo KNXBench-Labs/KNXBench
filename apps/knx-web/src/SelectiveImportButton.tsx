@@ -53,7 +53,7 @@ function ImportDialog({ tree, scope, onTreeUpdate, onClose }: Props & { tree: Pr
   const source = inventory?.installations.find(i => i.id === sourceId);
   const target = tree.installations.find(i => i.id === targetId);
   const ready = Boolean(source && target && (devices.length || lines.length));
-  const matches = source?.devices.filter(d => `${d.name} ${d.address ?? ""} ${d.id}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())) ?? [];
+  const matches = source?.devices.filter(d => `${d.name} ${deviceLabel(t, d)} ${d.address ?? ""} ${d.id}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())) ?? [];
   const shown = matches.slice(0, 250);
   function body(): api.SelectionRequest {
     if (!inventory || !source || !target) throw new Error(t("selectiveImport.chooseInstallation"));

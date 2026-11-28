@@ -74,6 +74,13 @@ async function installActivityFixture(page: Page, language: "en" | "de", width: 
         ? route.fulfill({ status: 500, contentType: "application/json", body: '{"error":"Fictional save failure"}' })
         : ok({});
     }
+    if (path === "/api/missing-names/scan" && method === "POST") return ok({
+      serverIncarnation: state.activeTree.server_incarnation, projectIncarnation: state.activeTree.project_incarnation ?? 1,
+      snapshotRevision: state.activeTree.snapshot_revision, persistence: "session-only",
+      discovery: { completeness: "complete", offset: 0, limit: 1, has_more_in_scan: false,
+        counts: { entities_scanned: 0, candidates_found_in_scan: 0, total_candidates: 0, total_by_kind: {} } },
+      items: [],
+    });
     if (path === "/api/device-system2/status" && method === "GET") return ok(null);
     if (path === "/api/devices" && method === "GET") return ok({ schemaVersion: 1, serverIncarnation: state.activeTree.server_incarnation, snapshotRevision: state.activeTree.snapshot_revision, devices: [] });
     if (path === "/api/device-compare" && method === "POST") {

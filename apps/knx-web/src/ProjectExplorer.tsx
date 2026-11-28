@@ -20,6 +20,7 @@ import { useTranslate, type MessageKey, type Translate } from "./i18n";
 import { canonicalGroupAddress, useGroupAddressFormat } from "./gaNotation";
 import { writeDraggedGroupAddress } from "./groupAddressDrag";
 import { installationLabel } from "./installationPresentation";
+import { deviceLabel } from "./devicePresentation";
 import { useTreePulse } from "./treeLines";
 import type { ImportFindingSeverity } from "./importFindings";
 
@@ -311,8 +312,10 @@ function DeviceItem(props: {
   scrollOnReveal?: boolean;
 } & SelectionProps & DeviceDragProps) {
   const { device, selection, multiSelection, onItemClick } = props;
+  const t = useTranslate();
   const draggable = props.eligibleDeviceIds.has(device.id);
-  const label = device.address ? `${device.address} ${device.name}` : device.name;
+  const name = deviceLabel(t, device);
+  const label = device.address ? `${device.address} ${name}` : name;
   const sel: Selection = { kind: "device", id: device.id };
   return (
     <TreeNode
@@ -1165,7 +1168,7 @@ export default function ProjectExplorer(
       onTreeUpdate(next);
       emitAchievementEvent({ type: "dragDropApplied" });
       props.onSummary(t("dragDrop.movedToLine", {
-        device: device.name,
+        device: deviceLabel(t, device),
         line: t("explorer.lineLabel", { address: line.address, name: line.name }),
       }));
     } catch (error) {
@@ -1188,7 +1191,7 @@ export default function ProjectExplorer(
       onTreeUpdate(next);
       emitAchievementEvent({ type: "dragDropApplied" });
       props.onSummary(t("dragDrop.movedToBuildingPart", {
-        device: device.name,
+        device: deviceLabel(t, device),
         buildingPart: building.name,
       }));
     } catch (error) {

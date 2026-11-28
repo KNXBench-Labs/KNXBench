@@ -889,6 +889,7 @@ export const messages = {
   "selectiveImport.destination": "Destination installation",
   "selectiveImport.chooseInstallation": "Choose an installation…",
   "installation.unnamed": "Unnamed installation (ID {id})",
+  "device.unnamed": "Unnamed device (ID {id})",
   "installation.description": "An installation groups the topology, buildings, unassigned devices and group addresses within a project. It is not a device or a line; a project can contain several installations.",
   "installation.editHint": "Edit the name here. Enter or leaving the field saves it; Escape cancels the draft. Renaming changes only this installation’s name and can be undone.",
   "installation.selectHint": "Select this node to see its explanation and edit its name. The arrow expands or collapses the installation.",

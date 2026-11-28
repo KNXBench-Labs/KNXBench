@@ -11,6 +11,7 @@ import type { ItemClickHandler } from "./multiSelection";
 import { catalogueMatchesTree, projectDeviceRows, visibleDeviceRows,
   type DeviceCatalog, type DeviceCatalogRow, type DeviceListRow, type DeviceSort } from "./deviceList";
 import { useTranslate, type MessageKey } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import { maskHex, systemLabel } from "./deviceSystem";
 import { useProductLanguage } from "./productLanguage";
 import { useUiLanguage } from "./uiLanguage";
@@ -106,7 +107,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
   const cell = (row: DeviceListRow, id: string) => {
     switch (id) {
       case "address": return <td key={id} className="mono"><button className="table-select" onClick={(event) => onItemClick(event, "device", row.id, { kind: "device", id: row.id }, visibleOrder, true)}>{row.address ?? t("workbench.unassigned")}</button></td>;
-      case "name": return <td key={id}><button className="table-select" onClick={(event) => onItemClick(event, "device", row.id, { kind: "device", id: row.id }, visibleOrder, true)}>{row.name}</button></td>;
+      case "name": return <td key={id}><button className="table-select" onClick={(event) => onItemClick(event, "device", row.id, { kind: "device", id: row.id }, visibleOrder, true)}>{deviceLabel(t, row)}</button></td>;
       case "programming": return <td key={id}>{programmingMounted ? programmingChips(row, row.id === system2Result?.deviceId ? system2Result : null) : null}</td>;
       case "manufacturer": return <td key={id}>{row.catalog?.manufacturerName ?? row.catalog?.manufacturerId ?? resolution(row)}</td>;
       case "product": return <td key={id}>{row.catalog?.productText ?? resolution(row)}
@@ -153,7 +154,7 @@ export default function DevicesWorkspace({ tree, active, selection, multiSelecti
           onItemClick(event, "device", row.id, { kind: "device", id: row.id }, visibleOrder, true);
         }}
         aria-selected={selection?.kind === "device" && selection.id === row.id || multiSelection?.kind === "device" && multiSelection.ids.has(row.id)}>
-        <td><input type="checkbox" aria-label={t("devices.select", { name: row.name })}
+        <td><input type="checkbox" aria-label={t("devices.select", { name: deviceLabel(t, row) })}
           checked={multiSelection?.kind === "device" && multiSelection.ids.has(row.id) || false}
           onChange={() => onItemClick(CHECKBOX_CLICK, "device", row.id, { kind: "device", id: row.id }, visibleOrder)} /></td>
         {columns.map((column) => cell(row, column.id))}

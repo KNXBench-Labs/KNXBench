@@ -869,6 +869,7 @@ export const messages: Record<MessageKey, string> = {
   "selectiveImport.destination": "Zielinstallation",
   "selectiveImport.chooseInstallation": "Installation auswählen…",
   "installation.unnamed": "Unbenannte Installation (ID {id})",
+  "device.unnamed": "Unbenanntes Gerät (ID {id})",
   "installation.description": "Eine Installation bündelt die Topologie, Gebäude, nicht zugeordneten Geräte und Gruppenadressen innerhalb eines Projekts. Sie ist kein Gerät und keine Linie; ein Projekt kann mehrere Installationen enthalten.",
   "installation.editHint": "Hier kannst du den Namen bearbeiten. Enter oder Verlassen des Feldes speichert ihn; Escape verwirft den Entwurf. Die Umbenennung ändert nur den Namen dieser Installation und lässt sich rückgängig machen.",
   "installation.selectHint": "Wähle diesen Knoten aus, um seine Erklärung zu sehen und den Namen zu bearbeiten. Der Pfeil klappt die Installation auf oder zu.",

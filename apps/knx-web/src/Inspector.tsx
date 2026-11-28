@@ -15,6 +15,7 @@ import ComObjectTable from "./ComObjectTable";
 import DeviceConfigPanel from "./DeviceConfigPanel";
 import { useComMutation } from "./ComMutationBoundary";
 import { useUiLanguage } from "./uiLanguage";
+import { deviceLabel } from "./devicePresentation";
 import { DPT_OPTIONS, dptDisplay, dptEntry, retainedDptOptions } from "./dptLabels";
 import ValueProvenance, { isRoutineLayer } from "./ValueProvenance";
 import type { DeviceProductNode } from "./bindings/DeviceProductNode";
@@ -1072,13 +1073,13 @@ export function DeviceWorkspace(props: {
   const pending = useDevicePendingParts(tree, detail.id);
   const pendingSentence = usePendingSentence();
   return <section className="device-workspace">
-    <header className="workspace-heading"><div><h2>{detail.name}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div>
+    <header className="workspace-heading"><div><h2>{deviceLabel(t, detail)}</h2><span className="mono">{detail.address ?? t("workbench.unassigned")}</span></div>
       <div className="workspace-heading-actions"><OpenDownloadButton deviceId={detail.id} address={detail.address} />
         <button type="button" disabled={props.comparisons.running} onClick={() => props.comparisons.open([detail])}>{t("compare.one")}</button>
         <PluginDataButton tree={tree} deviceId={detail.id} onTreeUpdate={onApplied} onOpenHistory={props.onOpenHistory} /></div></header>
     <DevicePendingSummary parts={pending} />
     <RenameNameField tree={tree} target={{ kind: "device", id: detail.id, name: detail.name }} onApplied={onApplied} />
-    <div className="device-tabs" role="tablist" aria-label={detail.name} onKeyDown={(e) => {
+    <div className="device-tabs" role="tablist" aria-label={deviceLabel(t, detail)} onKeyDown={(e) => {
       // Decided 23 Nov 2026 (owner Q11, WP-49.5): Alt/Ctrl/Meta-modified navigation
       // keys are NOT handled or prevented, so browser shortcuts (Alt+Left = back,
       // Ctrl+Arrow, Cmd+Arrow) keep working. Plain and Shift-modified keys stay handled.
@@ -1286,7 +1287,7 @@ function DeviceInspector(props: {
 
   return (
     <div className="inspector">
-      <h2>{detail.name}</h2>
+      <h2>{deviceLabel(t, detail)}</h2>
       <RenameNameField tree={tree} target={{ kind: "device", id: detail.id, name: detail.name }} onApplied={onApplied} />
       {canDelete ? (
         <button className="danger-action" onClick={remove}>{t("inspector.delete")}</button>

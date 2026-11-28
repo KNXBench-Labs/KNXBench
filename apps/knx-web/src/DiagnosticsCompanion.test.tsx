@@ -342,6 +342,15 @@ describe("one editing workspace", () => {
     for (const module of ["DeviceLink.tsx", "deviceList.ts", "deviceSystem.ts", "programmingState.ts", "treeUtils.ts"]) {
       expect(graph.get(module)).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
     }
+    // WP-51 Q2 adds `devicePresentation.ts` (blank-name display fallback) and
+    // `blankName.ts` (the shared blank rule) through `DeviceLink`: pure strings,
+    // no API call, no IO and no project mutation.
+    const devicePresentationGraph = valueImportGraph("devicePresentation.ts");
+    expect([...devicePresentationGraph.keys()].sort()).toEqual(["blankName.ts", "devicePresentation.ts"]);
+    expect(apiCallsIn(devicePresentationGraph)).toEqual([]);
+    for (const module of ["blankName.ts", "devicePresentation.ts"]) {
+      expect(devicePresentationGraph.get(module)).not.toMatch(/\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\s*\(/);
+    }
     // The project-status import links add `importFindings.ts` through the
     // Log panel: pure source/severity matching over already-fetched entries.
     // It has no value imports, calls no API and mutates nothing.
@@ -436,6 +445,7 @@ describe("one editing workspace", () => {
       "activityHistory.ts",
       "api.ts",
       "appUiScale.ts", // Root computed style only; no API or project mutation.
+      "blankName.ts", // WP-51 Q2: pure blank-name rule; checked above.
       "bundledLanguagePacks.ts",
       "busConnection.ts",
       "busContext.ts",
@@ -445,6 +455,7 @@ describe("one editing workspace", () => {
       "canonicalJson.ts",
       "comObjectView.ts", // Issue #51: pure group-address label/DPT helpers; no API.
       "deviceList.ts",
+      "devicePresentation.ts", // WP-51 Q2: pure display label; checked above.
       "deviceSystem.ts",
       "diagnosticsWindow.ts",
       "downloadFailure.ts",

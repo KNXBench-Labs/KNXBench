@@ -56,3 +56,12 @@ it("renders passive text outside the editing workspace, including the diagnostic
   await act(async () => root!.render(<DeviceLink address="1.1.2">Source</DeviceLink>));
   expect(host.textContent).toBe("Source"); expect(host.querySelector("button")).toBeNull();
 });
+it("labels a blank-named device with its stable ID in text and accessible name", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+  host = document.createElement("div"); document.body.append(host); root = createRoot(host);
+  await act(async () => root!.render(<DeviceNavigationProvider tree={tree([{ ...device(5), name: " " }])} onOpen={() => {}} onList={() => {}}>
+    <DeviceLink deviceId={5} /></DeviceNavigationProvider>));
+  const button = host.querySelector<HTMLButtonElement>("button")!;
+  expect(button.textContent).toBe("Unnamed device (ID 5)");
+  expect(button.getAttribute("aria-label")).toBe("Open device Unnamed device (ID 5)");
+});

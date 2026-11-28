@@ -5,6 +5,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import { collectDevices } from "./treeUtils";
 import { catalogueMatchesTree, type DeviceCatalog } from "./deviceList";
 import { useTranslate } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 
 interface DeviceNavigation {
   devices: Map<number, DeviceNode>;
@@ -43,14 +44,14 @@ export default function DeviceLink({ deviceId, address, children }: {
   const matches = address == null ? [] : navigation.addresses.get(address) ?? [];
   const device = deviceId !== undefined ? navigation.devices.get(deviceId)
     : matches.length === 1 ? matches[0] : undefined;
-  const label = children ?? device?.name ?? address ?? `#${deviceId}`;
+  const label = children ?? (device ? deviceLabel(t, device) : address ?? `#${deviceId}`);
   if (!device) {
     const hint = t(deviceId !== undefined ? "devices.missingDevice"
       : matches.length > 1 ? "devices.ambiguousAddress" : "devices.noAddressMatch");
     return <span className="device-link-unresolved" title={hint}>{label}<span className="sr-only"> — {hint}</span></span>;
   }
-  return <button type="button" className="device-link table-select" title={t("devices.openNamed", { name: device.name })}
-    aria-label={t("devices.openNamed", { name: device.name })}
+  return <button type="button" className="device-link table-select" title={t("devices.openNamed", { name: deviceLabel(t, device) })}
+    aria-label={t("devices.openNamed", { name: deviceLabel(t, device) })}
     onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") event.stopPropagation(); }}
     onClick={(event) => { event.stopPropagation(); navigation.open(device.id); }}>{label}</button>;
 }

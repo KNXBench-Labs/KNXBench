@@ -2,7 +2,7 @@
 
 Owner request: 24 November 2026, approved naming-wizard interview decisions
 Q1, Q2 and Q4–Q17; Q18 requests this independent work package.
-Status: Partial in progress — slices 51.1a–51.1c and 51.2a–51.2c published (`c6c6cfbcf` after independent re-review APPROVE and a green change-scoped package gate); 51.3a (web wizard dialog and manual entry) is published (`a3af339e1`); 51.3b (automatic opening and Later) is published on `main` (`13e5cb946`..`688eb5aeb`); 51.3c (Q17 read-only rule) is implemented on a work branch, pending review; the rest of 51.3, 51.4 and the Wizard as a whole are not complete.
+Status: Partial in progress — slices 51.1a–51.1c and 51.2a–51.2c published (`c6c6cfbcf` after independent re-review APPROVE and a green change-scoped package gate); 51.3a (web wizard dialog and manual entry) is published (`a3af339e1`); 51.3b (automatic opening and Later) is published on `main` (`13e5cb946`..`688eb5aeb`); 51.3c (Q17 read-only rule) is published on `main` (`1510e8883`, `e210ed533`); 51.3d (Q2 device-name display in the web consumers) is a work-branch candidate, pending review; the rest of 51.3, 51.4 and the Wizard as a whole are not complete.
 Slice 51.1a covers validated, reversible name-only domain commands for Project (`RenameProject` / `RestoreProjectName`) and Project Function (`RenameFunction` / `RestoreFunctionName`), unambiguous Function ID resolution, native working-history snapshot replay/roundtrip coverage, and diagnostic allowlist wiring. Slice 51.1b adds validated structural renames and exact Restore*Name inverses for Installation, all 11 supported BuildingPart kinds, Area, Line and GroupRange. Slice 51.1c records the verified Q9 source/model/name constraints audit and adds the structured provenance data model and deterministic, strictly read-only missing-name detection across all Q9 entity types in `knx-edit::missing_names` (backed by shared `knx_core::names::is_blank_name`). Slice 51.1c did not include recipes or wizard/Apply paths; the bounded 51.2a successor below adds recipes only.
 Blocked by: None (WP-51 and WP-52 are independent).
 
@@ -123,7 +123,7 @@ none is an individually complete product slice, and the Wizard is not complete.
 | 51.1b | Validated structural name-only commands and exact restore inverses; unique installation name resolution; core identity/admission/no-op/batch regressions and native history replay across every supported building kind | Published (`3d335ab7e` / `b57106993`; backend foundation only) |
 | 51.1c (remaining 51.1) | Audit Q9 source/model/name constraints beyond the implemented command paths; define provenance and deterministic missing-name detection without mutating import data | Published as `9c8c4e039`; independent review and 16/16 scoped gate accepted; publication recorded in snapshot archive |
 | 51.2 | Implement all recipes, ambiguity/manual cases, parent dependency invalidation, bounded scan/count/page semantics and preview binding; reuse candidate stack, `Command::Batch`, stale-snapshot guards and durable native write-before-publish | Partial: 51.2a read-only recipes (`2867d28da`) and 51.2b offline preview, parent dependency invalidation, confirmation token and atomic `Command::Batch` apply (`0aa842ee1`, independent APPROVE, 14/14 scoped gate) published in `knx-edit`; server/API plumbing and durable native persistence wiring remain open |
-| 51.3 | Implement entry timing, Later/manual reopen, grouped editable selection, source/context/errors, duplicate warnings, 256 cap and explicit confirmation; reuse Overlay; keyboard/focus, narrow displays and all supported translations; update all Q2 device consumers | Partial: 51.3a (published `a3af339e1`) adds the web wizard dialog (scan, editable selection, preview, explicit Apply, 256 cap, en/de) and a manual “Fill missing names” entry in the File menu and command palette. 51.3b (published on `main`, `13e5cb946`..`688eb5aeb`) adds Q4 automatic opening after import/open and a Later button, vitest only. 51.3c (work-branch candidate) adds the Q17 read-only rule (scan/preview `readOnly`, 409 `missingNameReadOnly` before any state change, no auto-open, review without Apply). Q2 device consumers, narrow-display/real-browser checks and 51.4 remain open |
+| 51.3 | Implement entry timing, Later/manual reopen, grouped editable selection, source/context/errors, duplicate warnings, 256 cap and explicit confirmation; reuse Overlay; keyboard/focus, narrow displays and all supported translations; update all Q2 device consumers | Partial: 51.3a (published `a3af339e1`) adds the web wizard dialog (scan, editable selection, preview, explicit Apply, 256 cap, en/de) and a manual “Fill missing names” entry in the File menu and command palette. 51.3b (published on `main`, `13e5cb946`..`688eb5aeb`) adds Q4 automatic opening after import/open and a Later button, vitest only. 51.3c (published on `main`, `1510e8883`, `e210ed533`) adds the Q17 read-only rule (scan/preview `readOnly`, 409 `missingNameReadOnly` before any state change, no auto-open, review without Apply). 51.3d (work-branch candidate) shows a blank device name as “Unnamed device (ID n)” in every web Q2 consumer, display-only, vitest only. Narrow-display/real-browser checks and 51.4 remain open |
 | 51.4 | Integrate native/session-only persistence, save/reopen and Undo, failure/conflict paths and end-to-end acceptance across every supported entity; update affected user/status/limitations docs only with verified results | Planned (not started) |
 
 ### 51.1b focused implementation diagnostics (26 November 2026)
@@ -233,7 +233,7 @@ unresolved-program notice, plugin data) in the desktop app, so a late scan could
 open the wizard behind one; the fix needs a shared counter in `filePicker.ts`.
 The Q17 read-only rule followed in 51.3c.
 
-**51.3c status: PARTIAL (28 November 2026, work-branch candidate, pending review).**
+**51.3c status: PARTIAL (28 November 2026, published on `main` as `1510e8883` and `e210ed533`).**
 Owner decision for Q17: a project is read-only when its native `.knxdb` file (or
 the directory holding it) is not writable for the server process; a session-only
 project is never read-only. The server checks this with `access(2)` on every
@@ -254,9 +254,33 @@ read-only after the preview refuses the apply the same way; session-only stays
 writable) and vitest (client, hook, wizard EN/DE). No real-browser run. Not
 covered: write permission granted or revoked through ACLs or a read-only mount is
 detected by `access(2)` but untested; the desktop app's native picker gap from
-51.3b is unchanged. Open: Q2 device consumers, narrow-display browser check and
-51.4. The 51.3 row stays partial and no acceptance-matrix row is checked: the
-read-only row also needs the real-browser and import-timing evidence.
+51.3b is unchanged. Open: Q2 device consumers (now 51.3d), narrow-display browser
+check and 51.4. The 51.3 row stays partial and no acceptance-matrix row is
+checked: the read-only row also needs the real-browser and import-timing evidence.
+
+**51.3d status: PARTIAL (28 November 2026, work-branch candidate, pending review).**
+Q2 in the web UI: `devicePresentation.ts::deviceLabel` returns a nonblank device
+name unchanged and shows a blank one (same rule as the wizard, now shared from
+`blankName.ts`) as “Unnamed device (ID n)” / “Unbenanntes Gerät (ID n)”. It is
+display-only: no stored name, ID, address, assignment, parameter or programming
+state changes, and the server DTOs are unchanged. Wired consumers: explorer
+topology rows and drag-and-drop summaries, device list (name cell and selection
+label), topology and building views, Inspector device heading and tab-list label,
+GA links, GA matrix columns (the `addressTable.unknownDevice` fallback still
+covers a missing device), GA member add, object inventory and `DeviceLink` (text
+and accessible name). The physical address stays next to the label wherever it
+was shown. The rename fields keep the raw stored name. After the wizard Apply
+(`onTreeUpdate`) and after Undo/Redo (`App.tsx` passes `api.undo()`/`api.redo()`
+to `handleTreeUpdate`), the consumers re-render from the republished tree; the
+Undo path is confirmed by source reading, not by a test through `App`.
+Verification: vitest `devicePresentation.test.ts` (blank variants incl. NBSP and
+EM SPACE, exact nonblank names, German, English fallback, shared blank rule),
+`DeviceLink.test.tsx` (blank label and accessible name), `StructureWorkspace.test.tsx`
+(topology and building views: blank → named → blank re-render keeps ID and
+address) and the `DiagnosticsCompanion` import-graph guard extended for the two
+pure modules; full `vitest run` and `tsc` for every web tsconfig pass. No
+real-browser run. The Q2 acceptance row stays unchecked: it also needs an
+end-to-end Apply/Undo run against a native project.
 
 Each row requires recorded evidence at implementation time, using fictional
 fixtures and simulated/offline workflows. No row has been executed for intake.
@@ -299,7 +323,8 @@ None at owner level: the naming interview frontier is closed. Slices 51.1a–51.
 and 51.2a–51.2c (offline recipes, preview, invalidation, atomic batch apply,
 server API and native write-before-publish apply) are published. 51.3a (web
 dialog and manual entry) and 51.3b (automatic opening, Later) are published and
-51.3c (Q17 read-only rule) is a branch candidate; the rest of 51.3, 51.4 and
+51.3c (Q17 read-only rule) is published; 51.3d (Q2 device-name display) is a
+branch candidate; the rest of 51.3, 51.4 and
 the Wizard as a whole remain incomplete. Source-derived details still
 to establish within this plan:
 exact descriptive-text/product-resolution access for every type, validated command

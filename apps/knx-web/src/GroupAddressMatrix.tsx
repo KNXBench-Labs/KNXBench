@@ -4,6 +4,7 @@ import type { GroupAddressWorkspaceViewProps } from "./groupAddressWorkspaceView
 import type { GroupAddressMatrixColumn, GroupAddressMatrixIndex } from "./groupAddressMatrix";
 import type { GroupAddressObjectInventory } from "./groupAddressObjectInventory";
 import { useTranslate } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import { useGroupAddressFormat } from "./gaNotation";
 import GroupAddressWindowNotice from "./GroupAddressWindowNotice";
 import GroupAddressObjectInventoryList from "./GroupAddressObjectInventoryList";
@@ -31,7 +32,8 @@ export default function GroupAddressMatrix(props: GroupAddressWorkspaceViewProps
   const choices = props.matrix.columns.filter(column =>
     [column.key, column.deviceName ?? "", column.deviceAddress ?? "", column.objectName ?? "", String(column.objectNumber)].some(value => value.toLowerCase().includes(needle)),
   );
-  const deviceLabel = (column: GroupAddressMatrixColumn) => column.deviceName ?? t("addressTable.unknownDevice", { id: column.deviceId });
+  const columnDevice = (column: GroupAddressMatrixColumn) => column.deviceName === null
+    ? t("addressTable.unknownDevice", { id: column.deviceId }) : deviceLabel(t, { id: column.deviceId, name: column.deviceName });
   const objectLabel = (column: GroupAddressMatrixColumn) => `${column.objectName ?? t("addressTable.unnamedObject")} #${column.objectNumber}`;
   const rows = Number.isFinite(props.limit) ? props.rows.slice(0, props.limit) : props.rows;
   const visibleOrder = rows.filter(row => row.selectable).map(row => row.node.id);
@@ -47,7 +49,7 @@ export default function GroupAddressMatrix(props: GroupAddressWorkspaceViewProps
       <div className="ga-column-choices">{choices.map(column => <label key={column.key}>
         <input type="checkbox" data-ga-column={column.key} checked={selected.has(column.key)} disabled={!selected.has(column.key) && columns.length >= MAX_COLUMNS}
           onChange={() => { const next = new Set(columns.map(c => c.key)); if (next.has(column.key)) next.delete(column.key); else next.add(column.key); props.onColumns(next); }} />
-        <span>{deviceLabel(column)} · {column.deviceAddress ?? t("gaWorkspace.noDeviceAddress")}
+        <span>{columnDevice(column)} · {column.deviceAddress ?? t("gaWorkspace.noDeviceAddress")}
           <small>{objectLabel(column)} · {column.key}</small>
           {!column.linked && <small data-ga-unlinked>{t("gaWorkspace.unlinkedObject")}</small>}</span>
       </label>)}</div>
@@ -56,7 +58,7 @@ export default function GroupAddressMatrix(props: GroupAddressWorkspaceViewProps
     <ResizableTable tableId="group-address-matrix" columns={MATRIX_COLUMNS} showReset={props.showColumnReset} trailing={{ count: columns.length, column: MATRIX_OBJECT_COLUMN }} scrollClassName="workspace-table-wrap" className="workspace-table ga-matrix-table">
       <thead><tr><th>{t("addressTable.selectColumn")}</th><th>{t("workbench.address")}</th><th>{t("workbench.name")}</th>
         {columns.map(column => <th key={column.key} scope="col">
-          <span>{deviceLabel(column)}</span>
+          <span>{columnDevice(column)}</span>
           <small>{objectLabel(column)}</small><small>{column.key}</small>
           {!column.linked && <small data-ga-unlinked>{t("gaWorkspace.unlinkedObject")}</small>}
         </th>)}

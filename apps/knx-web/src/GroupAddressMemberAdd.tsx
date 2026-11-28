@@ -13,6 +13,7 @@ import {
 import { directionLabel } from "./groupAddressView";
 import { suggestLinkDirection } from "./linkDirectionDefault";
 import { useTranslate, type MessageKey } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import { useUiLanguage } from "./uiLanguage";
 import { projectContextKey } from "./treeUtils";
 
@@ -129,7 +130,7 @@ export default function GroupAddressMemberAdd(props: {
         <select data-ga-member-device value={draft.deviceId ?? ""} disabled={busy} onChange={(event) => chooseDevice(event.target.value)}>
           <option value="">{t("addressTable.members.chooseDevice")}</option>
           {candidates.map((device) => <option key={device.id} value={device.id}>
-            {device.address ?? t("addressTable.members.noAddress")} — {device.name}
+            {device.address ?? t("addressTable.members.noAddress")} — {deviceLabel(t, device)}
           </option>)}
         </select>
       </label>

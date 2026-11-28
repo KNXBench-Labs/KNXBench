@@ -10,6 +10,7 @@ import { canAddMembers } from "./groupAddressMembers";
 import { useGroupAddressFormat } from "./gaNotation";
 import { useTranslate } from "./i18n";
 import DeviceLink from "./DeviceLink";
+import { deviceLabel } from "./devicePresentation";
 import GroupAddressMemberAdd from "./GroupAddressMemberAdd";
 
 const GROUP_ADDRESS_MEMBERS_COLUMNS = [
@@ -45,7 +46,8 @@ function useUnlink(ga: GroupAddressNode, link: GroupAddressLinkNode, onTreeUpdat
 function MemberDevice({ link }: { link: GroupAddressLinkNode }) {
   const t = useTranslate();
   return <>
-    <DeviceLink deviceId={link.device_id}>{link.device_name ?? t("addressTable.unknownDevice", { id: link.device_id })}</DeviceLink>
+    <DeviceLink deviceId={link.device_id}>{link.device_name === null ? t("addressTable.unknownDevice", { id: link.device_id })
+      : deviceLabel(t, { id: link.device_id, name: link.device_name })}</DeviceLink>
     {link.device_address && <small className="mono"> {link.device_address}</small>}
   </>;
 }

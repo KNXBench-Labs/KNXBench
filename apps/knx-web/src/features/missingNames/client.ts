@@ -6,6 +6,7 @@
  * render faithfully and never invents totals the server withheld (Q17).
  */
 import { noteRefusal } from "../../api";
+import { isBlankName } from "../../blankName";
 
 /** The server's batch cap (`MAX_MISSING_NAME_SELECTION`, Q17). */
 export const MAX_MISSING_NAME_SELECTION = 256;
@@ -247,10 +248,7 @@ export function cancelMissingNames(token: string, transport: typeof fetch = fetc
   void post("/api/missing-names/cancel", { token }, transport).catch(() => undefined);
 }
 
-/** Blank exactly as `knx_core::names::is_blank_name` (Rust `trim`: the Unicode White_Space set). */
-export function isBlankName(text: string): boolean {
-  return /^\p{White_Space}*$/u.test(text);
-}
+export { isBlankName };
 
 /** Unicode code points, the unit of `max_name_codepoints`. */
 export function codePoints(text: string): number {

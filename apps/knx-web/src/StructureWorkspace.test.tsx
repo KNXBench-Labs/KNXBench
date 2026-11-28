@@ -86,6 +86,24 @@ it("selects actual projected devices and lines in graphical topology by click", 
   await act(async () => root.unmount()); host.remove();
 });
 
+// WP-51 Q2: a blank device name shows the same ID marker in topology and building views,
+// keeps its address, and a republished tree (wizard Apply, then Undo) updates both views.
+it.each(["topology", "buildings"] as const)("%s shows blank device names with ID and address", async (view) => {
+  const host = document.createElement("div"); document.body.append(host); const root = createRoot(host);
+  const withName = (name: string): ProjectTree => ({ ...tree, installations: [{ ...tree.installations[0],
+    topology: [{ ...tree.installations[0].topology[0], lines: [{ ...tree.installations[0].topology[0].lines[0], devices: [{ ...device, name }] }] }],
+    buildings: [{ ...tree.installations[0].buildings[0], children: [{ ...tree.installations[0].buildings[0].children[0], devices: [{ ...device, name }] }] }] }] });
+  const render = (project: ProjectTree) => root.render(<StructureWorkspace {...inert} tree={project} view={view} selection={null} onSelect={() => {}} onCatalog={() => {}} />);
+  try {
+    await act(async () => render(withName("  ")));
+    expect(host.textContent).toContain("Unnamed device (ID 9)"); expect(host.textContent).toContain("1.2.9");
+    await act(async () => render(withName("Kitchen actuator")));
+    expect(host.textContent).toContain("Kitchen actuator"); expect(host.textContent).not.toContain("Unnamed device");
+    await act(async () => render(withName("")));
+    expect(host.textContent).toContain("Unnamed device (ID 9)"); expect(host.textContent).not.toContain("Kitchen actuator");
+  } finally { await act(async () => root.unmount()); host.remove(); }
+});
+
 // The right-hand number on a device row is `DeviceNode.com_object_count`
 // (crates/knx-projection: `device.com_objects.len()`), so it is labelled as
 // communication objects, with a real plural, never left as a bare figure.

@@ -7,6 +7,7 @@ import type { DeviceNode } from "./bindings/DeviceNode";
 import type { MultiSelection, Selection } from "./selection";
 import type { ItemClickHandler } from "./multiSelection";
 import { useTranslate } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import WorkbenchIcon from "./WorkbenchIcon";
 import GroupAddressTable from "./GroupAddressTable";
 import { GROUP_ADDRESSES_COLUMNS } from "./GroupAddressTreeTable";
@@ -76,7 +77,7 @@ export default function StructureWorkspace(props: {
   const selected = (kind: Selection["kind"], id: number) => selection?.kind === kind && selection.id === id;
   function devices(nodes: DeviceNode[]) {
     return <div className="diagram-devices">{nodes.map((device) => <button key={device.id} className="diagram-device" aria-pressed={selected("device", device.id)} onClick={() => onSelect({ kind: "device", id: device.id })}>
-      <WorkbenchIcon name="catalog" /><span><strong title={device.name}>{device.name}</strong><small className="mono">{device.address ?? t("workbench.unassigned")}</small></span><span className="device-object-count">{t("workbench.objectCount", { count: device.com_object_count })}</span>
+      <WorkbenchIcon name="catalog" /><span><strong title={deviceLabel(t, device)}>{deviceLabel(t, device)}</strong><small className="mono">{device.address ?? t("workbench.unassigned")}</small></span><span className="device-object-count">{t("workbench.objectCount", { count: device.com_object_count })}</span>
     </button>)}</div>;
   }
   function building(node: BuildingNode) {
@@ -91,7 +92,7 @@ export default function StructureWorkspace(props: {
       columns={BUILDING_DEVICES_COLUMNS} className="workspace-table">
       <thead><tr><th>{t("workbench.device")}</th><th>{t("workbench.address")}</th><th>{t("inspector.communicationObjects")}</th></tr></thead>
       <tbody>{nodes.map((device) => <tr key={device.id} aria-selected={selected("device", device.id)}>
-        <td><button className="table-select" onClick={() => onSelect({ kind: "device", id: device.id })}>{device.name}</button></td>
+        <td><button className="table-select" onClick={() => onSelect({ kind: "device", id: device.id })}>{deviceLabel(t, device)}</button></td>
         <td className="mono">{device.address ?? t("workbench.unassigned")}</td><td>{device.com_object_count}</td>
       </tr>)}</tbody>
     </ResizableTable>{nodes.length === 0 && <p className="empty-device-list" role="status">{t("workbench.noDevices")}</p>}</div>;

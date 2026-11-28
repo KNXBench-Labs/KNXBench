@@ -2,6 +2,7 @@
 import type { GroupAddressObjectInventory } from "./groupAddressObjectInventory";
 import { loadableDevices, objectInventoryState } from "./groupAddressObjectInventory";
 import { useTranslate } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 
 export default function GroupAddressObjectInventoryList(props: { inventory: GroupAddressObjectInventory; query: string }) {
   const t = useTranslate();
@@ -16,7 +17,7 @@ export default function GroupAddressObjectInventoryList(props: { inventory: Grou
       const failure = entry?.status === "failed"
         ? (entry.mismatch ? t("gaWorkspace.inventory.mismatch") : entry.message ?? t("gaWorkspace.inventory.unknownError")) : null;
       return <li key={device.id} data-ga-inventory-device={device.id} data-ga-inventory-state={state}>
-        <span>{device.name} · {device.address ?? t("gaWorkspace.noDeviceAddress")}
+        <span>{deviceLabel(t, device)} · {device.address ?? t("gaWorkspace.noDeviceAddress")}
           <small>{t("gaWorkspace.objectCount", { count: device.com_object_count })}</small></span>
         <span className="ga-inventory-actions"><span className={`ga-inventory-state${state === "loading" && failure === null ? " task-status-text" : ""}`}>{failure !== null ? t("gaWorkspace.inventory.failed", { message: failure })
           : t(state === "loaded" ? "gaWorkspace.inventory.loaded" : state === "loading" ? "gaWorkspace.inventory.loading" : "gaWorkspace.inventory.notLoaded")}</span>

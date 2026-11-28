@@ -18,8 +18,8 @@ export type MissingNamesAutoOpenOptions = Readonly<{
 /**
  * Returns the check to run when a project lands. The cheap one-item scan is
  * silent on every failure; its answer opens the wizard only if the same
- * project is still shown, nothing else is open or saving, and this project
- * session has not opened it automatically before.
+ * project is still shown, nothing else is open or saving, the project is not
+ * read-only (Q17), and this project session has not opened it automatically before.
  */
 export function useMissingNamesAutoOpen(options: MissingNamesAutoOpenOptions): (tree: AutoOpenTree) => void {
   const latest = useRef(options);
@@ -36,7 +36,7 @@ export function useMissingNamesAutoOpen(options: MissingNamesAutoOpenOptions): (
       const now = latest.current;
       if (!mounted.current || now.currentKey() !== key || !hasEligibleCandidates(result)) return;
       const { overlayOpen, saving } = now.gate();
-      if (!shouldAutoOpen({ key, openedFor: tracker.openedFor(), overlayOpen, saving })) return;
+      if (!shouldAutoOpen({ key, openedFor: tracker.openedFor(), overlayOpen, saving, readOnly: result.readOnly })) return;
       tracker.markOpened(key);
       now.open();
     }, () => {});

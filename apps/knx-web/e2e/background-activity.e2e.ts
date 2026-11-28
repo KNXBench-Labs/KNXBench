@@ -76,7 +76,7 @@ async function installActivityFixture(page: Page, language: "en" | "de", width: 
     }
     if (path === "/api/missing-names/scan" && method === "POST") return ok({
       serverIncarnation: state.activeTree.server_incarnation, projectIncarnation: state.activeTree.project_incarnation ?? 1,
-      snapshotRevision: state.activeTree.snapshot_revision, persistence: "session-only",
+      snapshotRevision: state.activeTree.snapshot_revision, persistence: "session-only", readOnly: false,
       discovery: { completeness: "complete", offset: 0, limit: 1, has_more_in_scan: false,
         counts: { entities_scanned: 0, candidates_found_in_scan: 0, total_candidates: 0, total_by_kind: {} } },
       items: [],

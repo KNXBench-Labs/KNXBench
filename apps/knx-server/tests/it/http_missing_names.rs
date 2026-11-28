@@ -1260,7 +1260,7 @@ async fn external_knxdb_concurrent_conflict_and_readonly_failure_publish_nothing
         (0, 0)
     );
 
-    // Part B: read-only .knxdb -> 422 missingNamePersistenceFailed, zero in-memory mutation.
+    // Part B: a .knxdb made read-only after the preview -> 409 missingNameReadOnly up front.
     let (dir2, state2, app2) = state_with_project(full_q9_project());
     let ro_native = dir2.path().join("readonly.knxdb");
     let (status, _) = request(
@@ -1273,6 +1273,7 @@ async fn external_knxdb_concurrent_conflict_and_readonly_failure_publish_nothing
     assert_eq!(status, StatusCode::OK);
 
     let (_, scan2) = request(&app2, "POST", "/api/missing-names/scan", json!({})).await;
+    assert_eq!(scan2["readOnly"], false);
     let (_, preview2) = request(
         &app2,
         "POST",
@@ -1285,7 +1286,10 @@ async fn external_knxdb_concurrent_conflict_and_readonly_failure_publish_nothing
         }),
     )
     .await;
+    assert_eq!(preview2["readOnly"], false);
 
+    let generation_before = disk_generation(&ro_native);
+    let bytes_before = std::fs::read(&ro_native).unwrap();
     std::fs::set_permissions(&ro_native, std::fs::Permissions::from_mode(0o444)).unwrap();
     let before2 = state2.project.lock().unwrap().clone();
     let (status, ro_err) = request(
@@ -1295,15 +1299,129 @@ async fn external_knxdb_concurrent_conflict_and_readonly_failure_publish_nothing
         json!({"token": preview2["token"], "confirmed": true}),
     )
     .await;
+    let bytes_after = std::fs::read(&ro_native).unwrap();
     // Restore writable permissions so tempdir cleanup always succeeds.
     let _ = std::fs::set_permissions(&ro_native, std::fs::Permissions::from_mode(0o644));
-    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "ro_err: {ro_err}");
-    assert_eq!(ro_err["kind"], "missingNamePersistenceFailed");
+    assert_eq!(status, StatusCode::CONFLICT, "ro_err: {ro_err}");
+    assert_eq!(ro_err["kind"], "missingNameReadOnly");
     assert_eq!(state2.project.lock().unwrap().clone(), before2);
     assert_eq!(
         state2.command_stack.lock().unwrap().history_lengths(),
         (0, 0)
     );
+    assert_eq!(bytes_after, bytes_before);
+    assert_eq!(disk_generation(&ro_native), generation_before);
+}
+
+fn disk_generation(native: &std::path::Path) -> i64 {
+    let conn = knx_store::project_history::open_editor_store(native, false).unwrap();
+    conn.query_row(
+        "SELECT generation FROM project_history_state WHERE id = 0",
+        [],
+        |row| row.get(0),
+    )
+    .unwrap()
+}
+
+/// Opens `name` in a fresh state, saves it as `.knxdb` and makes the file read-only.
+async fn read_only_native(
+    name: &str,
+) -> (
+    tempfile::TempDir,
+    Arc<knx_server::AppState>,
+    axum::Router,
+    std::path::PathBuf,
+) {
+    let (dir, state, app) = state_with_project(full_q9_project());
+    let native = dir.path().join(name);
+    let (status, _) = request(
+        &app,
+        "POST",
+        "/api/project/save-as",
+        json!({"path": native}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    std::fs::set_permissions(&native, std::fs::Permissions::from_mode(0o444)).unwrap();
+    (dir, state, app, native)
+}
+
+#[tokio::test]
+async fn read_only_native_project_scans_but_refuses_preview_and_apply() {
+    let (_dir, state, app, native) = read_only_native("locked.knxdb").await;
+    let generation_before = {
+        let _ = std::fs::set_permissions(&native, std::fs::Permissions::from_mode(0o644));
+        let generation = disk_generation(&native);
+        std::fs::set_permissions(&native, std::fs::Permissions::from_mode(0o444)).unwrap();
+        generation
+    };
+    let bytes_before = std::fs::read(&native).unwrap();
+    let before = state.project.lock().unwrap().clone();
+
+    // Scan and review stay possible and report the read-only project.
+    let (status, scan) = request(&app, "POST", "/api/missing-names/scan", json!({})).await;
+    assert_eq!(status, StatusCode::OK, "scan: {scan}");
+    assert_eq!(scan["readOnly"], true);
+    assert_eq!(scan["persistence"], "native-working-history");
+    assert!(!scan["items"].as_array().unwrap().is_empty());
+
+    let (status, refused) = request(
+        &app,
+        "POST",
+        "/api/missing-names/preview",
+        json!({
+            "serverIncarnation": scan["serverIncarnation"],
+            "projectIncarnation": scan["projectIncarnation"],
+            "snapshotRevision": scan["snapshotRevision"],
+            "entries": [{"target": {"kind": "project"}, "name": "Never"}]
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT, "preview: {refused}");
+    assert_eq!(refused["kind"], "missingNameReadOnly");
+
+    // No token was issued, so a forged apply is refused read-only, not stale.
+    let (status, refused) = request(
+        &app,
+        "POST",
+        "/api/missing-names/apply",
+        json!({"token": "forged", "confirmed": true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT, "apply: {refused}");
+    assert_eq!(refused["kind"], "missingNameReadOnly");
+
+    assert_eq!(state.project.lock().unwrap().clone(), before);
+    assert_eq!(
+        state.command_stack.lock().unwrap().history_lengths(),
+        (0, 0)
+    );
+    assert_eq!(std::fs::read(&native).unwrap(), bytes_before);
+    let _ = std::fs::set_permissions(&native, std::fs::Permissions::from_mode(0o644));
+    assert_eq!(disk_generation(&native), generation_before);
+}
+
+#[tokio::test]
+async fn session_only_project_is_never_read_only() {
+    let (_dir, _state, app) = state_with_project(full_q9_project());
+    let (status, scan) = request(&app, "POST", "/api/missing-names/scan", json!({})).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(scan["persistence"], "session-only");
+    assert_eq!(scan["readOnly"], false);
+    let (status, preview) = request(
+        &app,
+        "POST",
+        "/api/missing-names/preview",
+        json!({
+            "serverIncarnation": scan["serverIncarnation"],
+            "projectIncarnation": scan["projectIncarnation"],
+            "snapshotRevision": scan["snapshotRevision"],
+            "entries": [{"target": {"kind": "project"}, "name": "Session"}]
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "preview: {preview}");
+    assert_eq!(preview["readOnly"], false);
 }
 
 #[tokio::test]

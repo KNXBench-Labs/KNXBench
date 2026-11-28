@@ -1,4 +1,4 @@
-/** Tests the hook that opens the missing-name wizard once per project session (WP-51.3b). */
+/** Tests the hook that opens the missing-name wizard once per project session (WP-51.3b/3c). */
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -48,6 +48,13 @@ describe("useMissingNamesAutoOpen", () => {
     await run();
     expect(scan).toHaveBeenCalledWith({ offset: 0, limit: 1 });
     expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it("never opens a read-only project, even with a candidate (Q17)", async () => {
+    scan.mockResolvedValue({ ...withCandidate, readOnly: true });
+    await run();
+    expect(scan).toHaveBeenCalledTimes(1);
+    expect(open).not.toHaveBeenCalled();
   });
 
   it("does not open without a candidate", async () => {

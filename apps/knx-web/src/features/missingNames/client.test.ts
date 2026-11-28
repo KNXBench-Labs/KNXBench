@@ -21,7 +21,17 @@ describe("missing-name scan", () => {
     expect(sent(send)).toEqual({ offset: 0, limit: 100, language: "de", maxEntitiesScanned: null });
     expect(scan.binding).toEqual(BINDING);
     expect(scan.persistence).toBe("native-working-history");
+    expect(scan.readOnly).toBe(false);
     expect(scan.items).toHaveLength(1);
+  });
+
+  it("admits the read-only flag, defaults its absence to writable and refuses a non-boolean", async () => {
+    const item = [proposal("device", 4, "Dimmer")];
+    expect((await scanMissingNames({ offset: 0 }, transport(200, scanBody(item, { readOnly: true })))).readOnly).toBe(true);
+    const { readOnly: _omitted, ...legacy } = scanBody(item);
+    expect((await scanMissingNames({ offset: 0 }, transport(200, legacy))).readOnly).toBe(false);
+    await expect(scanMissingNames({ offset: 0 }, transport(200, { ...scanBody(item), readOnly: "yes" })))
+      .rejects.toBeInstanceOf(MissingNameContractError);
   });
 
   it("omits unset options and keeps an incomplete scan without totals", async () => {

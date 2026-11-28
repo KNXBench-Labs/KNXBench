@@ -7,8 +7,9 @@
  * `MAX_MISSING_NAME_SELECTION` entries are never submitted (Q13, Q17).
  * A response that arrives after a project change or after closing is
  * discarded, and a preview token it brings is cancelled on the server.
- * Read-only projects: the web UI has no read-only signal (the server sends
- * no flag), so the wizard relies on the server refusing the apply.
+ * Read-only projects (Q17, native file not writable): the scan reports
+ * `readOnly`; the wizard keeps scan and review but disables Preview and
+ * Apply, and the server refuses both anyway.
  */
 import { useEffect, useRef, useState } from "react";
 import * as api from "../../api";
@@ -40,6 +41,7 @@ const REFUSALS = {
   missingNameInvalidName: "missingNames.refusal.invalidName",
   missingNameRefused: "missingNames.refusal.refused",
   missingNamePersistenceFailed: "missingNames.refusal.persistence",
+  missingNameReadOnly: "missingNames.refusal.readOnly",
 } as const;
 
 const KIND_LABELS = {
@@ -195,8 +197,9 @@ export default function MissingNamesWizard(props: {
   const tooMany = chosen.length > MAX_MISSING_NAME_SELECTION;
   const invalid = chosen.filter((draft) => nameProblem(draft) !== null).length;
   // A changed parent outdates dependent suggestions until Re-evaluate has run.
-  const canPreview = !!scan && !busy && !outdated && changedParents.size === 0 && chosen.length > 0 && !tooMany
-    && invalid === 0;
+  const readOnly = scan?.readOnly === true;
+  const canPreview = !!scan && !busy && !outdated && !readOnly && changedParents.size === 0 && chosen.length > 0
+    && !tooMany && invalid === 0;
 
   async function showPreview() {
     if (!scan || !canPreview) return;
@@ -313,6 +316,7 @@ export default function MissingNamesWizard(props: {
       <p>{t("missingNames.subtitle")}</p>
     </header>
     {sessionOnly && <p className="missing-names-session" data-session-only>{t("missingNames.sessionOnly")}</p>}
+    {readOnly && <p className="missing-names-session" data-read-only>{t("missingNames.readOnly")}</p>}
     {!scan && busy && <p role="status">{t("missingNames.scanning")}</p>}
     {discovery && counts && applied === null && <section className="missing-names-scan" aria-labelledby="missing-names-count">
       <div className="missing-names-summary">
@@ -379,7 +383,7 @@ export default function MissingNamesWizard(props: {
       {preview && applied === null && <button type="button" disabled={busy} onClick={retire}>{t("missingNames.back")}</button>}
       {!preview && applied === null && <button type="button" data-missing-preview disabled={!canPreview}
         onClick={() => void showPreview()}>{t("missingNames.preview")}</button>}
-      {applied === null && <button type="button" className="primary-action" data-missing-confirm disabled={busy || !preview}
+      {applied === null && <button type="button" className="primary-action" data-missing-confirm disabled={busy || readOnly || !preview}
         onClick={() => void confirm()}>{preview ? t("missingNames.confirm", { count: preview.changed }) : t("missingNames.confirmIdle")}</button>}
     </footer>
   </Overlay>;

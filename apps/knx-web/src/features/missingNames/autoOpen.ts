@@ -1,4 +1,4 @@
-/** WP-51.3b: pure rule for opening the missing-name wizard once per loaded project. */
+/** WP-51.3b/3c: pure rule for opening the missing-name wizard once per loaded project. */
 import type { MissingNameScan } from "./client";
 
 export type AutoOpenTree = Readonly<{ server_incarnation?: string; project_incarnation?: number }>;
@@ -10,7 +10,7 @@ export const autoOpenKey = (tree: AutoOpenTree): string =>
 /** The single predicate: may the wizard open by itself for this key right now? */
 export function shouldAutoOpen(state: Readonly<{ key: string; openedFor: string | null; overlayOpen: boolean;
   saving: boolean; readOnly?: boolean }>): boolean {
-  // readOnly is reserved for Q17: the UI has no read-only signal today, so callers leave it false.
+  // Q17: a read-only project (native file not writable) never opens the wizard by itself.
   if (state.readOnly) return false;
   if (state.overlayOpen || state.saving) return false;
   return state.openedFor !== state.key;

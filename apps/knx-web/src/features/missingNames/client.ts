@@ -55,7 +55,8 @@ export type MissingNameDiscovery = Readonly<{ completeness: "complete" | "incomp
   offset: number; limit: number; has_more_in_scan: boolean }>;
 export type Persistence = "session-only" | "native-working-history";
 export type MissingNameBinding = Readonly<{ serverIncarnation: string; projectIncarnation: number; snapshotRevision: number }>;
-export type MissingNameScan = Readonly<{ binding: MissingNameBinding; persistence: Persistence;
+/** `readOnly` (Q17): the native `.knxdb` is not writable, so preview and apply are refused. */
+export type MissingNameScan = Readonly<{ binding: MissingNameBinding; persistence: Persistence; readOnly: boolean;
   discovery: MissingNameDiscovery; items: readonly MissingNameProposal[] }>;
 export type MissingNameEntry = Readonly<{ target: NameTargetId; name: string }>;
 export type MissingNameReevaluation = Readonly<{ invalidated_targets: readonly NameTargetId[];
@@ -65,7 +66,7 @@ export type DuplicateNameWarning = Readonly<{ target: NameTargetId; proposed_nam
   conflicts_with: readonly DuplicateConflict[] }>;
 export type MissingNameApplyRow = Readonly<{ target: NameTargetId; kind: NameTargetKind; before: string; after: string }>;
 export type MissingNamePreview = Readonly<{ token: string; expiresInSeconds: number; persistence: Persistence;
-  rows: readonly MissingNameApplyRow[]; changed: number; warnings: readonly DuplicateNameWarning[] }>;
+  readOnly: boolean; rows: readonly MissingNameApplyRow[]; changed: number; warnings: readonly DuplicateNameWarning[] }>;
 export type MissingNameApplied = Readonly<{ changed: boolean; nativeGeneration: number | null; snapshotRevision: number;
   persistence: Persistence }>;
 
@@ -111,6 +112,13 @@ function admitProposal(value: unknown): MissingNameProposal {
   return value as unknown as MissingNameProposal;
 }
 
+/** An absent flag means writable (older servers); anything but a boolean is refused. */
+function admitReadOnly(value: unknown): boolean {
+  if (value === undefined) return false;
+  if (typeof value !== "boolean") fail("readOnly");
+  return value;
+}
+
 function admitPersistence(value: unknown): Persistence {
   if (value !== "session-only" && value !== "native-working-history") fail("persistence");
   return value;
@@ -135,6 +143,7 @@ function admitScan(value: unknown, offset: number): MissingNameScan {
     binding: { serverIncarnation: value.serverIncarnation, projectIncarnation: value.projectIncarnation,
       snapshotRevision: value.snapshotRevision },
     persistence: admitPersistence(value.persistence),
+    readOnly: admitReadOnly(value.readOnly),
     discovery: { completeness: discovery.completeness, counts: counts as unknown as MissingNameCounts, offset,
       limit: discovery.limit, has_more_in_scan: discovery.has_more_in_scan },
     items,
@@ -174,7 +183,7 @@ function admitPreview(value: unknown, entries: readonly MissingNameEntry[]): Mis
       || typeof warning.proposed_name !== "string" || !isRecord(warning.scope) || !Array.isArray(warning.conflicts_with)) fail("warning");
   }
   return { token: value.token, expiresInSeconds: value.expiresInSeconds, persistence: admitPersistence(value.persistence),
-    rows: rows as MissingNameApplyRow[], changed: preview.changed, warnings: preview.warnings as DuplicateNameWarning[] };
+    readOnly: admitReadOnly(value.readOnly), rows: rows as MissingNameApplyRow[], changed: preview.changed, warnings: preview.warnings as DuplicateNameWarning[] };
 }
 
 function admitApplied(value: unknown): MissingNameApplied {

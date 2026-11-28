@@ -83,6 +83,7 @@ struct ScanView {
     project_incarnation: u64,
     snapshot_revision: u64,
     persistence: &'static str,
+    read_only: bool,
     discovery: MissingNameScanResult,
     items: Vec<MissingNameProposal>,
 }
@@ -116,6 +117,7 @@ struct PreviewView {
     token: String,
     expires_in_seconds: u64,
     persistence: &'static str,
+    read_only: bool,
     preview: MissingNameApplyPreview,
 }
 
@@ -147,6 +149,25 @@ fn persistence_label(has_store_path: bool) -> &'static str {
     } else {
         "session-only"
     }
+}
+
+/// Q17: a project is read-only when its native `.knxdb` file (or the directory that
+/// holds its working history) is not writable; a session-only project never is.
+fn native_read_only(path: Option<&std::path::Path>) -> bool {
+    let Some(path) = path else { return false };
+    let writable =
+        |target: &std::path::Path| rustix::fs::access(target, rustix::fs::Access::WRITE_OK).is_ok();
+    let directory = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty());
+    !writable(path) || directory.is_some_and(|parent| !writable(parent))
+}
+
+fn read_only() -> ApiError {
+    ApiError::conflict(
+        "missingNameReadOnly",
+        "The project file is read-only; missing names can be reviewed but not applied",
+    )
 }
 
 fn stale() -> ApiError {
@@ -358,7 +379,9 @@ async fn scan(
                 domain::current_project_revision(state),
             )
         };
-        let persistence = persistence_label(state.store_path.known().is_some());
+        let native = state.store_path.known();
+        let persistence = persistence_label(native.is_some());
+        let read_only = native_read_only(native.as_deref());
         let evidence = resolve_product_evidence(state, &project, language.as_deref());
         let scan_request = MissingNameScanRequest {
             max_entities_scanned: request.max_entities_scanned,
@@ -371,6 +394,7 @@ async fn scan(
             project_incarnation,
             snapshot_revision,
             persistence,
+            read_only,
             discovery: proposed.discovery,
             items: proposed.items,
         }))
@@ -421,6 +445,11 @@ async fn preview(
         let project = lock
             .as_ref()
             .ok_or_else(|| ApiError::bad_request("No project open"))?;
+        // Q17: refuse before a plan or token exists; reviewing stays possible.
+        let native = state.store_path.known();
+        if native_read_only(native.as_deref()) {
+            return Err(read_only());
+        }
         check_binding(
             state,
             &request.server_incarnation,
@@ -445,7 +474,8 @@ async fn preview(
         let response = PreviewView {
             token: token.clone(),
             expires_in_seconds: PREVIEW_TTL.as_secs(),
-            persistence: persistence_label(state.store_path.known().is_some()),
+            persistence: persistence_label(native.is_some()),
+            read_only: false,
             preview: plan.preview().clone(),
         };
         *api.pending.lock().expect("preview mutex poisoned") = Some(Pending {
@@ -475,6 +505,10 @@ async fn apply(
         let project = lock
             .as_mut()
             .ok_or_else(|| ApiError::bad_request("No project open"))?;
+        // Q17: refuse before the command stack, history or token are touched.
+        if native_read_only(state.store_path.known().as_deref()) {
+            return Err(read_only());
+        }
         let mut pending = api.pending.lock().expect("preview mutex poisoned");
         let shown = pending.as_ref().ok_or_else(stale)?;
         if shown.token != request.token || shown.created.elapsed() >= PREVIEW_TTL {

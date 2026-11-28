@@ -42,7 +42,7 @@ for (const language of ["en", "de"] as const) for (const width of [1440, 400]) {
       if (path === "/api/project" && method === "GET") return imports ? ok(tree)
         : route.fulfill({ status: 400, contentType: "application/json", body: '{"error":"no project open"}' });
       if (path === "/api/missing-names/scan" && method === "POST") return ok({
-        serverIncarnation: "ux-feedback", projectIncarnation: 1, snapshotRevision: 1, persistence: "session-only",
+        serverIncarnation: "ux-feedback", projectIncarnation: 1, snapshotRevision: 1, persistence: "session-only", readOnly: false,
         discovery: { completeness: "complete", offset: 0, limit: 1, has_more_in_scan: false,
           counts: { entities_scanned: 0, candidates_found_in_scan: 0, total_candidates: 0, total_by_kind: {} } },
         items: [],

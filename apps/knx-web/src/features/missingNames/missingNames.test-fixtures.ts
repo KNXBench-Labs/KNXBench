@@ -32,12 +32,12 @@ export function proposal(kind: NameTargetKind, id: number, name: string | null,
 
 /** The server's wire shape of a scan response (the client re-nests the binding). */
 export function scanBody(items: readonly MissingNameProposal[], options: Partial<{ complete: boolean; offset: number;
-  found: number; hasMore: boolean; persistence: string; revision: number }> = {}) {
+  found: number; hasMore: boolean; persistence: string; revision: number; readOnly: boolean }> = {}) {
   const complete = options.complete ?? true;
   const found = options.found ?? items.length;
   return {
     serverIncarnation: "srv", projectIncarnation: 3, snapshotRevision: options.revision ?? 7,
-    persistence: options.persistence ?? "native-working-history",
+    persistence: options.persistence ?? "native-working-history", readOnly: options.readOnly ?? false,
     discovery: {
       completeness: complete ? "complete" : "incomplete",
       counts: { entities_scanned: 40, candidates_found_in_scan: found, total_candidates: complete ? found : null,

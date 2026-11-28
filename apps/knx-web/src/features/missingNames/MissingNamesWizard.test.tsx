@@ -34,15 +34,17 @@ function deferred<T>() {
 const refusal = (status: number, kind: string, message: string) => Object.assign(new Error(message), { status, kind });
 
 function scan(items: readonly MissingNameProposal[], options: Partial<{ complete: boolean; offset: number; hasMore: boolean;
-  persistence: MissingNameScan["persistence"] }> = {}): MissingNameScan {
+  persistence: MissingNameScan["persistence"]; readOnly: boolean }> = {}): MissingNameScan {
   const complete = options.complete ?? true;
-  return { binding: BINDING, persistence: options.persistence ?? "native-working-history", items, discovery: {
+  return { binding: BINDING, persistence: options.persistence ?? "native-working-history",
+    readOnly: options.readOnly ?? false, items, discovery: {
     completeness: complete ? "complete" : "incomplete", offset: options.offset ?? 0, limit: 100, has_more_in_scan: options.hasMore ?? false,
     counts: { entities_scanned: 40, candidates_found_in_scan: items.length, total_candidates: complete ? items.length : null,
       total_by_kind: complete ? {} : null } } };
 }
 const ITEMS = [proposal("area", 1, "Area 1"), proposal("group_address", 10, "Light"), proposal("device", 5, null)];
-const PREVIEW = { token: "shown-token", expiresInSeconds: 300, persistence: "native-working-history" as const, changed: 1,
+const PREVIEW = { token: "shown-token", expiresInSeconds: 300, persistence: "native-working-history" as const,
+  readOnly: false, changed: 1,
   rows: [{ target: target("group_address", 10), kind: "group_address" as const, before: "", after: "Light" }], warnings: [] };
 
 beforeEach(() => {
@@ -237,6 +239,36 @@ describe("MissingNamesWizard", () => {
     client.scanMissingNames.mockResolvedValueOnce(scan(ITEMS, { persistence: "session-only" }));
     await render();
     expect(panel().querySelector("[data-session-only]")).not.toBeNull();
+  });
+
+  it("reviews a read-only project but never previews or applies it (Q17)", async () => {
+    client.scanMissingNames.mockResolvedValueOnce(scan(ITEMS, { readOnly: true }));
+    await render();
+    expect(panel().querySelector("[data-read-only]")?.textContent).toBe(en["missingNames.readOnly"]);
+    await click(entryBox("group_address"));
+    expect(entryBox("group_address").checked).toBe(true);
+    expect(button("[data-missing-preview]").disabled).toBe(true);
+    expect(button("[data-missing-confirm]").disabled).toBe(true);
+    await click(button("[data-missing-preview]"));
+    expect(client.previewMissingNames).not.toHaveBeenCalled();
+    expect(client.applyMissingNames).not.toHaveBeenCalled();
+  });
+
+  it("shows the read-only note and refusal in German", async () => {
+    saveUiLanguage(settingsStorage, "de");
+    client.scanMissingNames.mockResolvedValueOnce(scan(ITEMS, { readOnly: true }));
+    await render();
+    expect(panel().querySelector("[data-read-only]")?.textContent).toBe(de["missingNames.readOnly"]);
+  });
+
+  it("explains a read-only refusal of the apply", async () => {
+    client.applyMissingNames.mockRejectedValueOnce(refusal(409, "missingNameReadOnly", "read-only"));
+    await render();
+    await click(entryBox("group_address"));
+    await click(button("[data-missing-preview]"));
+    await click(button("[data-missing-confirm]"));
+    expect(panel().querySelector("[role=alert]")?.textContent).toContain(en["missingNames.refusal.readOnly"]);
+    expect(updated).not.toHaveBeenCalled();
   });
 
   it("closes on Escape without applying and cancels the shown preview", async () => {

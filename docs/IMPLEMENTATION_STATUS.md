@@ -1,6 +1,16 @@
 # Implementation delivery history
 
-## Missing-name wizard dialog and manual entry (28 November 2026; WP-51.3a candidate)
+## Missing-name auto-open and Later (28 November 2026; WP-51.3b candidate)
+
+After a project open or import, the web UI opens the missing-name wizard once
+per project session (cheap scan, silent on failure, suppressed while an overlay
+is open or a save/load runs) with a Later button for that automatic opening.
+Verified by vitest only, no real-browser run; pending review and gate. The Q17
+read-only rule (no UI read-only signal), Q2 device-name consumers, narrow-display
+browser check and 51.4 remain open; WP-51 remains partial. See
+[WP-51](open-work/WP-51-empty-project-object-name-wizard.md).
+
+## Missing-name wizard dialog and manual entry (28 November 2026; WP-51.3a published `a3af339e1`)
 
 The web UI adds the missing-name wizard dialog (scan pages, editable selection,
 preview, explicit Apply within the 256 cap) and a manual “Fill missing names”

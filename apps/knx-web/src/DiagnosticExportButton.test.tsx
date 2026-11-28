@@ -12,7 +12,8 @@ vi.mock("./i18n",()=>({useTranslate:()=>((key:string,params?:object)=>params?`${
 vi.mock("./Overlay",()=>({default:({children}:{children:React.ReactNode})=><div role="dialog">{children}</div>}));
 const opened=vi.hoisted(()=>vi.fn());
 vi.mock("./ReportProblemEntry",()=>({useReportProblem:()=>opened}));
-vi.mock("./treeUtils",()=>({collectDevices:()=>new Map([[7,{id:7,address:"1.1.25",name:"Synthetic device"}]]),projectContextKey:()=>"synthetic-context"}));
+const names=vi.hoisted(()=>({device:"Synthetic device"}));
+vi.mock("./treeUtils",()=>({collectDevices:()=>new Map([[7,{id:7,address:"1.1.25",name:names.device}]]),projectContextKey:()=>"synthetic-context"}));
 import DiagnosticExportButton from "./DiagnosticExportButton";
 let host:HTMLDivElement,root:Root;
 const report={profile:"generic-identity-v1",simulated:true,written:false,complete:false,projectReference:"a".repeat(64),memoryStatus:"not-requested",memoryReason:"no safe memory profile",items:[{query:"descriptor-type-0",status:"not-read",bytes:[],expectedBytes:2,receivedBytes:0,completedAt:null}],stopReason:null};
@@ -163,4 +164,15 @@ it("keeps UDP calls at their legacy arity, drops the review on a transport chang
  expect(document.querySelector("[data-diagnostics-error]")!.textContent).toContain("diagnostics.refusal.tcpUnsupported");
  expect(document.querySelector("[data-diagnostics-review]")).toBeNull();
  expect(calls.preview).toHaveBeenCalledTimes(2);expect(calls.preview.mock.calls[1][4]).toBe("tcp");expect(calls.start).not.toHaveBeenCalled();
+});
+
+it("lists a blank device name as unnamed with its ID and a named one unchanged",async()=>{
+ for(const [name,label] of [["  ",'1.1.25 · device.unnamed {"id":7}'],["Synthetic device","1.1.25 · Synthetic device"]]){
+  names.device=name;
+  await act(()=>root.render(<DiagnosticExportButton project={{server_incarnation:"synthetic",project_incarnation:1,snapshot_revision:2} as ProjectTree} deviceId={7}/>));
+  await click("[data-diagnostics-open]");
+  expect([...document.querySelectorAll("[data-diagnostics-device] option")].map(o=>o.textContent)).toContain(label);
+  await act(async()=>{[...document.querySelectorAll("button")].find(b=>b.textContent==="support.close")!.click();});
+ }
+ names.device="Synthetic device";
 });

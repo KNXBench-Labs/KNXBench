@@ -6,6 +6,7 @@ import { pickOpenPath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useTranslate } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import { isProjectSaving, projectSavingMessage } from "./projectSaving";
 import "./selectiveImport.css";
 import { useFileMenuItemProps } from "./FileMenu";
@@ -124,7 +125,7 @@ function ImportDialog({ tree, scope, onTreeUpdate, onClose }: Props & { tree: Pr
         <label className="settings-field"><span>{t("selectiveImport.search")}</span><input type="search" value={search} onChange={e => setSearch(e.target.value)} /></label>
         <p>{t("selectiveImport.showing", { shown: shown.length, total: matches.length })}</p>
         <fieldset disabled={Boolean(mode)}><legend>{t("selectiveImport.devices")}</legend>{shown.map(d => <label className="selective-import-choice" key={d.id}>
-          <input type="checkbox" data-import-device={d.id} checked={devices.includes(d.id)} onChange={e => { invalidate(); setDevices(toggle(devices, d.id, e.target.checked)); }} />{d.address ?? "—"} · {d.name} (ID {d.id})
+          <input type="checkbox" data-import-device={d.id} checked={devices.includes(d.id)} onChange={e => { invalidate(); setDevices(toggle(devices, d.id, e.target.checked)); }} />{d.address ?? "—"} · {deviceLabel(t, d)} (ID {d.id})
         </label>)}</fieldset>
       </>}
       <details><summary>{t("selectiveImport.report")}</summary><pre>{JSON.stringify(inventory.sourceReport, null, 2)}</pre></details>

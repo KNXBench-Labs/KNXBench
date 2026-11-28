@@ -12,6 +12,7 @@ import {
 import { isTauri } from "./filePicker";
 import { buildIssueUrl } from "./githubIssue";
 import { useTranslate } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import { downloadLocalBlob } from "./localJsonDownload";
 import type { MessageKey } from "./messages/en";
 import Overlay from "./Overlay";
@@ -178,7 +179,7 @@ export default function ReportProblemWizard({ request, tree, notifications, onCl
     <select data-report-device value={choice.deviceId ?? ""}
       onChange={(e) => { const value = e.target.value; setChoice((current) => ({ ...current, deviceId: value === "" ? null : Number(value) })); }}>
       <option value="">{t("reportProblem.device.auto")}</option>
-      {devices.map((d) => <option key={d.id} value={d.id}>{d.address ?? "—"} · {d.name}</option>)}
+      {devices.map((d) => <option key={d.id} value={d.id}>{d.address ?? "—"} · {deviceLabel(t, d)}</option>)}
     </select>
   </label>;
 

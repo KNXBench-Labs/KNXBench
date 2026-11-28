@@ -76,6 +76,7 @@ import { MOTION_LEVELS, MOTION_STYLES, useMotion } from "./motion";
 import { useProductLanguage } from "./productLanguage";
 import type { ProductLanguage } from "./api";
 import { useTranslate } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import ToastStack from "./Toast";
 import { useReleaseUpdates } from "./useReleaseUpdates";
 import { pickStartupToast, useToasts } from "./toast";
@@ -808,7 +809,7 @@ function AppBody({ manifestVersion = packageVersion, session, editorReturn = fal
     const device = owner ? collectDevices(owner).get(id) : undefined;
     const task = activity.begin({ kind: "deviceDetail", operationId: String(++activitySerial.current),
       projectScope: scope, entityId: String(id), access: "read" }, {
-      ...projectActivityContext(owner), entities: device ? [{ label: device.name, address: device.address }] : undefined,
+      ...projectActivityContext(owner), entities: device ? [{ label: deviceLabel(t, device), address: device.address }] : undefined,
     });
     const live = () => scope === projectActivityScope.current && requestId === deviceDetailRequestIdRef.current
       && selectionRef.current?.kind === "device" && selectionRef.current.id === id;

@@ -5,6 +5,7 @@ import type { ProjectTree } from "./bindings/ProjectTree";
 import { runComparisonQueue, type ComparisonEntry, type ComparisonTarget, type ComparisonTransport } from "./deviceComparisons";
 import { projectActivityContext, type ActivityController, type ActivityHandle } from "./activityController";
 import { useTranslate } from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 
 export function useDeviceComparisons(tree: ProjectTree | null, activity: ActivityController) {
   const t = useTranslate();
@@ -43,7 +44,7 @@ export function useDeviceComparisons(tree: ProjectTree | null, activity: Activit
     activityId.current = null;
     setError(null); setSelected(null); setProgress({ completed: 0, current: null });
     setReview({ scope, started: false, targets: targets.map((target) => ({
-      id: target.id, name: target.name, address: target.address, revision: tree.comparison_revisions?.[target.id],
+      id: target.id, name: deviceLabel(t, target), address: target.address, revision: tree.comparison_revisions?.[target.id],
     })) });
   }
   function cancel() {
@@ -53,7 +54,7 @@ export function useDeviceComparisons(tree: ProjectTree | null, activity: Activit
   function inspect(target: { id: number; name: string; address: string | null }) {
     if (!tree || scope !== liveScope.current || run.current) return;
     open([target]); setSelected(target.id);
-    setReview({ scope, started: true, targets: [{ ...target, revision: tree.comparison_revisions?.[target.id] }] });
+    setReview({ scope, started: true, targets: [{ ...target, name: deviceLabel(t, target), revision: tree.comparison_revisions?.[target.id] }] });
   }
   async function confirm(gateway: string, transport: ComparisonTransport = "udp") {
     if (!tree || !review || review.scope !== scope || scope !== liveScope.current || review.started || run.current) return;

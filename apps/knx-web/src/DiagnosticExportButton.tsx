@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import Overlay from "./Overlay";
 import {useTranslate} from "./i18n";
+import { deviceLabel } from "./devicePresentation";
 import {collectDevices,projectContextKey} from "./treeUtils";
 import {loadPreferredGateway} from "./gatewayPreference";
 import {splitGatewayEndpoint,validateGatewayFields} from "./gatewayEndpoint";
@@ -75,7 +76,7 @@ export function DiagnosticExportDialog({project,initialDevice,close}:{project:Pr
   <div><header><h2 id="diagnostic-export-title">{t("diagnostics.title")}</h2><button type="button" disabled={acquiring||busy} onClick={close}>{t("support.close")}</button></header>
    <p>{t("diagnostics.intro")}</p><p className="form-warning">{t("diagnostics.privacy")}</p>
    <fieldset disabled={acquiring||busy}>
-    <label>{t("support.device")}<select data-diagnostics-device value={device??""} onChange={e=>{invalidate();setDevice(e.target.value?Number(e.target.value):null);}}><option value="">{t("diagnostics.chooseDevice")}</option>{devices.map(d=><option key={d.id} value={d.id}>{d.address??"—"} · {d.name}</option>)}</select></label>
+    <label>{t("support.device")}<select data-diagnostics-device value={device??""} onChange={e=>{invalidate();setDevice(e.target.value?Number(e.target.value):null);}}><option value="">{t("diagnostics.chooseDevice")}</option>{devices.map(d=><option key={d.id} value={d.id}>{d.address??"—"} · {deviceLabel(t,d)}</option>)}</select></label>
     <label>{t("support.gateway")}<input data-diagnostics-gateway value={gateway} onChange={e=>{invalidate();setGateway(e.target.value);}} placeholder="IPv4:port"/></label>
     <label>{t("diagnostics.profile")}<select data-diagnostics-profile value={profile} onChange={e=>{invalidate();setProfile(e.target.value===api.MEMORY_PROFILE?api.MEMORY_PROFILE:api.IDENTITY_PROFILE);}}>
      <option value={api.IDENTITY_PROFILE}>{t("diagnostics.profile.identity")}</option><option value={api.MEMORY_PROFILE}>{t("diagnostics.profile.memory")}</option></select></label>

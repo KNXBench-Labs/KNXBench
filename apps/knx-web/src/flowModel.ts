@@ -340,6 +340,7 @@ function ensureNode(model: FlowModel, node: FlowNode): boolean {
   return true;
 }
 
+// The snapshot arrives pre-labeled from the feed (labelSnapshotDevices); names are plain data here.
 function deviceNode(context: ParticipantContext, deviceId: number): FlowNode {
   const device = context.devicesById.get(deviceId);
   return device

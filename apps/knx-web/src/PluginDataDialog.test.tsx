@@ -195,3 +195,11 @@ it("a change elsewhere while the source is being listed discards that listing in
   await act(async () => finish(listing));
   expect(document.querySelector('[data-plugin-pair="1:10"]')).toBeNull();
 });
+
+it("shows a blank device name as unnamed with its ID and leaves a named one exact", async () => {
+  const blank: AdoptionCandidate = { ...adoptable, sourceDevice: device(1, " ", "1.1.2"), targetDevice: device(10, "Sensor", "1.1.1") };
+  await render(); await choose({ ...listing, candidates: [blank] });
+  expect(text()).toContain("Unnamed device (ID 1) (1.1.2)");
+  expect(text()).toContain("Sensor (1.1.1)");
+  expect(blank.sourceDevice.name).toBe(" ");
+});

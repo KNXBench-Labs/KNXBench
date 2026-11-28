@@ -6,6 +6,7 @@ import { pickOpenPath } from "./filePicker";
 import * as api from "./api";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import { useTranslate } from "./i18n";
+import { deviceLabel as shownDeviceName } from "./devicePresentation";
 import { isProjectSaving, projectSavingMessage } from "./projectSaving";
 import {
   addressDifference, classifyAdoptionError, pairKey, refusalMessage, visiblePairs,
@@ -180,7 +181,7 @@ export default function PluginDataDialog({ tree, deviceId, onTreeUpdate, onClose
       case "other": return failure.message;
     }
   }
-  const deviceLabel = (d: AdoptionDevice) => d.address ? `${d.name} (${d.address})` : d.name;
+  const deviceLabel = (d: AdoptionDevice) => d.address ? `${shownDeviceName(t, d)} (${d.address})` : shownDeviceName(t, d);
   const pairStatus = (c: AdoptionCandidate) => c.refusalDetail
     ? t("pluginData.pair.cannot", { reason: refusalMessage(t, c.refusalDetail) })
     : t("pluginData.pair.can", { count: c.replacements });

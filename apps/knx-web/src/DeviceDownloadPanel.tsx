@@ -412,7 +412,7 @@ export default function DeviceDownloadPanel({
     const context = { project, deviceId, scope };
     if (shown.untestedAcknowledgement !== null && untestedAcknowledgement !== shown.untestedAcknowledgement) return;
     setError(null);
-    if (!(await consent.request(`${shown.address} — ${shown.deviceName}`))) return;
+    if (!(await consent.request(`${shown.address} — ${deviceLabel(t, { id: shown.deviceId, name: shown.deviceName })}`))) return;
     if (latestContext.current.project !== context.project || latestContext.current.deviceId !== context.deviceId ||
       latestContext.current.scope !== context.scope) return;
     setStarting(true);
@@ -654,7 +654,7 @@ export default function DeviceDownloadPanel({
           <p>{t("deviceDownload.planNothingSent")}</p>
           <dl>
             <dt>{t("deviceDownload.target")}</dt>
-            <dd><code>{plan.address}</code> — {plan.deviceName}</dd>
+            <dd><code>{plan.address}</code> — {deviceLabel(t, { id: plan.deviceId, name: plan.deviceName })}</dd>
             <dt>{t("deviceDownload.program")}</dt>
             <dd><code>{plan.programId}</code></dd>
             <dt>{t("deviceDownload.support")}</dt>

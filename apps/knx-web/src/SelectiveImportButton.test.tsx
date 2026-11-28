@@ -99,3 +99,14 @@ it("keeps the acknowledged success visible when the real parent accepts the retu
   expect(document.body.textContent).toContain("Selection imported");
   expect(api.applyImportSelection).toHaveBeenCalledTimes(1);
 });
+
+it("shows a blank source device as unnamed with its ID and keeps a named one unchanged", async () => {
+  const mixed = { ...source, installations: [{ ...source.installations[0], devices: [
+    { id: 1, name: "Imported switch", address: "1.1.1", line: 3 }, { id: 2, name: "  ", address: "1.1.2", line: 3 }] }] };
+  picker.pickOpenPath.mockResolvedValue("source.knxproj"); api.inspectImportSource.mockResolvedValue(mixed);
+  await render(); await click("Import selected lines/devices…"); await click("Choose source project…");
+  const row = (id: number) => document.querySelector(`[data-import-device="${id}"]`)!.parentElement!.textContent;
+  expect(row(1)).toBe("1.1.1 · Imported switch (ID 1)");
+  expect(row(2)).toBe("1.1.2 · Unnamed device (ID 2) (ID 2)");
+  expect(mixed.installations[0].devices[1].name).toBe("  ");
+});

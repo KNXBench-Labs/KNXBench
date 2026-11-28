@@ -1,4 +1,5 @@
 /** Present server-owned experimental downloads and explicit original-state recovery. */
+import { deviceLabel } from "./devicePresentation";
 import { useEffect, useRef, useState } from "react";
 import type { ProjectTree } from "./bindings/ProjectTree";
 import * as api from "./system2DownloadApi";
@@ -126,7 +127,7 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
     const body: api.System2Start = { preparationId: shown.preparationId, gateway: gateway.trim(), ...phrases, recoveryTrack: track };
     action.current = true; setPending(true); setError(false); setStartRefusal(null); reads.current += 1;
     try {
-      if (!(await consent.request(`${shown.address} — ${shown.deviceName}`))) return;
+      if (!(await consent.request(`${shown.address} — ${deviceLabel(t, { id: shown.binding.deviceId, name: shown.deviceName })}`))) return;
       if (!mounted.current || ticket !== generation.current || context.current.project !== original.project || context.current.deviceId !== original.deviceId || context.current.gateway !== original.gateway || !context.current.enabled) return;
       // Drop local execution capability before sending, even when its response is lost.
       setPreview(null); setPhrases(EMPTY); setTrack("");
@@ -168,7 +169,7 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
     const body: api.System2Recovery = { operationId: original.operationId, gateway: gateway.trim(), ...recovery };
     action.current = true; setPending(true); reads.current += 1;
     try {
-      if (!(await consent.request(`${original.address} — ${original.deviceName}`))) return;
+      if (!(await consent.request(`${original.address} — ${deviceLabel(t, { id: original.binding.deviceId, name: original.deviceName })}`))) return;
       if (!mounted.current || generation.current !== ticket || context.current.gateway !== originalGateway || statusRef.current !== original) return;
       setRecovery({ recoveryConfirmation: "", downloadConfirmation: "", releaseConfirmation: "" });
       try { const next = await api.recoverSystem2(body); requireOriginal(next, original); if (mounted.current) accept(next); }
@@ -197,7 +198,7 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
     {enabled && preview && expected && <section data-system2-preview aria-label={t("system2.preview")}>
       <h4>{t("system2.preview")}</h4><p>{t("system2.offline")}</p>
       <dl>
-        <dt>{t("deviceDownload.target")}</dt><dd>{preview.address} — {preview.deviceName}</dd>
+        <dt>{t("deviceDownload.target")}</dt><dd>{preview.address} — {deviceLabel(t, { id: preview.binding.deviceId, name: preview.deviceName })}</dd>
         <dt>{t("deviceDownload.program")}</dt><dd>{preview.programId}</dd>
         <dt>{t("system2.profile")}</dt><dd>{preview.profileId}</dd>
         <dt>{t("system2.configuration")}</dt><dd style={{ overflowWrap: "anywhere" }}><code>{preview.configurationSha256}</code></dd>
@@ -221,11 +222,11 @@ export default function System2DownloadPanel({ project, deviceId, gateway, enabl
       </fieldset>
     </section>}
     {status && <section data-system2-status aria-live="polite">
-      <h4>{t("system2.operation")}: {status.address} — {status.deviceName}</h4>
+      <h4>{t("system2.operation")}: {status.address} — {deviceLabel(t, { id: status.binding.deviceId, name: status.deviceName })}</h4>
       {/* Issue #34: the server keeps one operation process-wide; say whose it is. */}
       {deviceId !== null && (status.binding.deviceId !== deviceId || (project?.project_incarnation !== undefined &&
         status.binding.projectIncarnation !== String(project.project_incarnation))) && <p data-system2-other-device className="form-warning">
-        {t("system2.otherDevice", { address: status.address, device: status.deviceName })}</p>}
+        {t("system2.otherDevice", { address: status.address, device: deviceLabel(t, { id: status.binding.deviceId, name: status.deviceName }) })}</p>}
       <p style={{ overflowWrap: "anywhere" }}><code>{status.operationId}</code> · {t(nothingWritten(status) ? `system2.state.${status.state === "failed" ? "failed" : "cancelled"}BeforeWrite` : `system2.state.${status.state}`)}</p>
       {nothingWritten(status) && <p data-system2-nothing-written>{t("system2.nothingWritten")}</p>}
       <p>{status.totalSteps === null ? t("system2.checkpointsUnknown", { done: status.completedSteps }) : t("system2.checkpoints", { done: status.completedSteps, total: status.totalSteps })}</p>
